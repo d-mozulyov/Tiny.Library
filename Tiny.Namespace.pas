@@ -1,4 +1,4 @@
-unit Tiny.Invoke;
+unit Tiny.Namespace;
 
 {******************************************************************************}
 { Copyright (c) Dmitry Mozulyov                                                }

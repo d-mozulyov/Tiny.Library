@@ -1,3 +1,3 @@
 # Tiny.Rtti
 
-Lightweight RTTI/marshalling library for Delphi and FreePascal
+Lightweight RTTI/marshalling/testing library for Delphi and FreePascal

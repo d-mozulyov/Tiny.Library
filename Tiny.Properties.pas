@@ -1,4 +1,4 @@
-unit Tiny.Invoke;
+unit Tiny.Properties;
 
 {******************************************************************************}
 { Copyright (c) Dmitry Mozulyov                                                }

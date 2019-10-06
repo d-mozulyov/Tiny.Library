@@ -1,4 +1,4 @@
-unit Tiny.Invoke;
+unit Tiny.Testing;
 
 {******************************************************************************}
 { Copyright (c) Dmitry Mozulyov                                                }
