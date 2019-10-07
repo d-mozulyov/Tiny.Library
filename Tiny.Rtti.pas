@@ -143,6 +143,11 @@ type
   UCS4String = System.UCS4String;
   PUCS4String = ^UCS4String;
 
+  PInternalInt = ^InternalInt;
+  InternalInt = {$ifdef FPC}NativeInt{$else .DELPHI}Integer{$endif};
+  PInternalUInt = ^InternalUInt;
+  InternalUInt = {$ifdef FPC}NativeUInt{$else .DELPHI}Cardinal{$endif};
+
 type
   PDynArrayRec = ^TDynArrayRec;
   TDynArrayRec = packed object
@@ -162,11 +167,11 @@ type
   {$endif}
   public
   {$ifdef FPC}
-    RefCount: NativeInt;
+    RefCount: InternalInt;
     High: NativeInt;
   {$else .DELPHI}
     {$ifdef LARGEINT}_Padding: Integer;{$endif}
-    RefCount: Integer;
+    RefCount: InternalInt;
     Length: NativeInt;
   {$endif}
   end;
@@ -180,13 +185,13 @@ type
       {$ifdef FPC}
         CodePageElemSize: Integer;
         {$ifdef LARGEINT}_Padding: Integer;{$endif}
-        RefCount: NativeInt;
-        Length: NativeInt;
+        RefCount: InternalInt;
+        Length: InternalInt;
       {$else .DELPHI}
         {$ifdef LARGEINT}_Padding: Integer;{$endif}
         CodePageElemSize: Integer;
-        RefCount: Integer;
-        Length: Integer;
+        RefCount: InternalInt;
+        Length: InternalInt;
       {$endif}
       );
       1:
@@ -645,6 +650,12 @@ type
   PCallConvs = ^TCallConvs;
   TCallConvs = set of TCallConv;
 
+  {$ifdef FPC}
+const
+  tkString = tkSString;
+  tkProcedure = tkProcVar;
+  {$endif}
+
 
 { Internal RTTI attribute routine }
 
@@ -723,7 +734,7 @@ type
   public
     Len: Word;
     Entries: TAttrEntry;
-    {Entries: array[] of TAttrEntry}
+    {Entries: array[] of TAttrEntry;}
     property Value: PAttrData read GetValue;
     property Tail: Pointer read GetTail;
     property Count: Integer read GetCount;
@@ -824,6 +835,9 @@ type
     Index: Integer;
     Default: Integer;
     NameIndex: SmallInt;
+    {$ifdef FPC}
+    PropProcs: Byte;
+    {$endif}
     Name: ShortStringHelper;
     property Tail: Pointer read GetTail;
   end;
@@ -831,10 +845,11 @@ type
   PPropData = ^TPropData;
   TPropData = packed object
   protected
-    function GetTail: Pointer; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetTail: Pointer;
   public
     PropCount: Word;
-    PropList: array[Word] of TPropInfo;
+    PropList: TPropInfo;
+    {PropList: array[1..PropCount] of TPropInfo;}
     property Tail: Pointer read GetTail;
   end;
 
@@ -854,9 +869,18 @@ type
 
   PVmtFieldClassTab = ^TVmtFieldClassTab;
   TVmtFieldClassTab = packed object
+  protected
+    {$ifNdef FPC}
+    function GetClass(const AIndex: Word): TClass; {$ifdef INLINESUPPORT}inline;{$endif}
+    {$endif}
   public
     Count: Word;
+    {$ifdef FPC}
+    Classes: array[Word] of TClass;
+    {$else .DELPHI}
     ClassRef: array[Word] of ^TClass;
+    property Classes[const AIndex: Word]: TClass read GetClass;
+    {$endif}
   end;
 
   PVmtFieldEntry = ^TVmtFieldEntry;
@@ -864,7 +888,7 @@ type
   protected
     function GetTail: Pointer; {$ifdef INLINESUPPORT}inline;{$endif}
   public
-    FieldOffset: Cardinal;
+    FieldOffset: InternalUInt;
     TypeIndex: Word; // index into ClassTab
     Name: ShortStringHelper;
     property Tail: Pointer read GetTail;
@@ -1076,7 +1100,7 @@ type
   public
     PropCount: Word;
     PropList: TPropInfoEx;
-    {PropList: array[1..PropCount] of TPropInfoEx}
+    {PropList: array[1..PropCount] of TPropInfoEx;}
     property Tail: Pointer read GetTail;
   end;
 
@@ -1442,8 +1466,8 @@ type
     function GetAttrData: PAttrData; {$ifdef INLINESUPPORT}inline;{$endif}
     {$endif}
   public
-    Size: Integer;
-    ElCount: Integer; // product of lengths of all dimensions
+    Size: InternalInt;
+    ElCount: InternalInt; // product of lengths of all dimensions
     ElType: PTypeInfoRef;
     DimCount: Byte;
     Dims: array[0..255 {DimCount-1}] of PTypeInfoRef;
@@ -1543,7 +1567,7 @@ type
         FloatType: TFloatType;
         {$ifdef EXTENDEDRTTI}FloatAttrData: TAttrData;{$endif});
       {$ifdef SHORTSTRSUPPORT}
-      {$ifdef FPC}tkSString{$else}tkString{$endif}: (
+      tkString: (
         MaxLength: Byte;
         {$ifdef EXTENDEDRTTI}StrAttrData: TAttrData{$endif});
       {$endif}
@@ -1598,7 +1622,7 @@ type
       tkArray: (
         ArrayData: TArrayTypeData;
         {ArrAttrData: TAttrData;});
-      tkRecord: ({RecordData: TRecordTypeData}
+      tkRecord: ( {RecordData: TRecordTypeData;}
         RecSize: Integer;
         ManagedFldCount: Integer;
         ManagedFields: TManagedField;
@@ -3616,8 +3640,17 @@ end;
 { TPropData}
 
 function TPropData.GetTail: Pointer;
+var
+  i: Integer;
+  LPtr: PByte;
 begin
-  Result := @PropList[PropCount];
+  LPtr := Pointer(@PropList);
+  for i := 0 to PropCount - 1 do
+  begin
+    LPtr := PPropInfo(LPtr).Tail;
+  end;
+
+  Result := LPtr;
 end;
 
 
@@ -3628,6 +3661,24 @@ begin
   Result := @Self;
   Inc(NativeUInt(Result), SizeOf(Self));
 end;
+
+
+{ TVmtFieldClassTab }
+
+{$ifNdef FPC}
+function TVmtFieldClassTab.GetClass(const AIndex: Word): TClass;
+var
+  LPtr: PByte;
+begin
+  LPtr := Pointer(ClassRef[AIndex]);
+  if (Assigned(LPtr)) then
+  begin
+    LPtr := PPointer(LPtr)^;
+  end;
+
+  Result := TClass(LPtr);
+end;
+{$endif}
 
 
 { TVmtFieldEntry }

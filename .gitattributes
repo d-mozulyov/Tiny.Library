@@ -1,0 +1,2 @@
+data/* filter=lfs diff=lfs merge=lfs -text
+tutorials/* filter=lfs diff=lfs merge=lfs -text
