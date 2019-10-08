@@ -636,6 +636,11 @@ type
   PIntfFlags = ^TIntfFlags;
   TIntfFlags = set of TIntfFlag;
 
+  PDispatchKind = ^TDispatchKind;
+  TDispatchKind = (dkStatic, dkVtable, dkDynamic, dkMessage, dkInterface);
+  PDispatchKinds = ^TDispatchKinds;
+  TDispatchKinds = set of TDispatchKind;
+
   PMemberVisibility = ^TMemberVisibility;
   TMemberVisibility = (mvPrivate, mvProtected, mvPublic, mvPublished);
   PMemberVisibilities = ^TMemberVisibilities;
@@ -1203,11 +1208,37 @@ type
   PVmtMethodExEntry = ^TVmtMethodExEntry;
   TVmtMethodExEntry = packed object
   protected
+    function GetName: PShortStringHelper; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetCodeAddress: Pointer; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsSpecial: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsAbstract: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsStatic: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsConstructor: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsDestructor: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsOperator: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsClassMethod: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetHasSelf: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetDispatchKind: TDispatchKind; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetMemberVisibility: TMemberVisibility; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetMethodKind: TMethodKind;
     function GetTail: Pointer; {$ifdef INLINESUPPORT}inline;{$endif}
+    property IsSpecial: Boolean read GetIsSpecial;
   public
     Entry: PVmtMethodEntry;
     Flags: Word;
     VirtualIndex: SmallInt; // signed word
+    property CodeAddress: Pointer read GetCodeAddress;
+    property Name: PShortStringHelper read GetName;
+    property IsAbstract: Boolean read GetIsAbstract;
+    property IsStatic: Boolean read GetIsStatic;
+    property IsConstructor: Boolean read GetIsConstructor;
+    property IsDestructor: Boolean read GetIsDestructor;
+    property IsOperator: Boolean read GetIsOperator;
+    property IsClassMethod: Boolean read GetIsClassMethod;
+    property HasSelf: Boolean read GetHasSelf;
+    property DispatchKind: TDispatchKind read GetDispatchKind;
+    property MemberVisibility: TMemberVisibility read GetMemberVisibility;
+    property MethodKind: TMethodKind read GetMethodKind;
     property Tail: Pointer read GetTail;
   end;
 
@@ -1396,6 +1427,7 @@ type
     ClassAttrData: TAttrData;
     ArrayPropCount: Word;
     ArrayPropData: array[1..ArrayPropCount] of TArrayPropInfo;}
+    function VmtFunctionOffset(const AAddress: Pointer; const AStandardFunctions: Boolean = True): NativeInt{-1 means fail};
     property FieldTable: PVmtFieldTable read GetFieldTable;
     property MethodTable: PVmtMethodTable read GetMethodTable;
     property PropData: PPropData read GetPropData;
@@ -1516,7 +1548,7 @@ type
             case Integer of
               0: (MethodSignature: TMethodSignature);
               1: (MethodData: TMethodTypeData);
-              2: (_: packed record end);
+              High(Integer): (_: packed record end);
           );
           tkClass: (ClassData: TClassTypeData);
           tkInterface: (InterfaceData: TInterfaceTypeData);
@@ -2247,7 +2279,7 @@ type
         case Integer of
           0: (ILow, IHigh: Integer);
           1: (ULow, UHigh: Cardinal);
-          2: (_: packed record end;);
+          High(Integer): (_: packed record end;);
         );
       1: (I64Low, I64High: Int64);
       2: (U64Low, U64High: UInt64);
@@ -2295,7 +2327,7 @@ type
         PtrDepth: Byte;
         case Integer of
           0: (CodePage: Word);
-          1: (MaxLength: Byte; SBCSIndex: ShortInt);
+          1: (MaxLength: Byte);
           2: (ChildType: TRttiType; Flags: Byte);
           3: (ExFlags: Word);
           High(Integer): (_: packed record end;));
@@ -2314,7 +2346,6 @@ type
     property PtrDepth: Byte read F.PtrDepth write F.PtrDepth;
     property CodePage: Word read F.CodePage write F.CodePage;
     property MaxLength: Byte read F.MaxLength write F.MaxLength;
-    property SBCSIndex: ShortInt read F.SBCSIndex write F.SBCSIndex;
     property ChildType: TRttiType read F.ChildType write F.ChildType;
     property Flags: Byte read F.Flags write F.Flags;
     property ExFlags: Word read F.ExFlags write F.ExFlags;
@@ -4179,6 +4210,124 @@ end;
 
 { TVmtMethodExEntry }
 
+function TVmtMethodExEntry.GetName: PShortStringHelper;
+var
+  LPtr: PByte;
+begin
+  LPtr := Pointer(Entry);
+  if (Assigned(LPtr)) then
+  begin
+    LPtr := Pointer(@PVmtMethodEntry(LPtr).Name);
+  end;
+
+  Result := Pointer(LPtr);
+end;
+
+function TVmtMethodExEntry.GetCodeAddress: Pointer;
+var
+  LPtr: PByte;
+begin
+  LPtr := Pointer(Entry);
+  if (Assigned(LPtr)) then
+  begin
+    LPtr := PVmtMethodEntry(LPtr).CodeAddress;
+  end;
+
+  Result := Pointer(LPtr);
+end;
+
+function TVmtMethodExEntry.GetIsSpecial: Boolean;
+begin
+  Result := (Flags and 4 <> 0);
+end;
+
+function TVmtMethodExEntry.GetIsAbstract: Boolean;
+begin
+  Result := (Flags and (1 shl 7) <> 0);
+end;
+
+function TVmtMethodExEntry.GetIsStatic: Boolean;
+begin
+  if (IsSpecial) then
+  begin
+    Result := (Flags and 3 = 2{smOperatorOverload});
+  end else
+  begin
+    Result := (Flags and 2{mfHasSelf} = 0);
+  end;
+end;
+
+function TVmtMethodExEntry.GetIsConstructor: Boolean;
+begin
+  Result := (IsSpecial) and (Flags and 3 = 0{smConstructor});
+end;
+
+function TVmtMethodExEntry.GetIsDestructor: Boolean;
+begin
+  Result := (IsSpecial) and (Flags and 3 = 1{smDestructor});
+end;
+
+function TVmtMethodExEntry.GetIsOperator: Boolean;
+begin
+  Result := (IsSpecial) and (Flags and 3 = 2{smOperatorOverload});
+end;
+
+function TVmtMethodExEntry.GetIsClassMethod: Boolean;
+begin
+  Result := (Flags and 1 <> 0) or (Flags and (4 or 2) = 0);
+end;
+
+function TVmtMethodExEntry.GetHasSelf: Boolean;
+begin
+  if (IsSpecial) then
+  begin
+    Result := (Flags and 3 <= 1{[smConstructor, smDestructor]});
+  end else
+  begin
+    Result := (Flags and 2{mfHasSelf} <> 0);
+  end;
+end;
+
+function TVmtMethodExEntry.GetDispatchKind: TDispatchKind;
+begin
+  Result := TDispatchKind((Flags shr 3) and 3);
+end;
+
+function TVmtMethodExEntry.GetMemberVisibility: TMemberVisibility;
+begin
+  Result := TMemberVisibility((Flags shr 5) and 3);
+end;
+
+function TVmtMethodExEntry.GetMethodKind: TMethodKind;
+var
+  LSignature: PVmtMethodSignature;
+begin
+  if (IsSpecial) then
+  begin
+    case Flags and 3 of
+      0{smConstructor}: Result := mkConstructor;
+      1{smDestructor}: Result := mkDestructor;
+      2{smOperatorOverload}: Result := mkOperatorOverload;
+    else
+      Result := mkProcedure;
+    end;
+  end else
+  begin
+    Result := mkProcedure;
+    if (IsClassMethod) then
+    begin
+      Result := mkClassProcedure;
+    end;
+
+    if (Assigned(Entry)) and (Assigned(Entry)) then
+    begin
+      LSignature := Self.Entry.Signature;
+      if (Assigned(LSignature)) and (LSignature.ResultType.Assigned) then
+        Inc(Result);
+    end;
+  end;
+end;
+
 function TVmtMethodExEntry.GetTail: Pointer;
 begin
   Result := @Self;
@@ -4665,6 +4814,48 @@ begin
   Result := GetAttrDataRec.Value;
 end;
 {$endif .EXTENDEDRTTI}
+
+function TClassTypeData.VmtFunctionOffset(const AAddress: Pointer; const AStandardFunctions: Boolean): NativeInt;
+const
+  VMT_START: array[Boolean] of NativeInt = (
+    {$ifdef FPC}vmtToString + SizeOf(Pointer){$else .DELPHI}0{$endif},
+    {$ifdef FPC}vmtMethodStart{$else .DELPHI}vmtParent + SizeOf(Pointer){$endif});
+var
+  LVmtTable, LVmtTop: NativeUInt;
+  LStart, LFinish, LValue: NativeUInt;
+begin
+  if (Assigned(AAddress)) then
+  begin
+    LVmtTable := NativeUInt(ClassType);
+    LStart := LVmtTable;
+    LFinish := LVmtTable;
+    Inc(LStart, {$ifdef FPC}vmtClassName{$else .DELPHI}(vmtSelfPtr + SizeOf(Pointer)){$endif});
+    Inc(LFinish, {$ifdef FPC}vmtMsgStrPtr{$else .DELPHI}vmtClassName{$endif});
+
+    LVmtTop := High(NativeUInt);
+    repeat
+      LValue := PNativeUInt(LStart)^;
+      Inc(LStart, SizeOf(Pointer));
+      if (LValue >= LVmtTable) and (LValue < LVmtTop) then LVmtTop := LValue;
+    until (LStart > LFinish);
+
+    LVmtTop := NativeUInt(NativeInt(LVmtTop) and -SizeOf(Pointer));
+    LStart := LVmtTable;
+    Inc(NativeInt(LVmtTable), VMT_START[AStandardFunctions]);
+    Dec(LVmtTable, SizeOf(Pointer));
+    repeat
+      Inc(LVmtTable, SizeOf(Pointer));
+      if (LVmtTable = LVmtTop) then Break;
+      if (PPointer(LVmtTable)^ = AAddress) then
+      begin
+        Result := NativeInt(LVmtTable) - NativeInt(LStart);
+        Exit;
+      end;
+    until (False);
+  end;
+
+  Result := -1;
+end;
 
 
 { TInterfaceTypeData }
