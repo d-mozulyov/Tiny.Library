@@ -626,7 +626,7 @@ type
   TMethodKinds = set of TMethodKind;
 
   PParamFlag = ^TParamFlag;
-  TParamFlag = (pfVar, pfConst, pfArray, pfAddress, pfReference, pfOut{$ifdef EXTENDEDRTTI}, pfResult{$endif});
+  TParamFlag = (pfVar, pfConst, pfArray, pfAddress, pfReference, pfOut, pfResult);
   PParamFlags = ^TParamFlags;
   TParamFlags = set of TParamFlag;
 
@@ -828,6 +828,16 @@ type
     Offset: Cardinal;
   end;
 
+  PSignatureData = ^TSignatureData;
+  TSignatureData = packed record
+    MethodKind: TMethodKind;
+    HasSelf: Boolean;
+    CallConv: TCallConv;
+    Result: TResultData;
+    ArgumentCount: Integer;
+    Arguments: array[Byte] of TArgumentData;
+  end;
+
   PPropInfo = ^TPropInfo;
   TPropInfo = packed object
   protected
@@ -1001,6 +1011,7 @@ type
     ResultTypeName: ShortStringHelper; // only if func
     ResultType: PTypeInfoRef; // only if Len(Name) > 0
     AttrData: TAttrData;}
+    function GetData(var AData: TSignatureData): Integer;
     property ResultData: TResultData read GetResultData;
     {$ifdef EXTENDEDRTTI}
     property AttrData: PAttrData read GetAttrData;
@@ -1069,7 +1080,7 @@ type
   TProcedureSignature = packed object
   protected
     function GetIsValid: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
-    function GetResultValue: TParamData;
+    function GetResultData: TResultData;
     function GetTail: Pointer;
   public
     Flags: Byte; // if 255 then record stops here, with Flags
@@ -1078,8 +1089,9 @@ type
     ParamCount: Byte;
     Params: TProcedureParam;
     {Params: array[1..ParamCount] of TProcedureParam;}
+    function GetData(var AData: TSignatureData; const AAttrData: Pointer = nil): Integer;
     property IsValid: Boolean read GetIsValid;
-    property ResultValue: TParamData read GetResultValue;
+    property ResultData: TResultData read GetResultData;
     property Tail: Pointer read GetTail;
   end;
   {$ifend .FPC.EXTENDEDRTTI}
@@ -1177,6 +1189,7 @@ type
     Flags: TParamFlags;
     ParamType: PTypeInfoRef;
     ParOff: Byte; // Parameter location: 0..2 for reg, >=8 for stack
+    LocationHigh: Byte;
     Name: ShortStringHelper;
     {AttrData: TAttrData;}
     property AttrData: PAttrData read GetAttrData;
@@ -1188,6 +1201,7 @@ type
   protected
     function GetAttrDataRec: PAttrData;
     function GetAttrData: PAttrData; {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure InternalGetResultData(var AResult: TResultData; const AHasResultParam: Integer);
     function GetResultData: TResultData;
   public
     Version: Byte; // =3
@@ -1198,6 +1212,8 @@ type
     Params: TVmtMethodParam;
     {Params: array[1..ParamCount] of TVmtMethodParam;
     AttrData: TAttrData;}
+    function GetData(var AData: TSignatureData; const AMethodKind: TMethodKind; const AHasSelf: Boolean): Integer; overload;
+    function GetData(var AData: TSignatureData): Integer; overload;
     property AttrData: PAttrData read GetAttrData;
     property ResultData: TResultData read GetResultData;
   end;
@@ -1227,6 +1243,7 @@ type
     Entry: PVmtMethodEntry;
     Flags: Word;
     VirtualIndex: SmallInt; // signed word
+    function GetData(var AData: TSignatureData): Integer;
     property CodeAddress: Pointer read GetCodeAddress;
     property Name: PShortStringHelper read GetName;
     property IsAbstract: Boolean read GetIsAbstract;
@@ -1296,6 +1313,8 @@ type
   PRecordTypeMethod = ^TRecordTypeMethod;
   TRecordTypeMethod = packed object
   protected
+    function GetMemberVisibility: TMemberVisibility; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetMethodKind: TMethodKind; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetSignature: PProcedureSignature; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetAttrDataRec: PAttrData; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetAttrData: PAttrData; {$ifdef INLINESUPPORT}inline;{$endif}
@@ -1306,6 +1325,9 @@ type
     Name: ShortStringHelper;
     {Signature: TProcedureSignature;
     AttrData: TAttrData;}
+    function GetData(var AData: TSignatureData): Integer;
+    property MemberVisibility: TMemberVisibility read GetMemberVisibility;
+    property MethodKind: TMethodKind read GetMethodKind;
     property Signature: PProcedureSignature read GetSignature;
     property AttrData: PAttrData read GetAttrData;
     property Tail: Pointer read GetTail;
@@ -1368,6 +1390,7 @@ type
   TMethodSignature = packed object
   protected
     function GetParamsTail: Pointer;
+    function InternalGetResultData(const APtr: PByte; var AResult: TResultData): PByte;
     function GetResultData: TResultData;
     function GetResultTail: Pointer; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetCallConv: TCallConv; {$ifdef INLINESUPPORT}inline;{$endif}
@@ -1384,6 +1407,7 @@ type
     // extended rtti
     MethSig: PProcedureSignature;
     MethAttrData: TAttrData;}
+    function GetData(var AData: TSignatureData): Integer;
     property ResultData: TResultData read GetResultData;
     property CallConv: TCallConv read GetCallConv;
     property ParamTypes: PPTypeInfoRef read GetParamTypes;
@@ -3851,6 +3875,9 @@ end;
 function TIntfMethodSignature.GetResultData: TResultData;
 var
   LPtr: PByte;
+  {$ifdef WEAKREF}
+  LAttrData: PAttrData;
+  {$endif}
 begin
   Result.Reference := rfDefault;
   if (Kind = 1) then
@@ -3862,7 +3889,29 @@ begin
       LPtr := PShortStringHelper(LPtr).Tail;
       Result.TypeInfo := PTypeInfoRef(PPointer(LPtr)^).Value;
       Result.Name := PShortStringHelper(@SHORTSTR_RESULT);
-      {Result.Reference ToDo}
+
+      {$ifdef WEAKREF}
+      {
+        Attention!
+        RTTI does not contain Result reference
+        Therefore, the only correct way to specify unsafe result is this:
+        [Result: Unsafe] function ...
+      }
+      if (Assigned(Result.TypeInfo)) and
+        (Result.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
+      begin
+        LAttrData := AttrData;
+        if (Assigned(LAttrData)) then
+        begin
+          Result.Reference := LAttrData.Reference;
+          if (Result.Reference = rfWeak) then
+          begin
+            Result.Reference := rfDefault;
+          end;
+        end;
+      end;
+      {$endif}
+
       Exit;
     end;
   end;
@@ -3876,15 +3925,18 @@ end;
 function TIntfMethodSignature.GetAttrDataRec: PAttrData;
 var
   LPtr: PByte;
+  LCount: NativeUInt;
 begin
   LPtr := GetParamsTail;
   if (Kind = 1) then
   begin
-    if (LPtr^ = 0) then
+    LCount := LPtr^;
+    if (LCount = 0) then
     begin
       Inc(LPtr);
     end else
     begin
+      Inc(LPtr, LCount);
       Inc(LPtr, SizeOf(Byte) + SizeOf(Pointer));
     end;
   end;
@@ -3906,15 +3958,18 @@ end;
 {$else}
 var
   LPtr: PByte;
+  LCount: NativeUInt;
 begin
   LPtr := GetParamsTail;
   if (Kind = 1) then
   begin
-    if (LPtr^ = 0) then
+    LCount := LPtr^;
+    if (LCount = 0) then
     begin
       Inc(LPtr);
     end else
     begin
+      Inc(LPtr, LCount);
       Inc(LPtr, SizeOf(Byte) + SizeOf(Pointer));
     end;
   end;
@@ -3922,6 +3977,32 @@ begin
   Result := Pointer(LPtr);
 end;
 {$endif}
+
+function TIntfMethodSignature.GetData(var AData: TSignatureData): Integer;
+var
+  i: Integer;
+  LParam: PIntfMethodParam;
+begin
+  AData.MethodKind := TMethodKind(Kind);
+  AData.HasSelf := True;
+  AData.CallConv := CC;
+  AData.Result := ResultData;
+
+  Result := 0;
+  LParam := Params.Tail;
+  for i := 1 to Integer(ParamCount) - 1 do
+  begin
+    if (not (pfResult in LParam.Flags)) then
+    begin
+      AData.Arguments[Result] := LParam.Data;
+      Inc(Result);
+    end;
+
+    LParam := LParam.Tail;
+  end;
+
+  AData.ArgumentCount := Result;
+end;
 
 
 { TIntfMethodEntry }
@@ -4011,8 +4092,9 @@ begin
   Result := (Flags <> 255);
 end;
 
-function TProcedureSignature.GetResultValue: TParamData;
+function TProcedureSignature.GetResultData: TResultData;
 begin
+  Result.Reference := rfDefault;
   Result.TypeName := nil;
   Result.Name := nil;
   if (IsValid) then
@@ -4021,6 +4103,16 @@ begin
     if (Assigned(Result.TypeInfo)) then
     begin
       Result.Name := PShortStringHelper(@SHORTSTR_RESULT);
+
+      {$ifdef WEAKREF}
+      {
+        Attention!
+        RTTI does not contain Result reference
+        Therefore, the only correct way to specify unsafe result is this:
+        [Unsafe] TProcedureType = function ... unsafe;
+        (!) Remember to pass AttrData to the GetData method
+      }
+      {$endif}
     end;
   end else
   begin
@@ -4043,6 +4135,64 @@ begin
   begin
     Result := @CC;
   end;
+end;
+
+function TProcedureSignature.GetData(var AData: TSignatureData;
+  const AAttrData: Pointer): Integer;
+var
+  i: Integer;
+  LParam: PProcedureParam;
+  {$ifdef WEAKREF}
+  LAttrData: PAttrData;
+  {$endif}
+begin
+  if (not IsValid) then
+  begin
+    AData.ArgumentCount := -1;
+    Result := -1;
+    Exit;
+  end;
+
+  AData.MethodKind := TMethodKind(ResultType.Assigned);
+  AData.HasSelf := False;
+  AData.CallConv := CC;
+  Result := 0;
+  LParam := @Params;
+  for i := 0 to Integer(ParamCount) - 1 do
+  begin
+    if (not (pfResult in LParam.Flags)) then
+    begin
+      AData.Arguments[Result] := LParam.Data;
+      Inc(Result);
+    end;
+
+    LParam := LParam.Tail;
+  end;
+  AData.ArgumentCount := Result;
+
+  // ResultData
+  AData.Result := ResultData;
+  {$ifdef WEAKREF}
+  {
+    Attention!
+    RTTI does not contain Result reference
+    Therefore, the only correct way to specify unsafe result is this:
+    [Unsafe] TProcedureType = function ... unsafe;
+  }
+  if (Assigned(AData.Result.TypeInfo)) and
+    (AData.Result.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
+  begin
+    LAttrData := AAttrData;
+    if (Assigned(LAttrData)) then
+    begin
+      AData.Result.Reference := LAttrData.Reference;
+      if (AData.Result.Reference = rfWeak) then
+      begin
+        AData.Result.Reference := rfDefault;
+      end;
+    end;
+  end;
+  {$endif}
 end;
 {$ifend .FPC.EXTENDEDRTTI}
 
@@ -4192,19 +4342,101 @@ begin
   Result := GetAttrDataRec.Value;
 end;
 
-function TVmtMethodSignature.GetResultData: TResultData;
+procedure TVmtMethodSignature.InternalGetResultData(var AResult: TResultData;
+  const AHasResultParam: Integer);
+{$ifdef WEAKREF}
+var
+  i: Integer;
+  LParam: PVmtMethodParam;
+{$endif}
 begin
-  Result.TypeInfo := ResultType.Value;
-  Result.TypeName := nil;
-  Result.Reference := rfDefault;
-  if (Assigned(Result.TypeInfo)) then
+  AResult.TypeInfo := ResultType.Value;
+  AResult.TypeName := nil;
+  AResult.Reference := rfDefault;
+  if (Assigned(AResult.TypeInfo)) then
   begin
-    Result.Name := PShortStringHelper(@SHORTSTR_RESULT);
-    {Result.Reference ToDo}
+    AResult.Name := PShortStringHelper(@SHORTSTR_RESULT);
+
+    {$ifdef WEAKREF}
+    if (AResult.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
+    begin
+      if (AHasResultParam >= 0) then
+      begin
+        if (AHasResultParam = 0) then
+        begin
+          AResult.Reference := rfUnsafe;
+        end;
+      end else
+      begin
+        AResult.Reference := rfUnsafe;
+        LParam := @Params;
+        for i := 0 to Integer(ParamCount) - 1 do
+        begin
+          if (pfResult in LParam.Flags) then
+          begin
+            AResult.Reference := rfDefault;
+            Break;
+          end;
+
+          LParam := LParam.Tail;
+        end;
+      end;
+    end;
+    {$endif}
   end else
   begin
-    Result.Name := nil;
+    AResult.Name := nil;
   end;
+end;
+
+function TVmtMethodSignature.GetResultData: TResultData;
+begin
+  InternalGetResultData(Result, -1);
+end;
+
+function TVmtMethodSignature.GetData(var AData: TSignatureData; const AMethodKind: TMethodKind;
+  const AHasSelf: Boolean): Integer;
+var
+  i, LCount: Integer;
+  LParam: PVmtMethodParam;
+  LHasResultParam: Boolean;
+begin
+  AData.MethodKind := AMethodKind;
+  AData.HasSelf := AHasSelf;
+  AData.CallConv := CC;
+
+  // arguments
+  Result := 0;
+  LParam := @Params;
+  LCount := ParamCount;
+  if (AHasSelf) then
+  begin
+    LParam := LParam.Tail;
+    Dec(LCount);
+  end;
+  LHasResultParam := False;
+  for i := 0 to LCount - 1 do
+  begin
+    if (pfResult in LParam.Flags) then
+    begin
+      LHasResultParam := True;
+    end else
+    begin
+      AData.Arguments[Result] := LParam.Data;
+      Inc(Result);
+    end;
+
+    LParam := LParam.Tail;
+  end;
+  AData.ArgumentCount := Result;
+
+  // ResultData
+  InternalGetResultData(AData.Result, Ord(LHasResultParam));
+end;
+
+function TVmtMethodSignature.GetData(var AData: TSignatureData): Integer;
+begin
+  Result := GetData(AData, TMethodKind(ResultType.Assigned), True);
 end;
 
 
@@ -4274,7 +4506,7 @@ end;
 
 function TVmtMethodExEntry.GetIsClassMethod: Boolean;
 begin
-  Result := (Flags and 1 <> 0) or (Flags and (4 or 2) = 0);
+  Result := IsStatic or (Flags and 1{mfClassMethod} <> 0);
 end;
 
 function TVmtMethodExEntry.GetHasSelf: Boolean;
@@ -4332,6 +4564,26 @@ function TVmtMethodExEntry.GetTail: Pointer;
 begin
   Result := @Self;
   Inc(NativeUInt(Result), SizeOf(Self));
+end;
+
+function TVmtMethodExEntry.GetData(var AData: TSignatureData): Integer;
+var
+  LEntry: PVmtMethodEntry;
+  LSignature: PVmtMethodSignature;
+begin
+  LEntry := Entry;
+  if (Assigned(LEntry)) then
+  begin
+    LSignature := LEntry.Signature;
+    if (Assigned(LSignature)) then
+    begin
+      Result := LSignature.GetData(AData, MethodKind, HasSelf);
+      Exit;
+    end;
+  end;
+
+  AData.ArgumentCount := -1;
+  Result := -1;
 end;
 
 
@@ -4415,6 +4667,42 @@ end;
 
 { TRecordTypeMethod }
 
+function TRecordTypeMethod.GetMemberVisibility: TMemberVisibility;
+begin
+  Result := TMemberVisibility((Flags shr 2) and 3);
+end;
+
+function TRecordTypeMethod.GetMethodKind: TMethodKind;
+label
+  check_result;
+var
+  LSignature: PProcedureSignature;
+begin
+  case (Cardinal(Flags) and 3) of
+    0:
+    begin
+      Result := mkProcedure;
+      goto check_result;
+    end;
+    1:
+    begin
+      Result := mkClassProcedure;
+    check_result:
+      LSignature := Signature;
+      if (Assigned(LSignature)) and (LSignature.ResultType.Assigned) then
+      begin
+        Inc(Result);
+      end;
+    end;
+    2:
+    begin
+      Result := mkConstructor;
+    end;
+  else
+    Result := mkOperatorOverload;
+  end;
+end;
+
 function TRecordTypeMethod.GetSignature: PProcedureSignature;
 begin
   Result := Name.Tail;
@@ -4433,6 +4721,47 @@ end;
 function TRecordTypeMethod.GetTail: Pointer;
 begin
   Result := GetAttrDataRec.Tail;
+end;
+
+function TRecordTypeMethod.GetData(var AData: TSignatureData): Integer;
+var
+  LSignature: PProcedureSignature;
+  LAttrData: PAttrData;
+  {$ifdef WEAKREF}
+  LTypeInfo: PTypeInfo;
+  {$endif}
+begin
+  LSignature := Signature;
+  if (Assigned(LSignature)) then
+  begin
+    LAttrData := nil;
+    {$ifdef WEAKREF}
+    {
+      Attention!
+      RTTI does not contain Result reference
+      Therefore, the only correct way to specify unsafe result is this:
+      [Result: Unsafe] function ...
+    }
+    LTypeInfo := LSignature.ResultType.Value;
+    if (Assigned(LTypeInfo)) and
+      (LTypeInfo.Kind in REFERENCED_TYPE_KINDS) then
+    begin
+      LAttrData := AttrData;
+    end;
+    {$endif}
+
+    Result := LSignature.GetData(AData, LAttrData);
+    if (Result >= 0) then
+    begin
+      AData.MethodKind := MethodKind;
+      AData.HasSelf := (AData.MethodKind in [mkProcedure, mkFunction]);
+    end;
+
+    Exit;
+  end;
+
+  AData.ArgumentCount := -1;
+  Result := -1;
 end;
 
 
@@ -4670,24 +4999,62 @@ begin
   Result := LPtr;
 end;
 
-function TMethodSignature.GetResultData: TResultData;
+function TMethodSignature.InternalGetResultData(const APtr: PByte; var AResult: TResultData): PByte;
 var
   LPtr: PByte;
+  {$ifdef WEAKREF}
+  LAttrData: PAttrData;
+  {$endif}
 begin
-  Result.Reference := rfDefault;
+  AResult.Reference := rfDefault;
   if (MethodKind <> mkFunction) then
   begin
-    Result.Name := nil;
-    Result.TypeInfo := nil;
-    Result.TypeName := nil;
+    AResult.Name := nil;
+    AResult.TypeInfo := nil;
+    AResult.TypeName := nil;
+    Result := APtr;
     Exit;
   end;
 
-  LPtr := GetParamsTail;
-  Result.Name := PShortStringHelper(@SHORTSTR_RESULT);
-  Result.TypeName := Pointer(LPtr);
-  Result.TypeInfo := PTypeInfoRef(PPointer(Result.TypeName.Tail)^).Value;
-  {Result.Reference ToDo}
+  LPtr := APtr;
+  if (not Assigned(LPtr)) then
+  begin
+    LPtr := GetParamsTail;
+  end;
+
+  AResult.Name := PShortStringHelper(@SHORTSTR_RESULT);
+  AResult.TypeName := Pointer(LPtr);
+  LPtr := PShortStringHelper(LPtr).Tail;
+  AResult.TypeInfo := PTypeInfoRef(PPointer(LPtr)^).Value;
+  Inc(LPtr, SizeOf(Pointer));
+  Result := LPtr;
+
+  {$ifdef WEAKREF}
+  {
+    Attention!
+    RTTI does not contain Result reference
+    Therefore, the only correct way to specify unsafe result is this:
+    [Unsafe] TMethodType = function ... unsafe of object;
+  }
+  if (Assigned(AResult.TypeInfo)) and
+    (AResult.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
+  begin
+    LAttrData := PMethodTypeData(@Self).AttrData;
+    if (Assigned(LAttrData)) then
+    begin
+      AResult.Reference := LAttrData.Reference;
+      if (AResult.Reference = rfWeak) then
+      begin
+        AResult.Reference := rfDefault;
+      end;
+    end;
+  end;
+  {$endif}
+end;
+
+function TMethodSignature.GetResultData: TResultData;
+begin
+  InternalGetResultData(nil, Result);
 end;
 
 function TMethodSignature.GetResultTail: Pointer;
@@ -4716,6 +5083,55 @@ begin
   LPtr := GetResultTail;
   Inc(LPtr, SizeOf(TCallConv));
   Result := Pointer(LPtr);
+end;
+
+function TMethodSignature.GetData(var AData: TSignatureData): Integer;
+var
+  i: Integer;
+  LPtr: PByte;
+  LParam: PMethodParam;
+  LArgument: PArgumentData;
+begin
+  // mkProcedure/mkFunction
+  AData.MethodKind := MethodKind;
+  AData.HasSelf := True;
+
+  // arguments
+  Result := 0;
+  LParam := @ParamList;
+  for i := 0 to Integer(ParamCount) - 1 do
+  begin
+    if (not (pfResult in LParam.Flags)) then
+    begin
+      LArgument := @AData.Arguments[Result];
+      LArgument.Name := @LParam.ParamName;
+      LArgument.TypeInfo := nil;
+      LArgument.TypeName := LParam.TypeName;
+      if (Assigned(LArgument.TypeName)) and (LArgument.TypeName.Length = 0) then
+      begin
+        LArgument.TypeName := nil;
+      end;
+      LArgument.Flags := LParam.Flags;
+      Inc(Result);
+    end;
+
+    LParam := LParam.Tail;
+  end;
+  AData.ArgumentCount := Result;
+
+  // ResultData
+  LPtr := InternalGetResultData(Pointer(LParam), AData.Result);
+
+  // CallConv
+  AData.CallConv := PCallConv(LPtr)^;
+  Inc(LPtr, SizeOf(TCallConv));
+
+  // TypeInfo
+  for i := 0 to Result - 1 do
+  begin
+    AData.Arguments[i].TypeInfo := PTypeInfoRef(PPointer(LPtr)^).Value;
+    Inc(LPtr, SizeOf(Pointer));
+  end;
 end;
 
 
