@@ -1,3 +1,31 @@
+
+{ RTTI defines }
+
+{$ifdef RTTION_ALL}
+  {$define RTTION}
+  {$define RTTION_FIELDS_ALL}
+  {$define RTTION_PROPERTIES_ALL}
+  {$define RTTION_METHODS_ALL}
+{$endif}
+{$ifdef RTTION_FIELDS_ALL}
+  {$define RTTION_FIELDS}
+{$endif}
+{$ifdef RTTION_PROPERTIES_ALL}
+  {$define RTTION_PROPERTIES}
+{$endif}
+{$ifdef RTTION_METHODS_ALL}
+  {$define RTTION_METHODS}
+{$endif}
+{$ifdef RTTION}
+  {$define RTTION_INTERFACE}
+  {$define RTTION_FIELDS}
+  {$define RTTION_PROPERTIES}
+  {$define RTTION_METHODS}
+{$endif}
+
+
+{ Compiler options }
+
 {$ifdef FPC}
   {$mode delphiunicode}
   {$asmmode intel}
@@ -93,4 +121,32 @@
 {$ifend}
 {$ifdef KOL_MCK}
   {$define KOL}
+{$endif}
+
+
+{ RTTI including }
+
+{$ifdef RTTION_INTERFACE}
+  {$M+}
+{$endif}
+{$ifdef RTTION_FIELDS}
+  {$ifdef RTTION_FIELDS_ALL}
+    {$RTTI EXPLICIT FIELDS([vcPrivate, vcProtected, vcPublic, vcPublished])}
+  {$else}
+    {$RTTI EXPLICIT FIELDS([vcPublic, vcPublished])}
+  {$endif}
+{$endif}
+{$ifdef RTTION_PROPERTIES}
+  {$ifdef RTTION_PROPERTIES_ALL}
+    {$RTTI EXPLICIT PROPERTIES([vcPrivate, vcProtected, vcPublic, vcPublished])}
+  {$else}
+    {$RTTI EXPLICIT PROPERTIES([vcPublic, vcPublished])}
+  {$endif}
+{$endif}
+{$ifdef RTTION_METHODS}
+  {$ifdef RTTION_METHODS_ALL}
+    {$RTTI EXPLICIT METHODS([vcPrivate, vcProtected, vcPublic, vcPublished])}
+  {$else}
+    {$RTTI EXPLICIT METHODS([vcPublic, vcPublished])}
+  {$endif}
 {$endif}

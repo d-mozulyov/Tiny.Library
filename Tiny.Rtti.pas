@@ -797,34 +797,47 @@ type
   PParamData = ^TParamData;
   TParamData = packed object
     Name: PShortStringHelper;
+    Reference: TReference;
     TypeInfo: PTypeInfo;
     TypeName: PShortStringHelper;
   end;
 
-  PReferencedParamData = ^TReferencedParamData;
-  TReferencedParamData = packed object(TParamData)
-    Reference: TReference;
-  end;
-
-  PArgumentData = ^TArgumentData;
-  TArgumentData = packed object(TParamData)
-    Flags: TParamFlags;
-  end;
-
   PResultData = ^TResultData;
-  TResultData = packed object(TReferencedParamData)
+  TResultData = packed object(TParamData)
   protected
+    {$ifdef WEAKREF}
+    procedure InitReference(const AAttrData: PAttrData);
+    {$endif}
     function GetAssigned: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
   public
     property Assigned: Boolean read GetAssigned;
   end;
 
-  PFieldData = ^TFieldData;
-  TFieldData = packed object(TReferencedParamData)
-    Visibility: TMemberVisibility;
+  PAttributedParamData = ^TAttributedParamData;
+  TAttributedParamData = packed object(TParamData)
+  protected
+    {$ifdef WEAKREF}
+    procedure InitReference;
+    {$endif}
+  public
     {$ifdef EXTENDEDRTTI}
     AttrData: PAttrData;
     {$endif}
+  end;
+
+  PArgumentData = ^TArgumentData;
+  TArgumentData = packed object(TAttributedParamData)
+  protected
+    {$ifdef WEAKREF}
+    procedure InitReference; {$ifdef INLINESUPPORT}inline;{$endif}
+    {$endif}
+  public
+    Flags: TParamFlags;
+  end;
+
+  PFieldData = ^TFieldData;
+  TFieldData = packed object(TAttributedParamData)
+    Visibility: TMemberVisibility;
     Offset: Cardinal;
   end;
 
@@ -3677,10 +3690,58 @@ end;
 
 { TResultData }
 
+{$ifdef WEAKREF}
+procedure TResultData.InitReference(const AAttrData: PAttrData);
+begin
+  Reference := rfDefault;
+
+  if (System.Assigned(AAttrData)) and (System.Assigned(TypeInfo)) and
+    (TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
+  begin
+    if (AAttrData.Reference = rfUnsafe) then
+    begin
+      Reference := rfUnsafe;
+    end;
+  end;
+end;
+{$endif}
+
 function TResultData.GetAssigned: Boolean;
 begin
   Result := System.Assigned(Name);
 end;
+
+
+{ TAttributedParamData }
+
+{$ifdef WEAKREF}
+procedure TAttributedParamData.InitReference;
+begin
+  Reference := rfDefault;
+
+  if (System.Assigned(AttrData)) and (Assigned(TypeInfo)) and
+    (TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
+  begin
+    Reference := AttrData.Reference;
+  end;
+end;
+{$endif}
+
+
+{ TArgumentData }
+
+{$ifdef WEAKREF}
+procedure TArgumentData.InitReference;
+begin
+  if (pfConst in Flags) then
+  begin
+    Reference := rfDefault;
+  end else
+  begin
+    inherited;
+  end;
+end;
+{$endif}
 
 
 { TPropInfo }
@@ -3843,6 +3904,14 @@ begin
   Result.TypeInfo := ParamType;
   Result.TypeName := TypeName;
   Result.Flags := Flags;
+  {$ifdef EXTENDEDRTTI}
+  Result.AttrData := AttrData;
+  {$endif}
+  {$ifdef WEAKREF}
+  Result.InitReference;
+  {$else}
+  Result.Reference := rfDefault;
+  {$endif}
 end;
 
 function TIntfMethodParam.GetTail: Pointer;
@@ -3875,9 +3944,6 @@ end;
 function TIntfMethodSignature.GetResultData: TResultData;
 var
   LPtr: PByte;
-  {$ifdef WEAKREF}
-  LAttrData: PAttrData;
-  {$endif}
 begin
   Result.Reference := rfDefault;
   if (Kind = 1) then
@@ -3900,15 +3966,7 @@ begin
       if (Assigned(Result.TypeInfo)) and
         (Result.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
       begin
-        LAttrData := AttrData;
-        if (Assigned(LAttrData)) then
-        begin
-          Result.Reference := LAttrData.Reference;
-          if (Result.Reference = rfWeak) then
-          begin
-            Result.Reference := rfDefault;
-          end;
-        end;
+        Result.InitReference(AttrData);
       end;
       {$endif}
 
@@ -4073,6 +4131,14 @@ begin
   Result.TypeInfo := ParamType.Value;
   Result.TypeName := nil;
   Result.Flags := Flags;
+  {$ifdef EXTENDEDRTTI}
+  Result.AttrData := AttrData;
+  {$endif}
+  {$ifdef WEAKREF}
+  Result.InitReference;
+  {$else}
+  Result.Reference := rfDefault;
+  {$endif}
 end;
 
 function TProcedureParam.GetTail: Pointer;
@@ -4142,9 +4208,6 @@ function TProcedureSignature.GetData(var AData: TSignatureData;
 var
   i: Integer;
   LParam: PProcedureParam;
-  {$ifdef WEAKREF}
-  LAttrData: PAttrData;
-  {$endif}
 begin
   if (not IsValid) then
   begin
@@ -4179,19 +4242,7 @@ begin
     Therefore, the only correct way to specify unsafe result is this:
     [Unsafe] TProcedureType = function ... unsafe;
   }
-  if (Assigned(AData.Result.TypeInfo)) and
-    (AData.Result.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
-  begin
-    LAttrData := AAttrData;
-    if (Assigned(LAttrData)) then
-    begin
-      AData.Result.Reference := LAttrData.Reference;
-      if (AData.Result.Reference = rfWeak) then
-      begin
-        AData.Result.Reference := rfDefault;
-      end;
-    end;
-  end;
+  AData.Result.InitReference(AAttrData);
   {$endif}
 end;
 {$ifend .FPC.EXTENDEDRTTI}
@@ -4287,6 +4338,11 @@ begin
   Result.TypeName := nil;
   Result.Visibility := Visibility;
   Result.AttrData := AttrData;
+  {$ifdef WEAKREF}
+  Result.InitReference;
+  {$else}
+  Result.Reference := rfDefault;
+  {$endif}
 end;
 
 function TVmtFieldExEntry.GetTail: Pointer;
@@ -4313,6 +4369,14 @@ begin
   Result.TypeInfo := ParamType.Value;
   Result.TypeName := nil;
   Result.Flags := Flags;
+  {$ifdef EXTENDEDRTTI}
+  Result.AttrData := AttrData;
+  {$endif}
+  {$ifdef WEAKREF}
+  Result.InitReference;
+  {$else}
+  Result.Reference := rfDefault;
+  {$endif}
 end;
 
 function TVmtMethodParam.GetTail: Pointer;
@@ -4350,9 +4414,9 @@ var
   LParam: PVmtMethodParam;
 {$endif}
 begin
+  AResult.Reference := rfDefault;
   AResult.TypeInfo := ResultType.Value;
   AResult.TypeName := nil;
-  AResult.Reference := rfDefault;
   if (Assigned(AResult.TypeInfo)) then
   begin
     AResult.Name := PShortStringHelper(@SHORTSTR_RESULT);
@@ -4470,7 +4534,7 @@ end;
 
 function TVmtMethodExEntry.GetIsSpecial: Boolean;
 begin
-  Result := (Flags and 4 <> 0);
+  Result := (Flags and 4{mfSpecial} <> 0);
 end;
 
 function TVmtMethodExEntry.GetIsAbstract: Boolean;
@@ -4506,8 +4570,8 @@ end;
 
 function TVmtMethodExEntry.GetIsClassMethod: Boolean;
 begin
-  Result := IsStatic or (Flags and 1{mfClassMethod} <> 0);
-end;
+  Result := IsStatic or (Flags and (4{mfSpecial} or 1{mfClassMethod}) = 1{mfClassMethod});
+ end;
 
 function TVmtMethodExEntry.GetHasSelf: Boolean;
 begin
@@ -4625,20 +4689,13 @@ begin
   Result.Name := @Name;
   Result.TypeInfo := Field.TypeRef.Value;
   Result.TypeName := nil;
-  Result.Reference := rfDefault;
   Result.Visibility := Visibility;
-  Result.AttrData := AttrData;
   Result.Offset := Cardinal(Field.FldOffset);
-
+  Result.AttrData := AttrData;
   {$ifdef WEAKREF}
-  if (Assigned(Result.AttrData)) then
-  begin
-    if (Assigned(Result.TypeInfo)) and
-      (Result.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
-    begin
-      Result.Reference := Result.AttrData.Reference;
-    end;
-  end;
+  Result.InitReference;
+  {$else}
+  Result.Reference := rfDefault;
   {$endif}
 end;
 
@@ -5002,14 +5059,12 @@ end;
 function TMethodSignature.InternalGetResultData(const APtr: PByte; var AResult: TResultData): PByte;
 var
   LPtr: PByte;
-  {$ifdef WEAKREF}
-  LAttrData: PAttrData;
-  {$endif}
 begin
   AResult.Reference := rfDefault;
   if (MethodKind <> mkFunction) then
   begin
     AResult.Name := nil;
+    AResult.Reference := rfDefault;
     AResult.TypeInfo := nil;
     AResult.TypeName := nil;
     Result := APtr;
@@ -5029,6 +5084,7 @@ begin
   Inc(LPtr, SizeOf(Pointer));
   Result := LPtr;
 
+  AResult.Reference := rfDefault;
   {$ifdef WEAKREF}
   {
     Attention!
@@ -5039,15 +5095,7 @@ begin
   if (Assigned(AResult.TypeInfo)) and
     (AResult.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
   begin
-    LAttrData := PMethodTypeData(@Self).AttrData;
-    if (Assigned(LAttrData)) then
-    begin
-      AResult.Reference := LAttrData.Reference;
-      if (AResult.Reference = rfWeak) then
-      begin
-        AResult.Reference := rfDefault;
-      end;
-    end;
+    AResult.InitReference(PMethodTypeData(@Self).AttrData);
   end;
   {$endif}
 end;
@@ -5086,6 +5134,24 @@ begin
 end;
 
 function TMethodSignature.GetData(var AData: TSignatureData): Integer;
+{$ifdef EXTENDEDRTTI}
+var
+  LAttrDataRec: PAttrData;
+  LSignature: PProcedureSignature;
+begin
+  LAttrDataRec := PMethodTypeData(@Self).GetAttrDataRec;
+  LSignature := PPointer(NativeUInt(LAttrDataRec) - SizeOf(Pointer))^;
+  if (not Assigned(LSignature)) then
+  begin
+    Result := -1;
+    AData.ArgumentCount := -1;
+    Exit;
+  end;
+
+  Result := LSignature.GetData(AData, LAttrDataRec.Value);
+  AData.HasSelf := True;
+end;
+{$else}
 var
   i: Integer;
   LPtr: PByte;
@@ -5105,6 +5171,7 @@ begin
     begin
       LArgument := @AData.Arguments[Result];
       LArgument.Name := @LParam.ParamName;
+      LArgument.Reference := rfDefault;
       LArgument.TypeInfo := nil;
       LArgument.TypeName := LParam.TypeName;
       if (Assigned(LArgument.TypeName)) and (LArgument.TypeName.Length = 0) then
@@ -5112,6 +5179,7 @@ begin
         LArgument.TypeName := nil;
       end;
       LArgument.Flags := LParam.Flags;
+
       Inc(Result);
     end;
 
@@ -5133,6 +5201,7 @@ begin
     Inc(LPtr, SizeOf(Pointer));
   end;
 end;
+{$endif}
 
 
 { TMethodTypeData}
