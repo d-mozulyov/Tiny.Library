@@ -58,6 +58,12 @@ type
     {$ifend}
     PWord = ^Word;
   {$endif}
+  {$if not Defined(FPC) and (CompilerVersion < 21)}
+  TDate = type TDateTime;
+  TTime = type TDateTime;
+  {$ifend}
+  PDate = ^TDate;
+  PTime = ^TTime;
   {$if SizeOf(Extended) >= 10}
     {$define EXTENDEDSUPPORT}
   {$ifend}
@@ -301,6 +307,7 @@ type
     property Tail: Pointer read GetTail;
   end;
 
+  string0 = {$ifdef SHORTSTRSUPPORT}string[0]{$else}array[0..0] of AnsiChar{$endif};
   string1 = {$ifdef SHORTSTRSUPPORT}string[1]{$else}array[0..1] of AnsiChar{$endif};
   string2 = {$ifdef SHORTSTRSUPPORT}string[2]{$else}array[0..2] of AnsiChar{$endif};
   string3 = {$ifdef SHORTSTRSUPPORT}string[3]{$else}array[0..3] of AnsiChar{$endif};
@@ -1386,6 +1393,28 @@ type
     {$endif}
   end;
 
+  PSetTypeData = ^TSetTypeData;
+  TSetTypeData = packed object
+  protected
+    {$ifdef EXTENDEDRTTI}
+    function GetAttrData: PAttrData; {$ifdef INLINESUPPORT}inline;{$endif}
+    {$endif}
+    function GetSize: Integer;
+    function GetAdjustment: Integer;
+  public
+    SetTypeOrSize: Byte;
+    CompType: PTypeInfoRef;
+    {$ifdef EXTENDEDRTTI}
+    AttrDataRec: TAttrData;
+    {// Tokyo +
+     SetLoByte: Byte;
+     SetSize: Byte;}
+    property AttrData: PAttrData read GetAttrData;
+    {$endif}
+    property Size: Integer{Byte or -1} read GetSize;
+    property Adjustment: Integer{Byte or -1} read GetAdjustment;
+  end;
+
   PMethodParam = ^TMethodParam;
   TMethodParam = packed object
   protected
@@ -1581,6 +1610,7 @@ type
       tkUnknown: (
         case TTypeKind of
           tkEnumeration: (EnumerationData: TEnumerationTypeData);
+          tkSet: (SetData: TSetTypeData);
           tkMethod: (
             case Integer of
               0: (MethodSignature: TMethodSignature);
@@ -1596,21 +1626,21 @@ type
       {$ifdef UNICODE}
       tkUString,
       {$endif}
-      {$ifdef WIDESTRSUPPORT}
+      {.$ifdef WIDESTRSUPPORT}
       tkWString,
-      {$endif}
+      {.$endif}
       tkVariant: ({$ifdef EXTENDEDRTTI}AttrData: TAttrData{$endif});
-      {$ifdef ANSISTRSUPPORT}
+      {.$ifdef ANSISTRSUPPORT}
       tkLString: (
-        CodePage: Word;
+        {$ifdef INTERNALCODEPAGE}CodePage: Word;{$endif}
         {$ifdef EXTENDEDRTTI}LStrAttrData: TAttrData{$endif});
-      {$endif}
+      {.$endif}
       tkInteger,
-      {$ifdef ANSISTRSUPPORT}
+      {.$ifdef ANSISTRSUPPORT}
       tkChar,
-      {$endif}
+      {.$endif}
       tkEnumeration, {EnumerationData: TEnumerationTypeData;}
-      tkSet, tkWChar: (
+      tkWChar: (
         OrdType: TOrdType;
         case TTypeKind of
           tkInteger, tkChar, tkEnumeration, tkWChar: (
@@ -1624,22 +1654,25 @@ type
                 NameList: ShortStringHelper;
                 {EnumUnitName: ShortStringHelper;
                 EnumAttrData: TAttrData;}
-                ___: packed record end;));
+                ___: packed record end;)
+              );
           tkSet: (
-            {$if (not Defined(FPC)) and (CompilerVersion >= 33)}
-            SetTypeOrSize: Byte;
-            {$ifend}
-            CompType: PTypeInfoRef;
-            {$ifdef EXTENDEDRTTI}SetAttrData: TAttrData;{$endif}
-            ____: packed record end;));
+           ____: packed record end;));
+      tkSet: (
+        SetTypeOrSize: Byte;
+        CompType: PTypeInfoRef;
+        {$ifdef EXTENDEDRTTI}SetAttrData: TAttrData;{$endif}
+        {// Tokyo +
+         SetLoByte: Byte;
+         SetSize: Byte;});
       tkFloat: (
         FloatType: TFloatType;
         {$ifdef EXTENDEDRTTI}FloatAttrData: TAttrData;{$endif});
-      {$ifdef SHORTSTRSUPPORT}
+      {.$ifdef SHORTSTRSUPPORT}
       tkString: (
         MaxLength: Byte;
         {$ifdef EXTENDEDRTTI}StrAttrData: TAttrData{$endif});
-      {$endif}
+      {.$endif}
       tkClass: ( {ClassData: TClassTypeData;}
         ClassType: TClass; // most data for instance types is in VMT offsets
         ParentInfo: PTypeInfoRef;
@@ -1715,22 +1748,22 @@ type
         ProcAttrData: TAttrData;);
       {$endif}
       {$ifdef FPC}
-        tkHelper:
-          (HelperParent: PTypeInfo;
-           ExtendedInfo: PTypeInfo;
-           HelperProps: SmallInt;
-           HelperUnit: ShortStringHelper;
-           {here the properties follow as array of TPropInfo});
-        tkProcVar:
-          (ProcSig: TProcedureSignature);
-        tkQWord:
-          (MinQWordValue, MaxQWordValue: QWord);
-       tkInterfaceRaw:
-          (RawIntfParent: PTypeInfoRef;
-           RawIntfFlags: TIntfFlags;
-           IID: TGUID;
-           RawIntfUnit: ShortStringHelper;
-           IIDStr: ShortStringHelper;);
+      tkHelper: (
+        HelperParent: PTypeInfo;
+        ExtendedInfo: PTypeInfo;
+        HelperProps: SmallInt;
+        HelperUnit: ShortStringHelper;
+        {here the properties follow as array of TPropInfo});
+      tkProcVar: (
+        ProcSig: TProcedureSignature);
+      tkQWord: (
+        MinQWordValue, MaxQWordValue: QWord);
+      tkInterfaceRaw: (
+        RawIntfParent: PTypeInfoRef;
+        RawIntfFlags: TIntfFlags;
+        IID: TGUID;
+        RawIntfUnit: ShortStringHelper;
+        IIDStr: ShortStringHelper;);
       {$endif}
   end;
 
@@ -1785,250 +1818,38 @@ type
     {009} rgMetaTypeRef,
     {000} rgVariant,
     {011} rgFunction,
-    {012} rg012,
-    {013} rg013,
-    {014} rg014,
-    {015} rg015,
-    {016} rg016,
-    {017} rg017,
-    {018} rg018,
-    {019} rg019,
-    {020} rg020,
-    {021} rg021,
-    {022} rg022,
-    {023} rg023,
-    {024} rg024,
-    {025} rg025,
-    {026} rg026,
-    {027} rg027,
-    {028} rg028,
-    {029} rg029,
-    {030} rg030,
-    {031} rg031,
-    {032} rg032,
-    {033} rg033,
-    {034} rg034,
-    {035} rg035,
-    {036} rg036,
-    {037} rg037,
-    {038} rg038,
-    {039} rg039,
-    {040} rg040,
-    {041} rg041,
-    {042} rg042,
-    {043} rg043,
-    {044} rg044,
-    {045} rg045,
-    {046} rg046,
-    {047} rg047,
-    {048} rg048,
-    {049} rg049,
-    {050} rg050,
-    {051} rg051,
-    {052} rg052,
-    {053} rg053,
-    {054} rg054,
-    {055} rg055,
-    {056} rg056,
-    {057} rg057,
-    {058} rg058,
-    {059} rg059,
-    {060} rg060,
-    {061} rg061,
-    {062} rg062,
-    {063} rg063,
-    {064} rg064,
-    {065} rg065,
-    {066} rg066,
-    {067} rg067,
-    {068} rg068,
-    {069} rg069,
-    {070} rg070,
-    {071} rg071,
-    {072} rg072,
-    {073} rg073,
-    {074} rg074,
-    {075} rg075,
-    {076} rg076,
-    {077} rg077,
-    {078} rg078,
-    {079} rg079,
-    {080} rg080,
-    {081} rg081,
-    {082} rg082,
-    {083} rg083,
-    {084} rg084,
-    {085} rg085,
-    {086} rg086,
-    {087} rg087,
-    {088} rg088,
-    {089} rg089,
-    {090} rg090,
-    {091} rg091,
-    {092} rg092,
-    {093} rg093,
-    {094} rg094,
-    {095} rg095,
-    {096} rg096,
-    {097} rg097,
-    {098} rg098,
-    {099} rg099,
-    {100} rg100,
-    {101} rg101,
-    {102} rg102,
-    {103} rg103,
-    {104} rg104,
-    {105} rg105,
-    {106} rg106,
-    {107} rg107,
-    {108} rg108,
-    {109} rg109,
-    {110} rg110,
-    {111} rg111,
-    {112} rg112,
-    {113} rg113,
-    {114} rg114,
-    {115} rg115,
-    {116} rg116,
-    {117} rg117,
-    {118} rg118,
-    {119} rg119,
-    {120} rg120,
-    {121} rg121,
-    {122} rg122,
-    {123} rg123,
-    {124} rg124,
-    {125} rg125,
-    {126} rg126,
-    {127} rg127,
-    {128} rg128,
-    {129} rg129,
-    {130} rg130,
-    {131} rg131,
-    {132} rg132,
-    {133} rg133,
-    {134} rg134,
-    {135} rg135,
-    {136} rg136,
-    {137} rg137,
-    {138} rg138,
-    {139} rg139,
-    {140} rg140,
-    {141} rg141,
-    {142} rg142,
-    {143} rg143,
-    {144} rg144,
-    {145} rg145,
-    {146} rg146,
-    {147} rg147,
-    {148} rg148,
-    {149} rg149,
-    {150} rg150,
-    {151} rg151,
-    {152} rg152,
-    {153} rg153,
-    {154} rg154,
-    {155} rg155,
-    {156} rg156,
-    {157} rg157,
-    {158} rg158,
-    {159} rg159,
-    {160} rg160,
-    {161} rg161,
-    {162} rg162,
-    {163} rg163,
-    {164} rg164,
-    {165} rg165,
-    {166} rg166,
-    {167} rg167,
-    {168} rg168,
-    {169} rg169,
-    {170} rg170,
-    {171} rg171,
-    {172} rg172,
-    {173} rg173,
-    {174} rg174,
-    {175} rg175,
-    {176} rg176,
-    {177} rg177,
-    {178} rg178,
-    {179} rg179,
-    {180} rg180,
-    {181} rg181,
-    {182} rg182,
-    {183} rg183,
-    {184} rg184,
-    {185} rg185,
-    {186} rg186,
-    {187} rg187,
-    {188} rg188,
-    {189} rg189,
-    {190} rg190,
-    {191} rg191,
-    {192} rg192,
-    {193} rg193,
-    {194} rg194,
-    {195} rg195,
-    {196} rg196,
-    {197} rg197,
-    {198} rg198,
-    {199} rg199,
-    {200} rg200,
-    {201} rg201,
-    {202} rg202,
-    {203} rg203,
-    {204} rg204,
-    {205} rg205,
-    {206} rg206,
-    {207} rg207,
-    {208} rg208,
-    {209} rg209,
-    {210} rg210,
-    {211} rg211,
-    {212} rg212,
-    {213} rg213,
-    {214} rg214,
-    {215} rg215,
-    {216} rg216,
-    {217} rg217,
-    {218} rg218,
-    {219} rg219,
-    {220} rg220,
-    {221} rg221,
-    {222} rg222,
-    {223} rg223,
-    {224} rg224,
-    {225} rg225,
-    {226} rg226,
-    {227} rg227,
-    {228} rg228,
-    {229} rg229,
-    {230} rg230,
-    {231} rg231,
-    {232} rg232,
-    {233} rg233,
-    {234} rg234,
-    {235} rg235,
-    {236} rg236,
-    {237} rg237,
-    {238} rg238,
-    {239} rg239,
-    {240} rg240,
-    {241} rg241,
-    {242} rg242,
-    {243} rg243,
-    {244} rg244,
-    {245} rg245,
-    {246} rg246,
-    {247} rg247,
-    {248} rg248,
-    {249} rg249,
-    {250} rg250,
-    {251} rg251,
-    {252} rg252,
-    {253} rg253,
-    {254} rg254,
-    {255} rg255);
+    // Reserved
+    {012} rg012, {013} rg013, {014} rg014, {015} rg015,
+    {016} rg016, {017} rg017, {018} rg018, {019} rg019, {020} rg020, {021} rg021, {022} rg022, {023} rg023,
+    {024} rg024, {025} rg025, {026} rg026, {027} rg027, {028} rg028, {029} rg029, {030} rg030, {031} rg031,
+    {032} rg032, {033} rg033, {034} rg034, {035} rg035, {036} rg036, {037} rg037, {038} rg038, {039} rg039,
+    {040} rg040, {041} rg041, {042} rg042, {043} rg043, {044} rg044, {045} rg045, {046} rg046, {047} rg047,
+    {048} rg048, {049} rg049, {050} rg050, {051} rg051, {052} rg052, {053} rg053, {054} rg054, {055} rg055,
+    {056} rg056, {057} rg057, {058} rg058, {059} rg059, {060} rg060, {061} rg061, {062} rg062, {063} rg063,
+    {064} rg064, {065} rg065, {066} rg066, {067} rg067, {068} rg068, {069} rg069, {070} rg070, {071} rg071,
+    {072} rg072, {073} rg073, {074} rg074, {075} rg075, {076} rg076, {077} rg077, {078} rg078, {079} rg079,
+    {080} rg080, {081} rg081, {082} rg082, {083} rg083, {084} rg084, {085} rg085, {086} rg086, {087} rg087,
+    {088} rg088, {089} rg089, {090} rg090, {091} rg091, {092} rg092, {093} rg093, {094} rg094, {095} rg095,
+    {096} rg096, {097} rg097, {098} rg098, {099} rg099, {100} rg100, {101} rg101, {102} rg102, {103} rg103,
+    {104} rg104, {105} rg105, {106} rg106, {107} rg107, {108} rg108, {109} rg109, {110} rg110, {111} rg111,
+    {112} rg112, {113} rg113, {114} rg114, {115} rg115, {116} rg116, {117} rg117, {118} rg118, {119} rg119,
+    {120} rg120, {121} rg121, {122} rg122, {123} rg123, {124} rg124, {125} rg125, {126} rg126, {127} rg127,
+    {128} rg128, {129} rg129, {130} rg130, {131} rg131, {132} rg132, {133} rg133, {134} rg134, {135} rg135,
+    {136} rg136, {137} rg137, {138} rg138, {139} rg139, {140} rg140, {141} rg141, {142} rg142, {143} rg143,
+    {144} rg144, {145} rg145, {146} rg146, {147} rg147, {148} rg148, {149} rg149, {150} rg150, {151} rg151,
+    {152} rg152, {153} rg153, {154} rg154, {155} rg155, {156} rg156, {157} rg157, {158} rg158, {159} rg159,
+    {160} rg160, {161} rg161, {162} rg162, {163} rg163, {164} rg164, {165} rg165, {166} rg166, {167} rg167,
+    {168} rg168, {169} rg169, {170} rg170, {171} rg171, {172} rg172, {173} rg173, {174} rg174, {175} rg175,
+    {176} rg176, {177} rg177, {178} rg178, {179} rg179, {180} rg180, {181} rg181, {182} rg182, {183} rg183,
+    {184} rg184, {185} rg185, {186} rg186, {187} rg187, {188} rg188, {189} rg189, {190} rg190, {191} rg191,
+    {192} rg192, {193} rg193, {194} rg194, {195} rg195, {196} rg196, {197} rg197, {198} rg198, {199} rg199,
+    {200} rg200, {201} rg201, {202} rg202, {203} rg203, {204} rg204, {205} rg205, {206} rg206, {207} rg207,
+    {208} rg208, {209} rg209, {210} rg210, {211} rg211, {212} rg212, {213} rg213, {214} rg214, {215} rg215,
+    {216} rg216, {217} rg217, {218} rg218, {219} rg219, {220} rg220, {221} rg221, {222} rg222, {223} rg223,
+    {224} rg224, {225} rg225, {226} rg226, {227} rg227, {228} rg228, {229} rg229, {230} rg230, {231} rg231,
+    {232} rg232, {233} rg233, {234} rg234, {235} rg235, {236} rg236, {237} rg237, {238} rg238, {239} rg239,
+    {240} rg240, {241} rg241, {242} rg242, {243} rg243, {244} rg244, {245} rg245, {246} rg246, {247} rg247,
+    {248} rg248, {249} rg249, {250} rg250, {251} rg251, {252} rg252, {253} rg253, {254} rg254, {255} rg255);
   PRttiTypeGroups = ^TRttiTypeGroups;
   TRttiTypeGroups = set of TRttiTypeGroup;
 
@@ -2098,213 +1919,47 @@ type
     {049} rtMethod,
     {050} rtClosure,
     // Reserved
-    {051} rt051,
-    {052} rt052,
-    {053} rt053,
-    {054} rt054,
-    {055} rt055,
-    {056} rt056,
-    {057} rt057,
-    {058} rt058,
-    {059} rt059,
-    {060} rt060,
-    {061} rt061,
-    {062} rt062,
-    {063} rt063,
-    {064} rt064,
-    {065} rt065,
-    {066} rt066,
-    {067} rt067,
-    {068} rt068,
-    {069} rt069,
-    {070} rt070,
-    {071} rt071,
-    {072} rt072,
-    {073} rt073,
-    {074} rt074,
-    {075} rt075,
-    {076} rt076,
-    {077} rt077,
-    {078} rt078,
-    {079} rt079,
-    {080} rt080,
-    {081} rt081,
-    {082} rt082,
-    {083} rt083,
-    {084} rt084,
-    {085} rt085,
-    {086} rt086,
-    {087} rt087,
-    {088} rt088,
-    {089} rt089,
-    {090} rt090,
-    {091} rt091,
-    {092} rt092,
-    {093} rt093,
-    {094} rt094,
-    {095} rt095,
-    {096} rt096,
-    {097} rt097,
-    {098} rt098,
-    {099} rt099,
-    {100} rt100,
-    {101} rt101,
-    {102} rt102,
-    {103} rt103,
-    {104} rt104,
-    {105} rt105,
-    {106} rt106,
-    {107} rt107,
-    {108} rt108,
-    {109} rt109,
-    {110} rt110,
-    {111} rt111,
-    {112} rt112,
-    {113} rt113,
-    {114} rt114,
-    {115} rt115,
-    {116} rt116,
-    {117} rt117,
-    {118} rt118,
-    {119} rt119,
-    {120} rt120,
-    {121} rt121,
-    {122} rt122,
-    {123} rt123,
-    {124} rt124,
-    {125} rt125,
-    {126} rt126,
-    {127} rt127,
-    {128} rt128,
-    {129} rt129,
-    {130} rt130,
-    {131} rt131,
-    {132} rt132,
-    {133} rt133,
-    {134} rt134,
-    {135} rt135,
-    {136} rt136,
-    {137} rt137,
-    {138} rt138,
-    {139} rt139,
-    {140} rt140,
-    {141} rt141,
-    {142} rt142,
-    {143} rt143,
-    {144} rt144,
-    {145} rt145,
-    {146} rt146,
-    {147} rt147,
-    {148} rt148,
-    {149} rt149,
-    {150} rt150,
-    {151} rt151,
-    {152} rt152,
-    {153} rt153,
-    {154} rt154,
-    {155} rt155,
-    {156} rt156,
-    {157} rt157,
-    {158} rt158,
-    {159} rt159,
-    {160} rt160,
-    {161} rt161,
-    {162} rt162,
-    {163} rt163,
-    {164} rt164,
-    {165} rt165,
-    {166} rt166,
-    {167} rt167,
-    {168} rt168,
-    {169} rt169,
-    {170} rt170,
-    {171} rt171,
-    {172} rt172,
-    {173} rt173,
-    {174} rt174,
-    {175} rt175,
-    {176} rt176,
-    {177} rt177,
-    {178} rt178,
-    {179} rt179,
-    {180} rt180,
-    {181} rt181,
-    {182} rt182,
-    {183} rt183,
-    {184} rt184,
-    {185} rt185,
-    {186} rt186,
-    {187} rt187,
-    {188} rt188,
-    {189} rt189,
-    {190} rt190,
-    {191} rt191,
-    {192} rt192,
-    {193} rt193,
-    {194} rt194,
-    {195} rt195,
-    {196} rt196,
-    {197} rt197,
-    {198} rt198,
-    {199} rt199,
-    {200} rt200,
-    {201} rt201,
-    {202} rt202,
-    {203} rt203,
-    {204} rt204,
-    {205} rt205,
-    {206} rt206,
-    {207} rt207,
-    {208} rt208,
-    {209} rt209,
-    {210} rt210,
-    {211} rt211,
-    {212} rt212,
-    {213} rt213,
-    {214} rt214,
-    {215} rt215,
-    {216} rt216,
-    {217} rt217,
-    {218} rt218,
-    {219} rt219,
-    {220} rt220,
-    {221} rt221,
-    {222} rt222,
-    {223} rt223,
-    {224} rt224,
-    {225} rt225,
-    {226} rt226,
-    {227} rt227,
-    {228} rt228,
-    {229} rt229,
-    {230} rt230,
-    {231} rt231,
-    {232} rt232,
-    {233} rt233,
-    {234} rt234,
-    {235} rt235,
-    {236} rt236,
-    {237} rt237,
-    {238} rt238,
-    {239} rt239,
-    {240} rt240,
-    {241} rt241,
-    {242} rt242,
-    {243} rt243,
-    {244} rt244,
-    {245} rt245,
-    {246} rt246,
-    {247} rt247,
-    {248} rt248,
-    {249} rt249,
-    {250} rt250,
-    {251} rt251,
-    {252} rt252,
-    {253} rt253,
-    {254} rt254,
-    {255} rt255);
+    {051} rt051, {052} rt052, {053} rt053, {054} rt054, {055} rt055,
+    {056} rt056, {057} rt057, {058} rt058, {059} rt059, {060} rt060, {061} rt061, {062} rt062, {063} rt063,
+    {064} rt064, {065} rt065, {066} rt066, {067} rt067, {068} rt068, {069} rt069, {070} rt070, {071} rt071,
+    {072} rt072, {073} rt073, {074} rt074, {075} rt075, {076} rt076, {077} rt077, {078} rt078, {079} rt079,
+    {080} rt080, {081} rt081, {082} rt082, {083} rt083, {084} rt084, {085} rt085, {086} rt086, {087} rt087,
+    {088} rt088, {089} rt089, {090} rt090, {091} rt091, {092} rt092, {093} rt093, {094} rt094, {095} rt095,
+    {096} rt096, {097} rt097, {098} rt098, {099} rt099, {100} rt100, {101} rt101, {102} rt102, {103} rt103,
+    {104} rt104, {105} rt105, {106} rt106, {107} rt107, {108} rt108, {109} rt109, {110} rt110, {111} rt111,
+    {112} rt112, {113} rt113, {114} rt114, {115} rt115, {116} rt116, {117} rt117, {118} rt118, {119} rt119,
+    {120} rt120, {121} rt121, {122} rt122, {123} rt123, {124} rt124, {125} rt125, {126} rt126, {127} rt127,
+    {128} rt128, {129} rt129, {130} rt130, {131} rt131, {132} rt132, {133} rt133, {134} rt134, {135} rt135,
+    {136} rt136, {137} rt137, {138} rt138, {139} rt139, {140} rt140, {141} rt141, {142} rt142, {143} rt143,
+    {144} rt144, {145} rt145, {146} rt146, {147} rt147, {148} rt148, {149} rt149, {150} rt150, {151} rt151,
+    {152} rt152, {153} rt153, {154} rt154, {155} rt155, {156} rt156, {157} rt157, {158} rt158, {159} rt159,
+    {160} rt160, {161} rt161, {162} rt162, {163} rt163, {164} rt164, {165} rt165, {166} rt166, {167} rt167,
+    {168} rt168, {169} rt169, {170} rt170, {171} rt171, {172} rt172, {173} rt173, {174} rt174, {175} rt175,
+    {176} rt176, {177} rt177, {178} rt178, {179} rt179, {180} rt180, {181} rt181, {182} rt182, {183} rt183,
+    {184} rt184, {185} rt185, {186} rt186, {187} rt187, {188} rt188, {189} rt189, {190} rt190, {191} rt191,
+    {192} rt192, {193} rt193, {194} rt194, {195} rt195, {196} rt196, {197} rt197, {198} rt198, {199} rt199,
+    {200} rt200, {201} rt201, {202} rt202, {203} rt203, {204} rt204, {205} rt205, {206} rt206, {207} rt207,
+    {208} rt208, {209} rt209, {210} rt210, {211} rt211, {212} rt212, {213} rt213, {214} rt214, {215} rt215,
+    {216} rt216, {217} rt217, {218} rt218, {219} rt219, {220} rt220, {221} rt221, {222} rt222, {223} rt223,
+    {224} rt224, {225} rt225, {226} rt226, {227} rt227, {228} rt228, {229} rt229, {230} rt230, {231} rt231,
+    {232} rt232, {233} rt233, {234} rt234, {235} rt235, {236} rt236, {237} rt237, {238} rt238, {239} rt239,
+    {240} rt240, {241} rt241, {242} rt242, {243} rt243, {244} rt244, {245} rt245, {246} rt246, {247} rt247,
+    {248} rt248, {249} rt249, {250} rt250, {251} rt251, {252} rt252, {253} rt253, {254} rt254, {255} rt255);
   PRttiTypes = ^TRttiTypes;
   TRttiTypes = set of TRttiType;
+
+  PRttiFlag = ^TRttiFlag;
+  TRttiFlag = (_);
+  PRttiFlags = ^TRttiFlags;
+  TRttiFlags = set of TRttiFlag;
+
+  PRttiRules = ^TRttiRules;
+  TRttiRules = packed object
+    Size: Cardinal;
+    StackSize: Byte;
+    HFA: TRttiHFA;
+    Flags: TRttiFlags;
+  end;
 
   PRttiRangeData = ^TRttiRangeData;
   TRttiRangeData = packed object
@@ -2361,11 +2016,11 @@ type
     case Integer of
       0: (
         Base: TRttiType;
-        PtrDepth: Byte;
+        PointerDepth: Byte;
         case Integer of
-          0: (CodePage: Word);
-          1: (MaxLength: Byte);
-          2: (ChildType: TRttiType; Flags: Byte);
+          0: (Id: Word);
+          1: (CodePage: Word);
+          2: (MaxLength: Byte; Flags: Byte);
           3: (ExFlags: Word);
           High(Integer): (_: packed record end;));
       1: (
@@ -2378,15 +2033,18 @@ type
           4: (MetaType: PRttiMetaType);
           High(Integer): (__: packed record end;));
     end;
+    function GetTempRules: PRttiRules;
+    function GetRules: PRttiRules; {$ifdef INLINESUPPORT}inline;{$endif}
   public
     property Base: TRttiType read F.Base write F.Base;
-    property PtrDepth: Byte read F.PtrDepth write F.PtrDepth;
+    property PointerDepth: Byte read F.PointerDepth write F.PointerDepth;
+    property Id: Word read F.Id write F.Id;
     property CodePage: Word read F.CodePage write F.CodePage;
     property MaxLength: Byte read F.MaxLength write F.MaxLength;
-    property ChildType: TRttiType read F.ChildType write F.ChildType;
     property Flags: Byte read F.Flags write F.Flags;
     property ExFlags: Word read F.ExFlags write F.ExFlags;
     property Options: Cardinal read F.Options write F.Options;
+    property Rules: PRttiRules read GetRules;
 
     property Data: Pointer read F.Data write F.Data;
     property TypeData: PTypeData read F.TypeData write F.TypeData;
@@ -2463,211 +2121,134 @@ var
     {050} rgFunction, // rtClosure,
     // Reserved
     {051} rgUnknown,
-    {052} rgUnknown,
-    {053} rgUnknown,
-    {054} rgUnknown,
-    {055} rgUnknown,
-    {056} rgUnknown,
-    {057} rgUnknown,
-    {058} rgUnknown,
-    {059} rgUnknown,
-    {060} rgUnknown,
-    {061} rgUnknown,
-    {062} rgUnknown,
-    {063} rgUnknown,
-    {064} rgUnknown,
-    {065} rgUnknown,
-    {066} rgUnknown,
-    {067} rgUnknown,
-    {068} rgUnknown,
-    {069} rgUnknown,
-    {070} rgUnknown,
-    {071} rgUnknown,
-    {072} rgUnknown,
-    {073} rgUnknown,
-    {074} rgUnknown,
-    {075} rgUnknown,
-    {076} rgUnknown,
-    {077} rgUnknown,
-    {078} rgUnknown,
-    {079} rgUnknown,
-    {080} rgUnknown,
-    {081} rgUnknown,
-    {082} rgUnknown,
-    {083} rgUnknown,
-    {084} rgUnknown,
-    {085} rgUnknown,
-    {086} rgUnknown,
-    {087} rgUnknown,
-    {088} rgUnknown,
-    {089} rgUnknown,
-    {090} rgUnknown,
-    {091} rgUnknown,
-    {092} rgUnknown,
-    {093} rgUnknown,
-    {094} rgUnknown,
-    {095} rgUnknown,
-    {096} rgUnknown,
-    {097} rgUnknown,
-    {098} rgUnknown,
-    {099} rgUnknown,
-    {100} rgUnknown,
-    {101} rgUnknown,
-    {102} rgUnknown,
-    {103} rgUnknown,
-    {104} rgUnknown,
-    {105} rgUnknown,
-    {106} rgUnknown,
-    {107} rgUnknown,
-    {108} rgUnknown,
-    {109} rgUnknown,
-    {110} rgUnknown,
-    {111} rgUnknown,
-    {112} rgUnknown,
-    {113} rgUnknown,
-    {114} rgUnknown,
-    {115} rgUnknown,
-    {116} rgUnknown,
-    {117} rgUnknown,
-    {118} rgUnknown,
-    {119} rgUnknown,
-    {120} rgUnknown,
-    {121} rgUnknown,
-    {122} rgUnknown,
-    {123} rgUnknown,
-    {124} rgUnknown,
-    {125} rgUnknown,
-    {126} rgUnknown,
-    {127} rgUnknown,
-    {128} rgUnknown,
-    {129} rgUnknown,
-    {130} rgUnknown,
-    {131} rgUnknown,
-    {132} rgUnknown,
-    {133} rgUnknown,
-    {134} rgUnknown,
-    {135} rgUnknown,
-    {136} rgUnknown,
-    {137} rgUnknown,
-    {138} rgUnknown,
-    {139} rgUnknown,
-    {140} rgUnknown,
-    {141} rgUnknown,
-    {142} rgUnknown,
-    {143} rgUnknown,
-    {144} rgUnknown,
-    {145} rgUnknown,
-    {146} rgUnknown,
-    {147} rgUnknown,
-    {148} rgUnknown,
-    {149} rgUnknown,
-    {150} rgUnknown,
-    {151} rgUnknown,
-    {152} rgUnknown,
-    {153} rgUnknown,
-    {154} rgUnknown,
-    {155} rgUnknown,
-    {156} rgUnknown,
-    {157} rgUnknown,
-    {158} rgUnknown,
-    {159} rgUnknown,
-    {160} rgUnknown,
-    {161} rgUnknown,
-    {162} rgUnknown,
-    {163} rgUnknown,
-    {164} rgUnknown,
-    {165} rgUnknown,
-    {166} rgUnknown,
-    {167} rgUnknown,
-    {168} rgUnknown,
-    {169} rgUnknown,
-    {170} rgUnknown,
-    {171} rgUnknown,
-    {172} rgUnknown,
-    {173} rgUnknown,
-    {174} rgUnknown,
-    {175} rgUnknown,
-    {176} rgUnknown,
-    {177} rgUnknown,
-    {178} rgUnknown,
-    {179} rgUnknown,
-    {180} rgUnknown,
-    {181} rgUnknown,
-    {182} rgUnknown,
-    {183} rgUnknown,
-    {184} rgUnknown,
-    {185} rgUnknown,
-    {186} rgUnknown,
-    {187} rgUnknown,
-    {188} rgUnknown,
-    {189} rgUnknown,
-    {190} rgUnknown,
-    {191} rgUnknown,
-    {192} rgUnknown,
-    {193} rgUnknown,
-    {194} rgUnknown,
-    {195} rgUnknown,
-    {196} rgUnknown,
-    {197} rgUnknown,
-    {198} rgUnknown,
-    {199} rgUnknown,
-    {200} rgUnknown,
-    {201} rgUnknown,
-    {202} rgUnknown,
-    {203} rgUnknown,
-    {204} rgUnknown,
-    {205} rgUnknown,
-    {206} rgUnknown,
-    {207} rgUnknown,
-    {208} rgUnknown,
-    {209} rgUnknown,
-    {210} rgUnknown,
-    {211} rgUnknown,
-    {212} rgUnknown,
-    {213} rgUnknown,
-    {214} rgUnknown,
-    {215} rgUnknown,
-    {216} rgUnknown,
-    {217} rgUnknown,
-    {218} rgUnknown,
-    {219} rgUnknown,
-    {220} rgUnknown,
-    {221} rgUnknown,
-    {222} rgUnknown,
-    {223} rgUnknown,
-    {224} rgUnknown,
-    {225} rgUnknown,
-    {226} rgUnknown,
-    {227} rgUnknown,
-    {228} rgUnknown,
-    {229} rgUnknown,
-    {230} rgUnknown,
-    {231} rgUnknown,
-    {232} rgUnknown,
-    {233} rgUnknown,
-    {234} rgUnknown,
-    {235} rgUnknown,
-    {236} rgUnknown,
-    {237} rgUnknown,
-    {238} rgUnknown,
-    {239} rgUnknown,
-    {240} rgUnknown,
-    {241} rgUnknown,
-    {242} rgUnknown,
-    {243} rgUnknown,
-    {244} rgUnknown,
-    {245} rgUnknown,
-    {246} rgUnknown,
-    {247} rgUnknown,
-    {248} rgUnknown,
-    {249} rgUnknown,
-    {250} rgUnknown,
-    {251} rgUnknown,
-    {252} rgUnknown,
-    {253} rgUnknown,
-    {254} rgUnknown,
-    {255} rgUnknown);
+    {052} rgUnknown, {053} rgUnknown, {054} rgUnknown, {055} rgUnknown, {056} rgUnknown, {057} rgUnknown,
+    {058} rgUnknown, {059} rgUnknown, {060} rgUnknown, {061} rgUnknown, {062} rgUnknown, {063} rgUnknown,
+    {064} rgUnknown, {065} rgUnknown, {066} rgUnknown, {067} rgUnknown, {068} rgUnknown, {069} rgUnknown,
+    {070} rgUnknown, {071} rgUnknown, {072} rgUnknown, {073} rgUnknown, {074} rgUnknown, {075} rgUnknown,
+    {076} rgUnknown, {077} rgUnknown, {078} rgUnknown, {079} rgUnknown, {080} rgUnknown, {081} rgUnknown,
+    {082} rgUnknown, {083} rgUnknown, {084} rgUnknown, {085} rgUnknown, {086} rgUnknown, {087} rgUnknown,
+    {088} rgUnknown, {089} rgUnknown, {090} rgUnknown, {091} rgUnknown, {092} rgUnknown, {093} rgUnknown,
+    {094} rgUnknown, {095} rgUnknown, {096} rgUnknown, {097} rgUnknown, {098} rgUnknown, {099} rgUnknown,
+    {100} rgUnknown, {101} rgUnknown, {102} rgUnknown, {103} rgUnknown, {104} rgUnknown, {105} rgUnknown,
+    {106} rgUnknown, {107} rgUnknown, {108} rgUnknown, {109} rgUnknown, {110} rgUnknown, {111} rgUnknown,
+    {112} rgUnknown, {113} rgUnknown, {114} rgUnknown, {115} rgUnknown, {116} rgUnknown, {117} rgUnknown,
+    {118} rgUnknown, {119} rgUnknown, {120} rgUnknown, {121} rgUnknown, {122} rgUnknown, {123} rgUnknown,
+    {124} rgUnknown, {125} rgUnknown, {126} rgUnknown, {127} rgUnknown, {128} rgUnknown, {129} rgUnknown,
+    {130} rgUnknown, {131} rgUnknown, {132} rgUnknown, {133} rgUnknown, {134} rgUnknown, {135} rgUnknown,
+    {136} rgUnknown, {137} rgUnknown, {138} rgUnknown, {139} rgUnknown, {140} rgUnknown, {141} rgUnknown,
+    {142} rgUnknown, {143} rgUnknown, {144} rgUnknown, {145} rgUnknown, {146} rgUnknown, {147} rgUnknown,
+    {148} rgUnknown, {149} rgUnknown, {150} rgUnknown, {151} rgUnknown, {152} rgUnknown, {153} rgUnknown,
+    {154} rgUnknown, {155} rgUnknown, {156} rgUnknown, {157} rgUnknown, {158} rgUnknown, {159} rgUnknown,
+    {160} rgUnknown, {161} rgUnknown, {162} rgUnknown, {163} rgUnknown, {164} rgUnknown, {165} rgUnknown,
+    {166} rgUnknown, {167} rgUnknown, {168} rgUnknown, {169} rgUnknown, {170} rgUnknown, {171} rgUnknown,
+    {172} rgUnknown, {173} rgUnknown, {174} rgUnknown, {175} rgUnknown, {176} rgUnknown, {177} rgUnknown,
+    {178} rgUnknown, {179} rgUnknown, {180} rgUnknown, {181} rgUnknown, {182} rgUnknown, {183} rgUnknown,
+    {184} rgUnknown, {185} rgUnknown, {186} rgUnknown, {187} rgUnknown, {188} rgUnknown, {189} rgUnknown,
+    {190} rgUnknown, {191} rgUnknown, {192} rgUnknown, {193} rgUnknown, {194} rgUnknown, {195} rgUnknown,
+    {196} rgUnknown, {197} rgUnknown, {198} rgUnknown, {199} rgUnknown, {200} rgUnknown, {201} rgUnknown,
+    {202} rgUnknown, {203} rgUnknown, {204} rgUnknown, {205} rgUnknown, {206} rgUnknown, {207} rgUnknown,
+    {208} rgUnknown, {209} rgUnknown, {210} rgUnknown, {211} rgUnknown, {212} rgUnknown, {213} rgUnknown,
+    {214} rgUnknown, {215} rgUnknown, {216} rgUnknown, {217} rgUnknown, {218} rgUnknown, {219} rgUnknown,
+    {220} rgUnknown, {221} rgUnknown, {222} rgUnknown, {223} rgUnknown, {224} rgUnknown, {225} rgUnknown,
+    {226} rgUnknown, {227} rgUnknown, {228} rgUnknown, {229} rgUnknown, {230} rgUnknown, {231} rgUnknown,
+    {232} rgUnknown, {233} rgUnknown, {234} rgUnknown, {235} rgUnknown, {236} rgUnknown, {237} rgUnknown,
+    {238} rgUnknown, {239} rgUnknown, {240} rgUnknown, {241} rgUnknown, {242} rgUnknown, {243} rgUnknown,
+    {244} rgUnknown, {245} rgUnknown, {246} rgUnknown, {247} rgUnknown, {248} rgUnknown, {249} rgUnknown,
+    {250} rgUnknown, {251} rgUnknown, {252} rgUnknown, {253} rgUnknown, {254} rgUnknown, {255} rgUnknown);
 
+
+const
+
+{ Dummy type information
+  "TypeInfo" equivalents that can be used within the rtti context to define TRttiType and TRttiExType
+  First of all, for FreePascal and old Delphi versions, where, for example, there is no TypeInfo for TClass, Pointer, procedures
+  Consists of (can be created using the DummyTypeInfo function):
+    DUMMY_TYPEINFO_BASE
+    PointerDepth: 0..15
+    RttiType: TRttiType
+    Id/CodePage: Word}
+
+  DUMMY_TYPEINFO_BASE = NativeUInt(NativeInt(Integer($70000000)));
+  DUMMY_TYPEINFO_PTR = NativeUInt(1) shl 24;
+
+  TYPEINFO_UNKNOWN = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUnknown) shl 16);
+  TYPEINFO_POINTER = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtPointer) shl 16);
+  TYPEINFO_UINT64 = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUInt64) shl 16);
+  TYPEINFO_DATE = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtDate) shl 16);
+  TYPEINFO_TIME = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtTime) shl 16);
+  TYPEINFO_DATETIME = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtDateTime) shl 16);
+  TYPEINFO_TIMESTAMP = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtTimeStamp) shl 16);
+  TYPEINFO_PUINT64 = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUInt64) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PDATE = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtDate) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PTIME = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtTime) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PDATETIME = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtDateTime) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PTIMESTAMP = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtTimeStamp) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_ANSICHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSChar) shl 16);
+  TYPEINFO_UTF8CHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8Char) shl 16);
+  TYPEINFO_PANSICHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSChar) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PUTF8CHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8Char) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PWIDECHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtWideChar) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_ANSISTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSString) shl 16);
+  TYPEINFO_UTF8STRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8String) shl 16);
+  TYPEINFO_SHORTSTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtShortString) shl 16);
+  TYPEINFO_PANSISTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSString) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PUTF8STRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8String) shl 16 + DUMMY_TYPEINFO_PTR + 65001);
+  TYPEINFO_PSHORTSTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtShortString) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_ENUMERATION = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtEnumeration) shl 16);
+  TYPEINFO_PENUMERATION = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtEnumeration) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_SET = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSet) shl 16);
+  TYPEINFO_PSET = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSet) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_RECORD = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtRecord) shl 16);
+  TYPEINFO_PRECORD = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtRecord) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_STATICARRAY = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtStaticArray) shl 16);
+  TYPEINFO_PSTATICARRAY = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtStaticArray) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_DYNAMICARRAY = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtDynamicArray) shl 16);
+  TYPEINFO_PDYNAMICARRAY = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtDynamicArray) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_OBJECT = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtObject) shl 16);
+  TYPEINFO_POBJECT = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtObject) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_INTERFACE = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtInterface) shl 16);
+  TYPEINFO_PINTERFACE = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtInterface) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_CLASSREF = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtClassRef) shl 16);
+  TYPEINFO_PCLASSREF = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtClassRef) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_VARREC = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtVarRec) shl 16);
+  TYPEINFO_PVARREC = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtVarRec) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_FUNCTION = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtFunction) shl 16);
+  TYPEINFO_PFUNCTION = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtFunction) shl 16 + DUMMY_TYPEINFO_PTR);
+
+
+type
+
+  PRttiContext = ^TRttiContext;
+  TRttiContext = packed object
+  protected
+    function GetBaseTypeInfo(const ATypeInfo: PTypeInfo; const ATypeInfoList: array of PTypeInfo): Integer;
+    function GetBooleanType(const ATypeInfo: PTypeInfo): TRttiType;
+    {$ifdef EXTENDEDRTTI}
+    function IsClosureType(const ATypeData: PTypeData): Boolean;
+    {$endif}
+  public
+    procedure Init;
+
+    function GetType(const ATypeInfo: Pointer): TRttiType;
+    function GetExType(const ATypeInfo: Pointer): TRttiExType;
+  end;
+
+
+{ RTTI helpers? }
+
+function DummyTypeInfo(const ARttiType: TRttiType;
+  const APointerDepth: Byte = 0; const AId: Word = 0): Pointer;
+
+function RttiTypeGroupCurrent: TRttiTypeGroup;
+function RttiTypeGroupAdd: TRttiTypeGroup;
+function RttiTypeCurrent: TRttiType;
+function RttiTypeAdd(const AGroup: TRttiTypeGroup): TRttiType;
+
+function RttiAlloc(const ASize: Integer): Pointer;
+
+
+
+{ System.TypInfo/System.Rtti helpers }
 
 procedure CopyRecord(Dest, Source, TypeInfo: Pointer); {$if Defined(FPC) or (not Defined(CPUINTEL))}inline;{$ifend}
 {$if Defined(FPC) or (CompilerVersion <= 20)}
@@ -2683,12 +2264,6 @@ function GetEnumValue(const ATypeInfo: PTypeInfo; const AName: ShortString): Int
 function IsManaged(const ATypeInfo: PTypeInfo): Boolean;
 function HasWeakRef(const ATypeInfo: PTypeInfo): Boolean; {$if Defined(INLINESUPPORTSIMPLE) and not Defined(WEAKREF)}inline;{$ifend}
 
-function RttiTypeGroupCurrent: TRttiTypeGroup;
-function RttiTypeGroupAdd: TRttiTypeGroup;
-function RttiTypeCurrent: TRttiType;
-function RttiTypeAdd(const AGroup: TRttiTypeGroup): TRttiType;
-
-function RttiAlloc(const ASize: Integer): Pointer;
 
 implementation
 
@@ -2696,6 +2271,375 @@ const
   CP_UTF8 = 65001;
   SHORTSTR_RESULT: array[0..6] of Byte = (6, Ord('R'), Ord('e'), Ord('s'), Ord('u'), Ord('l'), Ord('t'));
   REFERENCED_TYPE_KINDS = [{$ifdef WEAKINSTREF}tkClass, tkMethod,{$endif} {$ifdef WEAKREF}tkInterface{$endif}];
+
+
+{ Default code page }
+
+var
+  DefaultCP: Word;
+
+{$if Defined(MSWINDOWS)}
+function GetACP: Cardinal; external 'kernel32.dll' name 'GetACP';
+{$elseif Defined(FPC)}
+type
+  TCodePageMapEntry = record
+    LocaleName: string;
+    CodePage: Cardinal;
+  end;
+
+const
+  // Predefined set of Name <=> CP mappings for POSIX
+  CodePageMapA: array[0..2] of TCodePageMapEntry = (
+    (LocaleName: 'ar'; CodePage: 1256),
+    (LocaleName: 'az-cyrl'; CodePage: 1251),
+    (LocaleName: 'az-latn'; CodePage: 1254));
+
+  CodePageMapBC: array[0..2] of TCodePageMapEntry = (
+    (LocaleName: 'be'; CodePage: 1251),
+    (LocaleName: 'bg'; CodePage: 1251),
+    (LocaleName: 'cs'; CodePage: 1250));
+
+  CodePageMapEF: array[0..2] of TCodePageMapEntry = (
+    (LocaleName: 'el'; CodePage: 1253),
+    (LocaleName: 'et'; CodePage: 1257),
+    (LocaleName: 'fa'; CodePage: 1256));
+
+  CodePageMapH: array[0..2] of TCodePageMapEntry = (
+    (LocaleName: 'he'; CodePage: 1255),
+    (LocaleName: 'hr'; CodePage: 1250),
+    (LocaleName: 'hu'; CodePage: 1250));
+
+  CodePageMapJK: array[0..2] of TCodePageMapEntry = (
+    (LocaleName: 'ja'; CodePage: 932),
+    (LocaleName: 'kk'; CodePage: 1251),
+    (LocaleName: 'ko'; CodePage: 949));
+
+  CodePageMapLM: array[0..2] of TCodePageMapEntry = (
+    (LocaleName: 'lt'; CodePage: 1257),
+    (LocaleName: 'lv'; CodePage: 1257),
+    (LocaleName: 'mk'; CodePage: 1251));
+
+  CodePageMapP: array[0..1] of TCodePageMapEntry = (
+    (LocaleName: 'pa-arab'; CodePage: 1256),
+    (LocaleName: 'pl'; CodePage: 1250));
+
+  CodePageMapR: array[0..1] of TCodePageMapEntry = (
+    (LocaleName: 'ro'; CodePage: 1250),
+    (LocaleName: 'ru'; CodePage: 1251));
+
+  CodePageMapS: array[0..4] of TCodePageMapEntry = (
+    (LocaleName: 'sk'; CodePage: 1250),
+    (LocaleName: 'sl'; CodePage: 1250),
+    (LocaleName: 'sq'; CodePage: 1250),
+    (LocaleName: 'sr-cyrl'; CodePage: 1251),
+    (LocaleName: 'sr-latn'; CodePage: 1250));
+
+  CodePageMapT: array[0..1] of TCodePageMapEntry = (
+    (LocaleName: 'th'; CodePage: 874),
+    (LocaleName: 'tr'; CodePage: 1254));
+
+  CodePageMapUV: array[0..5] of TCodePageMapEntry = (
+    (LocaleName: 'uk'; CodePage: 1251),
+    (LocaleName: 'ur'; CodePage: 1256),
+    (LocaleName: 'uz-arab'; CodePage: 1256),
+    (LocaleName: 'uz-cyrl'; CodePage: 1251),
+    (LocaleName: 'uz-latn'; CodePage: 1254),
+    (LocaleName: 'vi'; CodePage: 1258));
+
+  // Special case - needs full LANG_CNTRY to determine proper codepage
+  CodePageMapZH: array[0..6] of TCodePageMapEntry = (
+    (LocaleName: 'zh_cn'; CodePage: 936),
+    (LocaleName: 'zh_hk'; CodePage: 950),
+    (LocaleName: 'zh-hans_hk'; CodePage: 936),
+    (LocaleName: 'zh_mo'; CodePage: 950),
+    (LocaleName: 'zh-hans_mo'; CodePage: 936),
+    (LocaleName: 'zh_sg'; CodePage: 936),
+    (LocaleName: 'zh_tw'; CodePage: 950));
+
+function GetPosixLocaleName: string;
+{$IF defined(MACOS)}
+var
+  Locale: CFLocaleRef;
+begin
+  Locale := CFLocaleCopyCurrent;
+  try
+    Result := StringRefToString(CFLocaleGetIdentifier(Locale));
+  finally
+    CFRelease(Locale);
+  end;
+end;
+{$ELSEIF defined(ANDROID)}
+begin
+  Result := GetAndroidLocaleName;
+end;
+{$ELSE !MACOS and !ANDROID}
+var
+  Env: PAnsiChar;
+  I, Len: Integer;
+begin
+  Env := FpGetEnv('LANG');
+  Result := '';
+  if Assigned(Env) then
+  begin
+    // LANG environment variable is treated as 7-bit ASCII encoding
+    Len := 0;
+    while (Env[Len] <> #0) and (Env[Len] <> '.') do
+      Inc(Len);
+
+    SetLength(Result, Len);
+    for I := 0 to Len - 1 do
+      Result[I + 1] := Char(Ord(Env[I]));
+  end;
+end;
+{$IFEND !MACOS and !ANDROID}
+
+function GetACP: Cardinal;
+
+  function FindCodePage(const Name: string; const Map: array of TCodePageMapEntry;
+    var CodePage: Cardinal): Boolean;
+  var
+    I: Integer;
+  begin
+    for I := Low(Map) to High(Map) do
+      if Map[I].LocaleName = Name then
+      begin
+        CodePage := Map[I].CodePage;
+        Exit(True);
+      end;
+    Result := False;
+  end;
+
+var
+  I: Integer;
+  LName: string;
+  LCodePage: Cardinal;
+begin
+  LName := GetPosixLocaleName;
+  I := Low(string);
+  while I <= High(LName) do
+  begin
+    if AnsiChar(LName[I]) in ['A'..'Z'] then         // do not localize
+      Inc(LName[I], Ord('a') - Ord('A'))   // do not localize
+    else if LName[I] = '_' then            // do not localize
+    begin
+      SetLength(LName, I - Low(string));
+      Break;
+    end;
+    Inc(I);
+  end;
+
+  Result := 1252; // Default codepage
+  if Length(LName) > 0 then
+    case LName[Low(string)] of
+      'a':
+        if FindCodePage(LName, CodePageMapA, LCodePage) then
+          Result := LCodePage;
+      'b','c':
+        if FindCodePage(LName, CodePageMapBC, LCodePage) then
+          Result := LCodePage;
+      'e','f':
+        if FindCodePage(LName, CodePageMapEF, LCodePage) then
+          Result := LCodePage;
+      'h':
+        if FindCodePage(LName, CodePageMapH, LCodePage) then
+          Result := LCodePage;
+      'j','k':
+        if FindCodePage(LName, CodePageMapJK, LCodePage) then
+          Result := LCodePage;
+      'l','m':
+        if FindCodePage(LName, CodePageMapLM, LCodePage) then
+          Result := LCodePage;
+      'p':
+        if FindCodePage(LName, CodePageMapP, LCodePage) then
+          Result := LCodePage;
+      'r':
+        if FindCodePage(LName, CodePageMapR, LCodePage) then
+          Result := LCodePage;
+      's':
+        if FindCodePage(LName, CodePageMapS, LCodePage) then
+          Result := LCodePage;
+      't':
+        if FindCodePage(LName, CodePageMapT, LCodePage) then
+          Result := LCodePage;
+      'u','v':
+        if FindCodePage(LName, CodePageMapUV, LCodePage) then
+          Result := LCodePage;
+      'z':
+        begin
+          LName := GetPosixLocaleName;
+          I := Low(string);
+          while I <= High(LName) do
+          begin
+            if AnsiChar(LName[I]) in ['A'..'Z'] then         // do not localize
+              Inc(LName[I], Ord('a') - Ord('A'))   // do not localize
+            else if LName[I] = '@' then            // do not localize
+            // Non Gregorian calendars include "@calendar=<calendar>" on MACOS
+            begin
+              SetLength(LName, I - Low(string));
+              Break;
+            end;
+            Inc(I);
+          end;
+          if FindCodePage(LName, CodePageMapZH, LCodePage) then
+            Result := LCodePage
+          else if (Length(LName) >= 2) and (LName[Low(string) + 1] = 'h') then
+            // Fallback for Chinese in countries other than cn, hk, mo, tw, sg
+            Result := 936;
+        end;
+    end;
+end;
+{$ifend}
+
+procedure InitDefaultCP;
+begin
+  DefaultCP := GetACP;
+  if (DefaultCP = CP_UTF8) then
+  begin
+    DefaultCP := 1252;
+  end;
+end;
+
+
+{ Dummy type information }
+
+function DummyTypeInfo(const ARttiType: TRttiType;
+  const APointerDepth: Byte = 0; const AId: Word = 0): Pointer;
+begin
+  if (APointerDepth > $0f) then
+  begin
+    System.Error(reRangeError);
+    Result := nil;
+    Exit;
+  end ;
+
+  Result := Pointer(
+     DUMMY_TYPEINFO_BASE +
+     NativeUInt(APointerDepth) shl 24 +
+     NativeUInt(ARttiType) shl 24 +
+     NativeUInt(AId)
+   );
+end;
+
+
+{ Groups and types }
+
+var
+  TypeGroupCurrent: TRttiTypeGroup = rgFunction;
+  TypeCurrent: TRttiType = rtClosure;
+
+function RttiTypeGroupCurrent: TRttiTypeGroup;
+begin
+  Result := TypeGroupCurrent;
+end;
+
+function RttiTypeGroupAdd: TRttiTypeGroup;
+begin
+  Result := TypeGroupCurrent;
+
+  if (Result = High(TRttiTypeGroup)) then
+  begin
+    System.Error(reIntOverflow);
+  end;
+
+  Inc(Result);
+  TypeGroupCurrent := Result;
+end;
+
+function RttiTypeCurrent: TRttiType;
+begin
+  Result := TypeCurrent;
+end;
+
+function RttiTypeAdd(const AGroup: TRttiTypeGroup): TRttiType;
+begin
+  Result := TypeCurrent;
+
+  if (Result = High(TRttiType)) then
+  begin
+    System.Error(reIntOverflow);
+  end;
+
+  if (Byte(AGroup) > Byte(TypeGroupCurrent)) then
+  begin
+    System.Error(reInvalidCast);
+  end;
+
+  Inc(Result);
+  TypeCurrent := Result;
+  RTTI_TYPE_GROUPS[Result] := AGroup;
+end;
+
+
+{ Effective 8 bytes aligned allocator }
+
+var
+  MemoryDefaultBuffer: array[0..8 * 1024 - 1] of Byte;
+  MemoryCurrent, MemoryOverflow: PByte;
+  MemoryBuffers: array of TBytes;
+
+function RttiMemoryReserve(const ASize: NativeUInt): PByte;
+const
+  MAX_BUFFER_SIZE = 4 * 1024 * 1024 - 128;
+var
+  LBufferCount: NativeUInt;
+  LBufferSize: NativeUInt;
+begin
+  LBufferCount := Length(MemoryBuffers);
+  SetLength(MemoryBuffers, LBufferCount + 1);
+
+  if (ASize > MAX_BUFFER_SIZE) then
+  begin
+    LBufferSize := ASize;
+  end else
+  begin
+    LBufferSize := SizeOf(MemoryDefaultBuffer);
+    while (LBufferSize < ASize) do
+    begin
+      LBufferSize := LBufferSize shl 1;
+    end;
+  end;
+
+  SetLength(MemoryBuffers[LBufferCount], LBufferSize);
+  Result := Pointer(MemoryBuffers[LBufferCount]);
+  MemoryCurrent := Result;
+  MemoryOverflow := Pointer(NativeUInt(Result) + LBufferSize);
+end;
+
+function RttiAlloc(const ASize: Integer): Pointer;
+var
+  LSize: NativeUInt;
+  LPtr: PByte;
+begin
+  if (ASize <= 0) then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
+  LSize := Cardinal(ASize);
+  LPtr := MemoryCurrent;
+  if (not Assigned(LPtr)) then
+  begin
+    LPtr := @MemoryDefaultBuffer[Low(MemoryDefaultBuffer)];
+    MemoryCurrent := LPtr;
+    MemoryOverflow := Pointer(NativeUInt(LPtr) + SizeOf(MemoryDefaultBuffer));
+  end;
+
+  LPtr := Pointer((NativeInt(LPtr) + 7) and -8);
+  Result := LPtr;
+  Inc(LPtr, LSize);
+  if (NativeUInt(LPtr) <= NativeUInt(MemoryOverflow)) then
+  begin
+    MemoryCurrent := LPtr;
+    Exit;
+  end;
+
+  LPtr := RttiMemoryReserve(LSize + 7);
+  LPtr := Pointer((NativeInt(LPtr) + 7) and -8);
+  Result := LPtr;
+  Inc(LPtr, LSize);
+  MemoryCurrent := LPtr;
+end;
 
 
 { System.TypInfo/System.Rtti helpers }
@@ -2942,127 +2886,6 @@ begin
   Result := False;
 end;
 {$endif}
-
-
-{ Groups and types }
-
-var
-  TypeGroupCurrent: TRttiTypeGroup = rgFunction;
-  TypeCurrent: TRttiType = rtClosure;
-
-function RttiTypeGroupCurrent: TRttiTypeGroup;
-begin
-  Result := TypeGroupCurrent;
-end;
-
-function RttiTypeGroupAdd: TRttiTypeGroup;
-begin
-  Result := TypeGroupCurrent;
-
-  if (Result = High(TRttiTypeGroup)) then
-  begin
-    System.Error(reIntOverflow);
-  end;
-
-  Inc(Result);
-  TypeGroupCurrent := Result;
-end;
-
-function RttiTypeCurrent: TRttiType;
-begin
-  Result := TypeCurrent;
-end;
-
-function RttiTypeAdd(const AGroup: TRttiTypeGroup): TRttiType;
-begin
-  Result := TypeCurrent;
-
-  if (Result = High(TRttiType)) then
-  begin
-    System.Error(reIntOverflow);
-  end;
-
-  if (Byte(AGroup) > Byte(TypeGroupCurrent)) then
-  begin
-    System.Error(reInvalidCast);
-  end;
-
-  Inc(Result);
-  TypeCurrent := Result;
-  RTTI_TYPE_GROUPS[Result] := AGroup;
-end;
-
-
-{ Effective 8 bytes aligned allocator }
-
-var
-  MemoryDefaultBuffer: array[0..8 * 1024 - 1] of Byte;
-  MemoryCurrent, MemoryOverflow: PByte;
-  MemoryBuffers: array of TBytes;
-
-function RttiMemoryReserve(const ASize: NativeUInt): PByte;
-const
-  MAX_BUFFER_SIZE = 4 * 1024 * 1024 - 128;
-var
-  LBufferCount: NativeUInt;
-  LBufferSize: NativeUInt;
-begin
-  LBufferCount := Length(MemoryBuffers);
-  SetLength(MemoryBuffers, LBufferCount + 1);
-
-  if (ASize > MAX_BUFFER_SIZE) then
-  begin
-    LBufferSize := ASize;
-  end else
-  begin
-    LBufferSize := SizeOf(MemoryDefaultBuffer);
-    while (LBufferSize < ASize) do
-    begin
-      LBufferSize := LBufferSize shl 1;
-    end;
-  end;
-
-  SetLength(MemoryBuffers[LBufferCount], LBufferSize);
-  Result := Pointer(MemoryBuffers[LBufferCount]);
-  MemoryCurrent := Result;
-  MemoryOverflow := Pointer(NativeUInt(Result) + LBufferSize);
-end;
-
-function RttiAlloc(const ASize: Integer): Pointer;
-var
-  LSize: NativeUInt;
-  LPtr: PByte;
-begin
-  if (ASize <= 0) then
-  begin
-    Result := nil;
-    Exit;
-  end;
-
-  LSize := Cardinal(ASize);
-  LPtr := MemoryCurrent;
-  if (not Assigned(LPtr)) then
-  begin
-    LPtr := @MemoryDefaultBuffer[Low(MemoryDefaultBuffer)];
-    MemoryCurrent := LPtr;
-    MemoryOverflow := Pointer(NativeUInt(LPtr) + SizeOf(MemoryDefaultBuffer));
-  end;
-
-  LPtr := Pointer((NativeInt(LPtr) + 7) and -8);
-  Result := LPtr;
-  Inc(LPtr, LSize);
-  if (NativeUInt(LPtr) <= NativeUInt(MemoryOverflow)) then
-  begin
-    MemoryCurrent := LPtr;
-    Exit;
-  end;
-
-  LPtr := RttiMemoryReserve(LSize + 7);
-  LPtr := Pointer((NativeInt(LPtr) + 7) and -8);
-  Result := LPtr;
-  Inc(LPtr, LSize);
-  MemoryCurrent := LPtr;
-end;
 
 
 { TDynArrayRec }
@@ -5027,6 +4850,80 @@ end;
 {$endif}
 
 
+{ TSetTypeData }
+
+{$ifdef EXTENDEDRTTI}
+function TSetTypeData.GetAttrData: PAttrData;
+begin
+  Result := AttrDataRec.Value;
+end;
+{$endif}
+
+function TSetTypeData.GetSize: Integer;
+{$if not Defined(FPC) and (CompilerVersion >= 32)}
+var
+  LValue: Integer;
+begin
+  LValue := SetTypeOrSize;
+  if (LValue > $7f) then
+  begin
+    LValue := LValue and $7f;
+  end else
+  begin
+    LValue := LValue shr 1;
+    LValue := (LValue shl 1) + Byte(LValue = 0);
+  end;
+
+  Result := LValue;
+end;
+{$else}
+const
+  BYTE_MASK = $ff shl 3;
+var
+  LTypeInfo: PTypeInfo;
+  LTypeData: PTypeData;
+  LLow, LHigh: Integer;
+begin
+  LTypeInfo := CompType.Value;
+  if (not Assigned(LTypeInfo)) then
+  begin
+    Result := -1;
+    Exit;
+  end;
+
+  LTypeData := LTypeInfo.TypeData;
+  LLow := LTypeData.MinValue;
+  LHigh := LTypeData.MaxValue;
+  Result := (((LHigh + 7 + 1) and BYTE_MASK) - (LLow and BYTE_MASK)) shr 3;
+  Inc(Result, Byte(Result = 3));
+end;
+{$ifend}
+
+function TSetTypeData.GetAdjustment: Integer;
+{$if not Defined(FPC) and (CompilerVersion >= 32)}
+begin
+  Result := Integer(PByte(AttrDataRec.Tail)^ shl 3);
+end;
+{$else}
+const
+  BYTE_MASK = $ff shl 3;
+var
+  LTypeInfo: PTypeInfo;
+  LTypeData: PTypeData;
+begin
+  LTypeInfo := CompType.Value;
+  if (not Assigned(LTypeInfo)) then
+  begin
+    Result := -1;
+    Exit;
+  end;
+
+  LTypeData := LTypeInfo.TypeData;
+  Result := LTypeData.MinValue and BYTE_MASK;
+end;
+{$ifend}
+
+
 { TMethodParam }
 
 function TMethodParam.GetTypeName: PShortStringHelper;
@@ -5455,7 +5352,627 @@ begin
   Result := F.U64High - F.U64Low + 1;
 end;
 
+
+{ TRttiExType }
+
+function TRttiExType.GetTempRules: PRttiRules;
+begin
+  Result := nil;
+end;
+
+function TRttiExType.GetRules: PRttiRules;
+begin
+  Result := GetTempRules;
+end;
+
+
+{ TRttiContext }
+
+procedure TRttiContext.Init;
+begin
+  FillChar(Self, SizeOf(Self), #0);
+end;
+
+function TRttiContext.GetBaseTypeInfo(const ATypeInfo: PTypeInfo;
+  const ATypeInfoList: array of PTypeInfo): Integer;
+var
+  LCount: NativeUInt;
+  LSource, LTarget: PByte;
+  LTypeInfo, LValue: PTypeInfo;
+  LTypeData: PTypeData;
+  LBase: PTypeInfo;
+begin
+  LTypeInfo := ATypeInfo;
+
+  repeat
+    for Result := Low(ATypeInfoList) to High(ATypeInfoList) do
+    begin
+      LValue := ATypeInfoList[Result];
+      if (LTypeInfo = LValue) then
+        Exit;
+
+      LSource := Pointer(@LTypeInfo.Name);
+      LTarget := Pointer(@LValue.Name);
+      if (LSource^ = LTarget^) then
+      begin
+        LCount := LSource^;
+        Inc(LSource);
+        Inc(LTarget);
+        repeat
+          if (LCount = 0) then
+            Exit;
+          Dec(LCount);
+        until (LSource^ or $20 <> LTarget^ or $20);
+      end;
+    end;
+
+    case LTypeInfo.Kind of
+      tkInteger,
+      tkChar,
+      tkEnumeration,
+      tkWChar: ;
+    else
+      Break;
+    end;
+
+    LTypeData := LTypeInfo.TypeData;
+    LBase := LTypeData.BaseType.Value;
+    if (LTypeInfo = LBase) or (not Assigned(LBase)) then
+    begin
+      Break;
+    end;
+
+    LTypeInfo := LBase;
+  until (False);
+
+  Result := -1;
+end;
+
+function TRttiContext.GetBooleanType(const ATypeInfo: PTypeInfo): TRttiType;
+var
+  LTypeInfo: PTypeInfo;
+  LTypeData: PTypeData;
+  LBase: PTypeInfo;
+  LPtr: PByte;
+begin
+  Result := rtUnknown;
+  if (not Assigned(ATypeInfo)) or (ATypeInfo.Kind <> {$ifdef FPC}tkInteger{$else}tkEnumeration{$endif}) then
+  begin
+    {$ifdef FPC}
+    if (Assigned(ATypeInfo)) and (ATypeInfo.Kind = tkBool) then
+    begin
+      Result := rtBoolean;
+    end;
+    {$endif}
+    Exit;
+  end;
+
+  LTypeInfo := ATypeInfo;
+  repeat
+    LTypeData := LTypeInfo.TypeData;
+    LBase := LTypeData.BaseType.Value;
+    if (LTypeInfo = LBase) or (not Assigned(LBase)) then
+    begin
+      Break;
+    end;
+
+    LTypeInfo := LBase;
+  until (False);
+
+  if (LTypeInfo = System.TypeInfo(Boolean)) then
+  begin
+    Result := rtBoolean;
+  end else
+  if (LTypeInfo = System.TypeInfo(ByteBool)) then
+  begin
+    Result := rtByteBool;
+  end else
+  if (LTypeInfo = System.TypeInfo(WordBool)) then
+  begin
+    Result := rtWordBool;
+  end else
+  if (LTypeInfo = System.TypeInfo(LongBool)) then
+  begin
+    Result := rtLongBool;
+  end else
+  {$ifdef FPC}
+  if (LTypeInfo = System.TypeInfo(Boolean16)) then
+  begin
+    Result := rtBoolean16;
+  end else
+  if (LTypeInfo = System.TypeInfo(Boolean32)) then
+  begin
+    Result := rtBoolean32;
+  end else
+  if (LTypeInfo = System.TypeInfo(Boolean64)) then
+  begin
+    Result := rtBoolean64;
+  end else
+  if (LTypeInfo = System.TypeInfo(QWordBool)) then
+  begin
+    Result := rtQWordBool;
+  end else
+  {$endif}
+  begin
+    LTypeData := GetTypeData(LTypeInfo);
+    if (LTypeData.MinValue = 0) and (LTypeData.MaxValue = 1) then
+    begin
+      LPtr := Pointer(@LTypeInfo.Name);
+      if (LPtr^ <> 4) then Exit;
+      Inc(LPtr);
+      if (LPtr^ <> Ord('b')) then Exit;
+      Inc(LPtr);
+      if (LPtr^ <> Ord('o')) then Exit;
+      Inc(LPtr);
+      if (LPtr^ <> Ord('o')) then Exit;
+      Inc(LPtr);
+      if (LPtr^ <> Ord('l')) then Exit;
+
+      Result := rtBoolean;
+    end;
+  end;
+end;
+
+{$ifdef EXTENDEDRTTI}
+function TRttiContext.IsClosureType(const ATypeData: PTypeData): Boolean;
+var
+  LMethodTable: PIntfMethodTable;
+  LName: PByte;
+begin
+  Result := False;
+  if (not (ATypeData.IntfParent.Assigned)) or (ATypeData.IntfParent.Value <> TypeInfo(IInterface)) then
+    Exit;
+
+  LMethodTable := ATypeData.InterfaceData.MethodTable;
+  if (not Assigned(LMethodTable)) or (LMethodTable.Count <> 1) then
+    Exit;
+
+  LName := Pointer(@LMethodTable.Entries.Name);
+  case LMethodTable.RttiCount of
+    $ffff: Result := (LName^ = 2){no RTTI reference};
+    1:
+    begin
+      if (LName^ <> 6) then Exit;
+      Inc(LName);
+      if (LName^ <> Ord('I')) then Exit;
+      Inc(LName);
+      if (LName^ <> Ord('n')) then Exit;
+      Inc(LName);
+      if (LName^ <> Ord('v')) then Exit;
+      Inc(LName);
+      if (LName^ <> Ord('o')) then Exit;
+      Inc(LName);
+      if (LName^ <> Ord('k')) then Exit;
+      Inc(LName);
+      if (LName^ <> Ord('e')) then Exit;
+      Result := True;
+    end;
+  end;
+end;
+{$endif}
+
+function TRttiContext.GetType(const ATypeInfo: Pointer): TRttiType;
+var
+  LExType: TRttiExType;
+begin
+  LExType := GetExType(ATypeInfo);
+  if (LExType.PointerDepth <> 0) then
+  begin
+    Result := rtPointer;
+  end else
+  begin
+    Result := LExType.Base;
+  end;
+end;
+
+function TRttiContext.GetExType(const ATypeInfo: Pointer): TRttiExType;
+label
+  detect_base_type, copy_type_data, string_post_processing, post_processing;
+var
+  LTypeInfo: PTypeInfo;
+  LTypeData: PTypeData;
+  {$ifNdef SHORTSTRSUPPORT}
+  LCount: NativeUInt;
+  LPtr: PByte;
+  {$endif}
+begin
+  Result.Options := 0;
+  Result.Data := nil;
+
+  if (NativeUInt(ATypeInfo) <= High(Word)) then
+  begin
+    System.Error(reInvalidPtr);
+    Exit;
+  end;
+
+  if (NativeUInt(ATypeInfo) >= DUMMY_TYPEINFO_BASE) then
+  begin
+    Result.PointerDepth := (NativeUInt(ATypeInfo) shr 24) and $0f;
+    Result.Base := TRttiType(Byte(NativeUInt(ATypeInfo) shr 16));
+    Result.Id := Word(NativeUInt(ATypeInfo));
+
+    // ToDo Range
+    case Result.Base of
+      rtByte: ;
+      rtShortInt: ;
+      rtWord: ;
+      rtSmallInt: ;
+      rtCardinal: ;
+      rtInteger: ;
+      rtUInt64: ;
+      rtInt64: ;
+    end;
+  end else
+  (*if (False) then
+  begin
+    // MetaType check
+    // ToDo
+  end else*)
+  begin
+    LTypeInfo := ATypeInfo;
+  detect_base_type:
+    Result.Base := GetBooleanType(LTypeInfo);
+    if (Result.Base = rtUnknown) then
+    begin
+      LTypeData := LTypeInfo.GetTypeData;
+
+      case LTypeInfo.Kind of
+        tkInteger:
+        begin
+          case LTypeData.OrdType of
+            otSByte: Result.Base := rtShortInt;
+            otSWord: Result.Base := rtSmallInt;
+            otUWord: Result.Base := rtWord;
+            otSLong: Result.Base := rtInteger;
+            otULong: Result.Base := rtCardinal;
+          else
+            // otUByte
+            Result.Base := rtByte;
+            {$ifNdef ANSISTRSUPPORT}
+            case GetBaseTypeInfo(LTypeInfo, [TypeInfo(AnsiChar), TypeInfo(UTF8Char)]) of
+              0:
+              begin
+                Result.Base := rtSBCSChar;
+                goto string_post_processing;
+              end;
+              1:
+              begin
+                Result.Base := rtUTF8Char;
+                goto string_post_processing;
+              end;
+            end;
+            {$endif}
+          end;
+          goto copy_type_data;
+        end;
+        {$ifdef FPC}
+        tkQWord:
+        begin
+          Result.Base := rtUInt64;
+          goto copy_type_data;
+        end;
+        {$endif}
+        tkInt64:
+        begin
+          if (GetBaseTypeInfo(LTypeInfo, [TypeInfo(TimeStamp)]) = 0) then
+          begin
+            Result.Base := rtTimeStamp;
+          end else
+          if LTypeData.MinInt64Value > LTypeData.MaxInt64Value then
+          begin
+            Result.Base := rtUInt64;
+            goto copy_type_data;
+          end else
+          begin
+            Result.Base := rtInt64;
+            goto copy_type_data;
+          end;
+        end;
+        tkEnumeration:
+        begin
+          Result.Base := rtEnumeration;
+          // 1, 2, 4?
+          // ToDo
+          goto copy_type_data;
+        end;
+        tkFloat:
+        begin
+          case LTypeData.FloatType of
+            ftSingle: Result.Base := rtSingle;
+            ftExtended: Result.Base := rtExtended;
+            ftComp: Result.Base := rtComp;
+            ftCurr: Result.Base := rtCurrency;
+          else
+            // ftDouble
+            Result.Base := rtDouble;
+            case GetBaseTypeInfo(LTypeInfo, [TypeInfo(TDate), TypeInfo(TTime), TypeInfo(TDateTime)]) of
+              0: Result.Base := rtDate;
+              1: Result.Base := rtTime;
+              2: Result.Base := rtDateTime;
+            end;
+          end;
+        end;
+        tkChar:
+        begin
+          Result.Base := rtSBCSChar;
+        end;
+        tkWChar:
+        begin
+          Result.Base := rtWideChar;
+        end;
+        tkString:
+        begin
+          Result.Base := rtShortString; //1, 2, 4?
+          Result.MaxLength := LTypeData.MaxLength;
+        end;
+        {$ifdef FPC}tkAString,{$endif}
+        tkLString:
+        begin
+          Result.Base := rtSBCSString;
+          {$ifdef INTERNALCODEPAGE}
+            Result.CodePage := LTypeData.CodePage;
+          {$else}
+            case GetBaseTypeInfo(LTypeInfo, [TypeInfo(UTF8String), TypeInfo(RawByteString)]) of
+              0:
+              begin
+                Result.Base := rtUTF8String;
+              end;
+              1:
+              begin
+                Result.Base := rtSBCSString;
+                Result.CodePage := $ffff;
+              end;
+            end;
+          {$endif}
+        end;
+        {$ifdef UNICODE}
+        tkUString:
+        begin
+          Result.Base := rtUnicodeString;
+        end;
+        {$endif}
+        tkWString:
+        begin
+          Result.Base := rtWideString;
+        end;
+        tkClass:
+        begin
+          Result.Base := rtObject;
+          goto copy_type_data;
+        end;
+        tkVariant:
+        begin
+          if (LTypeInfo = TypeInfo(OleVariant)) then
+          begin
+            Result.Base := rtOleVariant;
+          end else
+          begin
+            Result.Base := rtVariant;
+          end;
+        end;
+        {$ifdef EXTENDEDRTTI}
+        tkPointer:
+        begin
+          repeat
+            Result.PointerDepth := Result.PointerDepth + 1;
+            LTypeInfo := LTypeInfo.TypeData.RefType.Value;
+            if (not Assigned(LTypeInfo)) or (LTypeInfo.Kind <> tkPointer) then
+              Break;
+          until (False);
+
+          if (not Assigned(LTypeInfo)) then
+          begin
+            Result.PointerDepth := Result.PointerDepth - 1;
+            Result.Base := rtPointer;
+          end else
+          begin
+            goto detect_base_type;
+          end;
+        end;
+        tkClassRef:
+        begin
+          Result.Base := rtClassRef;
+          goto copy_type_data;
+        end;
+        tkProcedure:
+        begin
+          Result.Base := rtFunction;
+          goto copy_type_data;
+        end;
+        {$endif}
+        {$ifdef FPC}
+        tkProcVar:
+        begin
+          Result.Base := rtFunction;
+          goto copy_type_data;
+        end;
+        {$endif}
+        tkSet:
+        begin
+          Result.Base := rtSet;
+          {$if not Defined(FPC) and (CompilerVersion >= 32)}
+            // internal size and adjustment
+          {$else}
+            // dynamically calculated size and adjustment
+            if (not LTypeData.SetData.CompType.Assigned) then
+            begin
+              LTypeData := nil;
+            end;
+          {$ifend}
+          goto copy_type_data;
+        end;
+        tkRecord{$ifdef FPC}, tkObject{$endif}:
+        begin
+          Result.Base := rtRecord;
+          goto copy_type_data;
+        end;
+        tkArray:
+        begin
+          Result.Base := rtStaticArray;
+
+          {$ifNdef SHORTSTRSUPPORT}
+          if (LTypeData.ArrayData.Size = LTypeData.ArrayData.ElCount) then
+          case LTypeData.ArrayData.Size of
+            1..256:
+            begin
+              if (LTypeData.ArrayData.ElType.Assigned) and
+                (GetBaseTypeInfo(LTypeData.ArrayData.ElType.Value, [TypeInfo(AnsiChar), TypeInfo(UTF8Char)]) >= 0) then
+              begin
+                LCount := NativeUInt(LTypeData.ArrayData.Size - 1);
+
+                if (LCount <> 255) or (GetBaseTypeInfo(LTypeInfo, [TypeInfo(ShortString)]) < 0) then
+                begin
+                  // check stringN case
+                  LPtr := Pointer(@LTypeInfo.Name);
+                  case LCount of
+                    0..9:
+                    begin
+                      if (LPtr^ <> 6 + 1) then goto copy_type_data;
+                    end;
+                    10..99:
+                    begin
+                      if (LPtr^ <> 6 + 2) then goto copy_type_data;
+                    end;
+                  else
+                    if (LPtr^ <> 6 + 3) then goto copy_type_data;
+                  end;
+
+                  Inc(LPtr);
+                  if (LPtr^ or $20 <> Ord('s')) then goto copy_type_data;
+                  Inc(LPtr);
+                  if (LPtr^ or $20 <> Ord('t')) then goto copy_type_data;
+                  Inc(LPtr);
+                  if (LPtr^ or $20 <> Ord('r')) then goto copy_type_data;
+                  Inc(LPtr);
+                  if (LPtr^ or $20 <> Ord('i')) then goto copy_type_data;
+                  Inc(LPtr);
+                  if (LPtr^ or $20 <> Ord('n')) then goto copy_type_data;
+                  Inc(LPtr);
+                  if (LPtr^ or $20 <> Ord('g')) then goto copy_type_data;
+                  Inc(LPtr);
+
+                  if (LCount > 9) then
+                  begin
+                    if (LCount > 99) then
+                    begin
+                      if (LPtr^ <> (LCount div 100) + Ord('0')) then goto copy_type_data;
+                      Inc(LPtr);
+                    end;
+
+                    if (LPtr^ <> ((LCount div 10) mod 10) + Ord('0')) then goto copy_type_data;
+                    Inc(LPtr);
+                  end;
+
+                  if (LPtr^ <> (LCount mod 10) + Ord('0')) then goto copy_type_data;
+                end;
+
+                // ShortString
+                Result.Base := rtShortString;
+                Result.MaxLength := LCount;
+                goto string_post_processing;
+              end;
+            end;
+          end;
+          {$endif}
+
+          goto copy_type_data;
+        end;
+        tkDynArray:
+        begin
+          case GetBaseTypeInfo(LTypeInfo, [TypeInfo(TBytes), TypeInfo(UCS4String)
+            {$ifNdef WIDESTRSUPPORT}
+            , TypeInfo(WideString)
+            {$endif}
+            {$ifNdef ANSISTRSUPPORT}
+            , TypeInfo(AnsiString), TypeInfo(UTF8String), TypeInfo(RawByteString)
+            {$endif}
+            ]) of
+            0: Result.Base := rtBytes;
+            1: Result.Base := rtUCS4String;
+            {$ifNdef WIDESTRSUPPORT}
+            2:
+            begin
+              Result.Base := rtWideString;
+            end;
+            {$endif !WIDESTRSUPPORT}
+            {$ifNdef ANSISTRSUPPORT}
+            {$ifNdef WIDESTRSUPPORT}2{$else}1{$endif} + 1:
+            begin
+              Result.Base := rtSBCSString;
+            end;
+            {$ifNdef WIDESTRSUPPORT}2{$else}1{$endif} + 2:
+            begin
+              Result.Base := rtUTF8String;
+            end;
+            {$ifNdef WIDESTRSUPPORT}2{$else}1{$endif} + 3:
+            begin
+              Result.Base := rtSBCSString;
+              Result.CodePage := $ffff;
+            end;
+            {$endif !ANSISTRSUPPORT}
+          else
+            Result.Base := rtDynamicArray;
+            goto copy_type_data;
+          end;
+        end;
+        tkInterface:
+        begin
+          {$ifdef EXTENDEDRTTI}
+          if (IsClosureType(LTypeData)) then
+          begin
+            Result.Base := rtClosure;
+          end else
+          {$endif}
+          begin
+            Result.Base := rtInterface;
+          end;
+          goto copy_type_data;
+        end;
+        tkMethod:
+        begin
+          Result.Base := rtMethod;
+        copy_type_data:
+          Result.Data := LTypeData;
+        end;
+      end;
+    end;
+  end;
+
+string_post_processing:
+  // ANSI/UTF8 routine
+  case Result.Base of
+    rtSBCSChar,
+    rtSBCSString:
+    begin
+      case Result.CodePage of
+        0:
+        begin
+          Result.CodePage := DefaultCP;
+        end;
+        CP_UTF8:
+        begin
+          Result.Base := Succ(Result.Base);
+        end;
+      end;
+    end;
+    rtUTF8Char,
+    rtUTF8String:
+    begin
+      if (Result.CodePage = 0) then
+      begin
+        Result.CodePage := CP_UTF8;
+      end;
+    end;
+  end;
+
+post_processing:
+  // post processing
+  // ToDo
+end;
+
 initialization
+  InitDefaultCP;
+
 finalization
   MemoryBuffers := nil;
 

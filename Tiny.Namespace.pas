@@ -30,8 +30,28 @@ unit Tiny.Namespace;
 
 interface
 uses
-  Tiny.Rtti;
+  Tiny.Rtti, UniConv;
+
+
+type
+
+  PRttiNamespace = ^TRttiNamespace;
+  TRttiNamespace = packed object(TRttiContext)
+  protected
+
+  public
+    procedure Init;
+  end;
+
 
 implementation
+
+
+{ TRttiNamespace }
+
+procedure TRttiNamespace.Init;
+begin
+  inherited;
+end;
 
 end.

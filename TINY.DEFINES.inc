@@ -129,24 +129,26 @@
 {$ifdef RTTION_INTERFACE}
   {$M+}
 {$endif}
-{$ifdef RTTION_FIELDS}
-  {$ifdef RTTION_FIELDS_ALL}
-    {$RTTI EXPLICIT FIELDS([vcPrivate, vcProtected, vcPublic, vcPublished])}
-  {$else}
-    {$RTTI EXPLICIT FIELDS([vcPublic, vcPublished])}
+{$ifdef EXTENDEDRTTI}
+  {$ifdef RTTION_FIELDS}
+    {$ifdef RTTION_FIELDS_ALL}
+      {$RTTI EXPLICIT FIELDS([vcPrivate, vcProtected, vcPublic, vcPublished])}
+    {$else}
+      {$RTTI EXPLICIT FIELDS([vcPublic, vcPublished])}
+    {$endif}
   {$endif}
-{$endif}
-{$ifdef RTTION_PROPERTIES}
-  {$ifdef RTTION_PROPERTIES_ALL}
-    {$RTTI EXPLICIT PROPERTIES([vcPrivate, vcProtected, vcPublic, vcPublished])}
-  {$else}
-    {$RTTI EXPLICIT PROPERTIES([vcPublic, vcPublished])}
+  {$ifdef RTTION_PROPERTIES}
+    {$ifdef RTTION_PROPERTIES_ALL}
+      {$RTTI EXPLICIT PROPERTIES([vcPrivate, vcProtected, vcPublic, vcPublished])}
+    {$else}
+      {$RTTI EXPLICIT PROPERTIES([vcPublic, vcPublished])}
+    {$endif}
   {$endif}
-{$endif}
-{$ifdef RTTION_METHODS}
-  {$ifdef RTTION_METHODS_ALL}
-    {$RTTI EXPLICIT METHODS([vcPrivate, vcProtected, vcPublic, vcPublished])}
-  {$else}
-    {$RTTI EXPLICIT METHODS([vcPublic, vcPublished])}
+  {$ifdef RTTION_METHODS}
+    {$ifdef RTTION_METHODS_ALL}
+      {$RTTI EXPLICIT METHODS([vcPrivate, vcProtected, vcPublic, vcPublished])}
+    {$else}
+      {$RTTI EXPLICIT METHODS([vcPublic, vcPublished])}
+    {$endif}
   {$endif}
 {$endif}
