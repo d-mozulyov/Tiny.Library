@@ -58,7 +58,7 @@ type
     {$ifend}
     PWord = ^Word;
   {$endif}
-  {$if not Defined(FPC) and (CompilerVersion < 21)}
+  {$if not Defined(FPC) and (CompilerVersion < 20)}
   TDate = type TDateTime;
   TTime = type TDateTime;
   {$ifend}
@@ -78,7 +78,6 @@ type
       PAnsiString = ^AnsiString;
       UTF8Char = System.UTF8Char;
       PUTF8Char = System.PUTF8Char;
-      {$POINTERMATH ON}
     {$else}
       AnsiChar = System.AnsiChar;
       PAnsiChar = System.PAnsiChar;
@@ -111,6 +110,7 @@ type
     PUTF8String = ^UTF8String;
     RawByteString = type AnsiString;
     PRawByteString = ^RawByteString;
+    {$POINTERMATH ON}
   {$endif}
   {$ifdef SHORTSTRSUPPORT}
     ShortString = System.ShortString;
@@ -307,7 +307,11 @@ type
     property Tail: Pointer read GetTail;
   end;
 
+  {$ifdef FPC}
+  string0 = array[0..0] of AnsiChar;
+  {$else}
   string0 = {$ifdef SHORTSTRSUPPORT}string[0]{$else}array[0..0] of AnsiChar{$endif};
+  {$endif}
   string1 = {$ifdef SHORTSTRSUPPORT}string[1]{$else}array[0..1] of AnsiChar{$endif};
   string2 = {$ifdef SHORTSTRSUPPORT}string[2]{$else}array[0..2] of AnsiChar{$endif};
   string3 = {$ifdef SHORTSTRSUPPORT}string[3]{$else}array[0..3] of AnsiChar{$endif};
@@ -579,6 +583,14 @@ type
   TReference = (rfDefault, rfWeak, rfUnsafe);
   PReferences = ^TReferences;
   TReferences = set of TReference;
+
+
+{ Invalid constants }
+
+const
+  INVALID_INDEX = -1;
+  INVALID_COUNT = INVALID_INDEX;
+  INVALID_POINTER = Pointer(NativeInt(INVALID_INDEX));
 
 
 type
@@ -1411,8 +1423,8 @@ type
      SetSize: Byte;}
     property AttrData: PAttrData read GetAttrData;
     {$endif}
-    property Size: Integer{Byte or -1} read GetSize;
-    property Adjustment: Integer{Byte or -1} read GetAdjustment;
+    property Size: Integer{Byte or INVALID_COUNT} read GetSize;
+    property Adjustment: Integer{Byte or INVALID_COUNT} read GetAdjustment;
   end;
 
   PMethodParam = ^TMethodParam;
@@ -1493,7 +1505,7 @@ type
     ClassAttrData: TAttrData;
     ArrayPropCount: Word;
     ArrayPropData: array[1..ArrayPropCount] of TArrayPropInfo;}
-    function VmtFunctionOffset(const AAddress: Pointer; const AStandardFunctions: Boolean = True): NativeInt{-1 means fail};
+    function VmtFunctionOffset(const AAddress: Pointer; const AStandardFunctions: Boolean = True): NativeInt{INVALID_INDEX means fail};
     property FieldTable: PVmtFieldTable read GetFieldTable;
     property MethodTable: PVmtMethodTable read GetMethodTable;
     property PropData: PPropData read GetPropData;
@@ -1736,17 +1748,17 @@ type
         RecAttrData: TAttrData;
         RecMethCnt: Word;
         RecMeths: array[1..RecMethCnt] of TRecordTypeMethod;});
-      {$ifdef EXTENDEDRTTI}
+      {$if Defined(FPC) or Defined(EXTENDEDRTTI)}
       tkClassRef: (
         InstanceType: PTypeInfoRef;
-        ClassRefAttrData: TAttrData;);
+        {$ifdef EXTENDEDRTTI}ClassRefAttrData: TAttrData;{$endif});
       tkPointer: (
         RefType: PTypeInfoRef;
-        PtrAttrData: TAttrData;);
-      tkProcedure: (
-        ProcSig: PProcedureSignature;
-        ProcAttrData: TAttrData;);
-      {$endif}
+        {$ifdef EXTENDEDRTTI}PtrAttrData: TAttrData;{$endif});
+      tkProcedure{/tkProcVar}: (
+        ProcSig: {$ifdef FPC}TProcedureSignature{$else .DELPHI}PProcedureSignature{$endif};
+        {$ifdef EXTENDEDRTTI}ProcAttrData: TAttrData;{$endif});
+      {$ifend}
       {$ifdef FPC}
       tkHelper: (
         HelperParent: PTypeInfo;
@@ -1754,8 +1766,6 @@ type
         HelperProps: SmallInt;
         HelperUnit: ShortStringHelper;
         {here the properties follow as array of TPropInfo});
-      tkProcVar: (
-        ProcSig: TProcedureSignature);
       tkQWord: (
         MinQWordValue, MaxQWordValue: QWord);
       tkInterfaceRaw: (
@@ -1882,7 +1892,7 @@ type
     {019} rtCurrency,
     {020} rtSingle,
     {021} rtDouble,
-    {022} rtExtended,
+    {022} rcLongDouble,
     // rgDateTime
     {023} rtDate,
     {024} rtTime,
@@ -1948,7 +1958,7 @@ type
   PRttiTypes = ^TRttiTypes;
   TRttiTypes = set of TRttiType;
 
-  PRttiFlag = ^TRttiFlag;
+(*  PRttiFlag = ^TRttiFlag;
   TRttiFlag = (_);
   PRttiFlags = ^TRttiFlags;
   TRttiFlags = set of TRttiFlag;
@@ -1959,7 +1969,7 @@ type
     StackSize: Byte;
     HFA: TRttiHFA;
     Flags: TRttiFlags;
-  end;
+  end; *)
 
   PRttiRangeData = ^TRttiRangeData;
   TRttiRangeData = packed object
@@ -2033,8 +2043,6 @@ type
           4: (MetaType: PRttiMetaType);
           High(Integer): (__: packed record end;));
     end;
-    function GetTempRules: PRttiRules;
-    function GetRules: PRttiRules; {$ifdef INLINESUPPORT}inline;{$endif}
   public
     property Base: TRttiType read F.Base write F.Base;
     property PointerDepth: Byte read F.PointerDepth write F.PointerDepth;
@@ -2044,7 +2052,6 @@ type
     property Flags: Byte read F.Flags write F.Flags;
     property ExFlags: Word read F.ExFlags write F.ExFlags;
     property Options: Cardinal read F.Options write F.Options;
-    property Rules: PRttiRules read GetRules;
 
     property Data: Pointer read F.Data write F.Data;
     property TypeData: PTypeData read F.TypeData write F.TypeData;
@@ -2083,7 +2090,7 @@ var
     {019} rgFloat, // rtCurrency,
     {020} rgFloat, // rtSingle,
     {021} rgFloat, // rtDouble,
-    {022} rgFloat, // rtExtended,
+    {022} rgFloat, // rcLongDouble,
     // rgDateTime
     {023} rgDateTime, // rtDate,
     {024} rgDateTime, // rtTime,
@@ -2157,6 +2164,130 @@ var
     {250} rgUnknown, {251} rgUnknown, {252} rgUnknown, {253} rgUnknown, {254} rgUnknown, {255} rgUnknown);
 
 
+type
+  PRttiFlag = ^TRttiFlag;
+  TRttiFlag = (_);
+  PRttiFlags = ^TRttiFlags;
+  TRttiFlags = set of TRttiFlag;
+
+  PRttiRules = ^TRttiRules;
+  TRttiRules = packed record
+    Size: Cardinal;
+    StackSize: Byte;
+    HFA: TRttiHFA;
+    Flags: TRttiFlags;
+  end;
+
+
+const
+  RTTI_RULES_NONE: TRttiRules = (Size: 0; StackSize: 0; HFA: hfaNone; Flags: []);
+  RTTI_RULES_BYTE: TRttiRules = (Size: SizeOf(Byte); StackSize: SizeOf(NativeUInt); HFA: hfaNone; Flags: []);
+  RTTI_RULES_WORD: TRttiRules = (Size: SizeOf(Word); StackSize: SizeOf(NativeUInt); HFA: hfaNone; Flags: []);
+  RTTI_RULES_CARDINAL: TRttiRules = (Size: SizeOf(Cardinal); StackSize: SizeOf(NativeUInt); HFA: hfaNone; Flags: []);
+  RTTI_RULES_NATIVE: TRttiRules = (Size: SizeOf(NativeUInt); StackSize: SizeOf(NativeUInt); HFA: hfaNone; Flags: []);
+  RTTI_RULES_INT64: TRttiRules = (Size: SizeOf(Int64); StackSize: SizeOf(Int64); HFA: hfaNone; Flags: []);
+
+  RTTI_RULES_SINGLE: TRttiRules = (Size: SizeOf(Single); StackSize: 0; HFA: hfaSingle1; Flags: []);
+  RTTI_RULES_DOUBLE: TRttiRules = (Size: SizeOf(Double); StackSize: 0; HFA: hfaDouble2; Flags: []);
+  RTTI_RULES_EXTENDED: TRttiRules = (Size: SizeOf(Extended); StackSize: 0; HFA: hfaNone; Flags: []);
+  RTTI_RULES_COMP: TRttiRules = (Size: SizeOf(Comp); StackSize: 0; HFA: hfaNone; Flags: []);
+  RTTI_RULES_CURRENCY: TRttiRules = (Size: SizeOf(Currency); StackSize: 0; HFA: hfaNone; Flags: []);
+
+
+var
+  RTTI_TYPE_RULES: array[TRttiType] of PRttiRules = (
+    // rgUnknown
+    {000} @RTTI_RULES_NONE, // rtUnknown,
+    // rgPointer
+    {001} @RTTI_RULES_NATIVE, // rtPointer,
+    // rgBoolean
+    {002} @RTTI_RULES_BYTE, // rtBoolean,
+    {003} @RTTI_RULES_WORD, // rtBoolean16,
+    {004} @RTTI_RULES_CARDINAL, // rtBoolean32,
+    {005} @RTTI_RULES_INT64, // rtBoolean64,
+    {006} @RTTI_RULES_BYTE, // rtByteBool,
+    {007} @RTTI_RULES_WORD, // rtWordBool,
+    {008} @RTTI_RULES_CARDINAL, // rtLongBool,
+    {009} @RTTI_RULES_INT64, // rtQWordBool,
+    // rgOrdinal
+    {010} @RTTI_RULES_BYTE, // rtByte,
+    {011} @RTTI_RULES_BYTE, // rtShortInt,
+    {012} @RTTI_RULES_WORD, // rtWord,
+    {013} @RTTI_RULES_WORD, // rtSmallInt,
+    {014} @RTTI_RULES_CARDINAL, // rtCardinal,
+    {015} @RTTI_RULES_CARDINAL, // rtInteger,
+    {016} @RTTI_RULES_INT64, // rtUInt64,
+    {017} @RTTI_RULES_INT64, // rtInt64,
+    // rgFloat
+    {018} @RTTI_RULES_COMP, // rtComp,
+    {019} @RTTI_RULES_CURRENCY, // rtCurrency,
+    {020} @RTTI_RULES_SINGLE, // rtSingle,
+    {021} @RTTI_RULES_DOUBLE, // rtDouble,
+    {022} @RTTI_RULES_EXTENDED, // rcLongDouble,
+    // rgDateTime
+    {023} @RTTI_RULES_DOUBLE, // rtDate,
+    {024} @RTTI_RULES_DOUBLE, // rtTime,
+    {025} @RTTI_RULES_DOUBLE, // rtDateTime,
+    {026} @RTTI_RULES_INT64, // rtTimeStamp,
+    // rgString
+    {027} @RTTI_RULES_BYTE, // rtSBCSChar,
+    {028} @RTTI_RULES_BYTE, // rtUTF8Char,
+    {029} @RTTI_RULES_WORD, // rtWideChar,
+    {020} nil, // rtShortString, // ToDo
+    {031} nil, // rtSBCSString,
+    {032} nil, // rtUTF8String,
+    {033} nil, // rtWideString,
+    {034} nil, // rtUnicodeString,
+    {035} nil, // rtUCS4String,
+    // rgEnumeration
+    {036} nil, // rtEnumeration, // ToDo
+    // rgMetaType
+    {037} nil, // rtSet,
+    {038} nil, // rtRecord,
+    {039} nil, // rtStaticArray,
+    {030} nil, // rtDynamicArray,
+    {041} nil, // rtObject,
+    {042} nil, // rtInterface,
+    // rgMetaTypeRef
+    {043} @RTTI_RULES_NATIVE, // rtClassRef,
+    // rgVariant
+    {044} nil, // rtBytes,
+    {045} nil, // rtVariant,
+    {046} nil, // rtOleVariant,
+    {047} nil, // rtVarRec,
+    // rgFunction
+    {048} @RTTI_RULES_NATIVE, // rtFunction,
+    {049} nil, // rtMethod,
+    {050} nil, // rtClosure,
+    // Reserved
+    {051} nil, {052} nil, {053} nil, {054} nil, {055} nil,
+    {056} nil, {057} nil, {058} nil, {059} nil, {060} nil, {061} nil, {062} nil, {063} nil,
+    {064} nil, {065} nil, {066} nil, {067} nil, {068} nil, {069} nil, {070} nil, {071} nil,
+    {072} nil, {073} nil, {074} nil, {075} nil, {076} nil, {077} nil, {078} nil, {079} nil,
+    {080} nil, {081} nil, {082} nil, {083} nil, {084} nil, {085} nil, {086} nil, {087} nil,
+    {088} nil, {089} nil, {090} nil, {091} nil, {092} nil, {093} nil, {094} nil, {095} nil,
+    {096} nil, {097} nil, {098} nil, {099} nil, {100} nil, {101} nil, {102} nil, {103} nil,
+    {104} nil, {105} nil, {106} nil, {107} nil, {108} nil, {109} nil, {110} nil, {111} nil,
+    {112} nil, {113} nil, {114} nil, {115} nil, {116} nil, {117} nil, {118} nil, {119} nil,
+    {120} nil, {121} nil, {122} nil, {123} nil, {124} nil, {125} nil, {126} nil, {127} nil,
+    {128} nil, {129} nil, {130} nil, {131} nil, {132} nil, {133} nil, {134} nil, {135} nil,
+    {136} nil, {137} nil, {138} nil, {139} nil, {140} nil, {141} nil, {142} nil, {143} nil,
+    {144} nil, {145} nil, {146} nil, {147} nil, {148} nil, {149} nil, {150} nil, {151} nil,
+    {152} nil, {153} nil, {154} nil, {155} nil, {156} nil, {157} nil, {158} nil, {159} nil,
+    {160} nil, {161} nil, {162} nil, {163} nil, {164} nil, {165} nil, {166} nil, {167} nil,
+    {168} nil, {169} nil, {170} nil, {171} nil, {172} nil, {173} nil, {174} nil, {175} nil,
+    {176} nil, {177} nil, {178} nil, {179} nil, {180} nil, {181} nil, {182} nil, {183} nil,
+    {184} nil, {185} nil, {186} nil, {187} nil, {188} nil, {189} nil, {190} nil, {191} nil,
+    {192} nil, {193} nil, {194} nil, {195} nil, {196} nil, {197} nil, {198} nil, {199} nil,
+    {200} nil, {201} nil, {202} nil, {203} nil, {204} nil, {205} nil, {206} nil, {207} nil,
+    {208} nil, {209} nil, {210} nil, {211} nil, {212} nil, {213} nil, {214} nil, {215} nil,
+    {216} nil, {217} nil, {218} nil, {219} nil, {220} nil, {221} nil, {222} nil, {223} nil,
+    {224} nil, {225} nil, {226} nil, {227} nil, {228} nil, {229} nil, {230} nil, {231} nil,
+    {232} nil, {233} nil, {234} nil, {235} nil, {236} nil, {237} nil, {238} nil, {239} nil,
+    {240} nil, {241} nil, {242} nil, {243} nil, {244} nil, {245} nil, {246} nil, {247} nil,
+    {248} nil, {249} nil, {250} nil, {251} nil, {252} nil, {253} nil, {254} nil, {255} nil);
+
+
 const
 
 { Dummy type information
@@ -2168,7 +2299,7 @@ const
     RttiType: TRttiType
     Id/CodePage: Word}
 
-  DUMMY_TYPEINFO_BASE = NativeUInt(NativeInt(Integer($70000000)));
+  DUMMY_TYPEINFO_BASE = NativeUInt(NativeInt(Integer($f0000000)));
   DUMMY_TYPEINFO_PTR = NativeUInt(1) shl 24;
 
   TYPEINFO_UNKNOWN = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUnknown) shl 16);
@@ -2190,10 +2321,10 @@ const
   TYPEINFO_PWIDECHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtWideChar) shl 16 + DUMMY_TYPEINFO_PTR);
   TYPEINFO_ANSISTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSString) shl 16);
   TYPEINFO_UTF8STRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8String) shl 16);
-  TYPEINFO_SHORTSTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtShortString) shl 16);
+  TYPEINFO_SHORTSTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtShortString) shl 16 + 255);
   TYPEINFO_PANSISTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSString) shl 16 + DUMMY_TYPEINFO_PTR);
   TYPEINFO_PUTF8STRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8String) shl 16 + DUMMY_TYPEINFO_PTR + 65001);
-  TYPEINFO_PSHORTSTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtShortString) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_PSHORTSTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtShortString) shl 16 + DUMMY_TYPEINFO_PTR + 255);
   TYPEINFO_ENUMERATION = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtEnumeration) shl 16);
   TYPEINFO_PENUMERATION = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtEnumeration) shl 16 + DUMMY_TYPEINFO_PTR);
   TYPEINFO_SET = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSet) shl 16);
@@ -2221,16 +2352,21 @@ type
   PRttiContext = ^TRttiContext;
   TRttiContext = packed object
   protected
+    FRttiRules: TRttiRules;
+
     function GetBaseTypeInfo(const ATypeInfo: PTypeInfo; const ATypeInfoList: array of PTypeInfo): Integer;
     function GetBooleanType(const ATypeInfo: PTypeInfo): TRttiType;
     {$ifdef EXTENDEDRTTI}
     function IsClosureType(const ATypeData: PTypeData): Boolean;
     {$endif}
+    function GetTempRules(const AExType: TRttiExType): PRttiRules;
   public
     procedure Init;
 
     function GetType(const ATypeInfo: Pointer): TRttiType;
     function GetExType(const ATypeInfo: Pointer): TRttiExType;
+    function GetRules(const AType: TRttiType): PRttiRules; overload; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetRules(const AExType: TRttiExType): PRttiRules; overload; {$ifdef INLINESUPPORT}inline;{$endif}
   end;
 
 
@@ -2800,7 +2936,7 @@ begin
     Result := ATypeInfo.TypeData.EnumerationData.EnumValues[AName];
   end else
   begin
-    Result := -1;
+    Result := INVALID_INDEX;
   end;
 end;
 
@@ -4034,8 +4170,8 @@ var
 begin
   if (not IsValid) then
   begin
-    AData.ArgumentCount := -1;
-    Result := -1;
+    AData.ArgumentCount := INVALID_COUNT;
+    Result := INVALID_COUNT;
     Exit;
   end;
 
@@ -4247,7 +4383,7 @@ begin
     {$ifdef WEAKREF}
     if (AResult.TypeInfo.Kind in REFERENCED_TYPE_KINDS) then
     begin
-      if (AHasResultParam >= 0) then
+      if (AHasResultParam <> INVALID_INDEX) then
       begin
         if (AHasResultParam = 0) then
         begin
@@ -4278,7 +4414,7 @@ end;
 
 function TVmtMethodSignature.GetResultData: TResultData;
 begin
-  InternalGetResultData(Result, -1);
+  InternalGetResultData(Result, INVALID_INDEX);
 end;
 
 function TVmtMethodSignature.GetData(var AData: TSignatureData; const AMethodKind: TMethodKind;
@@ -4469,8 +4605,8 @@ begin
     end;
   end;
 
-  AData.ArgumentCount := -1;
-  Result := -1;
+  AData.ArgumentCount := INVALID_COUNT;
+  Result := INVALID_COUNT;
 end;
 
 
@@ -4640,8 +4776,8 @@ begin
     Exit;
   end;
 
-  AData.ArgumentCount := -1;
-  Result := -1;
+  AData.ArgumentCount := INVALID_COUNT;
+  Result := INVALID_COUNT;
 end;
 
 
@@ -4742,7 +4878,7 @@ begin
 
   LMaxResult := MaxValue;
   LTarget := Pointer(@NameList);
-  Result := -1;
+  Result := INVALID_INDEX;
   repeat
     Inc(Result);
     if (PByte(LTarget)^ = LCount) then
@@ -4820,7 +4956,7 @@ begin
   until (Result = LMaxResult);
 
 failure:
-  Result := -1;
+  Result := INVALID_INDEX;
 end;
 
 function TEnumerationTypeData.GetUnitName: PShortStringHelper;
@@ -4887,7 +5023,7 @@ begin
   LTypeInfo := CompType.Value;
   if (not Assigned(LTypeInfo)) then
   begin
-    Result := -1;
+    Result := INVALID_COUNT;
     Exit;
   end;
 
@@ -4914,7 +5050,7 @@ begin
   LTypeInfo := CompType.Value;
   if (not Assigned(LTypeInfo)) then
   begin
-    Result := -1;
+    Result := INVALID_COUNT;
     Exit;
   end;
 
@@ -5040,8 +5176,8 @@ begin
   LSignature := PPointer(NativeUInt(LAttrDataRec) - SizeOf(Pointer))^;
   if (not Assigned(LSignature)) then
   begin
-    Result := -1;
-    AData.ArgumentCount := -1;
+    Result := INVALID_COUNT;
+    AData.ArgumentCount := INVALID_COUNT;
     Exit;
   end;
 
@@ -5236,7 +5372,7 @@ begin
     until (False);
   end;
 
-  Result := -1;
+  Result := INVALID_INDEX;
 end;
 
 
@@ -5353,19 +5489,6 @@ begin
 end;
 
 
-{ TRttiExType }
-
-function TRttiExType.GetTempRules: PRttiRules;
-begin
-  Result := nil;
-end;
-
-function TRttiExType.GetRules: PRttiRules;
-begin
-  Result := GetTempRules;
-end;
-
-
 { TRttiContext }
 
 procedure TRttiContext.Init;
@@ -5425,7 +5548,7 @@ begin
     LTypeInfo := LBase;
   until (False);
 
-  Result := -1;
+  Result := INVALID_INDEX;
 end;
 
 function TRttiContext.GetBooleanType(const ATypeInfo: PTypeInfo): TRttiType;
@@ -5679,7 +5802,7 @@ begin
         begin
           case LTypeData.FloatType of
             ftSingle: Result.Base := rtSingle;
-            ftExtended: Result.Base := rtExtended;
+            ftExtended: Result.Base := rcLongDouble;
             ftComp: Result.Base := rtComp;
             ftCurr: Result.Base := rtCurrency;
           else
@@ -5750,7 +5873,7 @@ begin
             Result.Base := rtVariant;
           end;
         end;
-        {$ifdef EXTENDEDRTTI}
+        {$if Defined(FPC) or Defined(EXTENDEDRTTI)}
         tkPointer:
         begin
           repeat
@@ -5774,19 +5897,12 @@ begin
           Result.Base := rtClassRef;
           goto copy_type_data;
         end;
-        tkProcedure:
+        tkProcedure{/tkProcVar}:
         begin
           Result.Base := rtFunction;
           goto copy_type_data;
         end;
-        {$endif}
-        {$ifdef FPC}
-        tkProcVar:
-        begin
-          Result.Base := rtFunction;
-          goto copy_type_data;
-        end;
-        {$endif}
+        {$ifend}
         tkSet:
         begin
           Result.Base := rtSet;
@@ -5968,6 +6084,42 @@ string_post_processing:
 post_processing:
   // post processing
   // ToDo
+end;
+
+function TRttiContext.GetTempRules(const AExType: TRttiExType): PRttiRules;
+begin
+  Result := @FRttiRules;
+end;
+
+function TRttiContext.GetRules(const AType: TRttiType): PRttiRules;
+begin
+  Result := RTTI_TYPE_RULES[AType];
+end;
+
+function TRttiContext.GetRules(const AExType: TRttiExType): PRttiRules;
+var
+  LOptions: NativeUInt;
+begin
+  LOptions := AExType.Options;
+  if (LOptions and $ff00{PointerDepth} = 0) then
+  begin
+    Result := RTTI_TYPE_RULES[TRttiType(LOptions)];
+    if (not Assigned(Result)) then
+    begin
+      Result := AExType.Data;
+      if (Assigned(Result)) and (PCardinal(Result)^ = 100500) then
+      begin
+        Inc(NativeUInt(Result), SizeOf(Cardinal));
+      end else
+      begin
+        Result := GetTempRules(AExType);
+      end;
+    end;
+  end else
+  begin
+    // rtPointer
+    Result := @RTTI_RULES_NATIVE;
+  end;
 end;
 
 initialization
