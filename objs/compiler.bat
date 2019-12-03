@@ -5,7 +5,7 @@ set platform=%~1
 set file=%~2
 set folder=%~3
 set target=unknown
-set flags=-c -O3
+set flags=-c -O3 -mllvm -align-all-functions=2
 
 if "%platform%"=="win32" (
   set target=i386-windows-gnu -mno-sse
@@ -16,15 +16,15 @@ if "%platform%"=="win32" (
 ) else if "%platform%"=="linux64" (
   set target=x86_64-linux-gnu
 ) else if "%platform%"=="mac32" (
-  set target=i386-darwin-gnu -mno-sse
+  set target=i386-darwin-gnu -mno-sse -fomit-frame-pointer
 ) else if "%platform%"=="mac64" (
-  set target=x86_64-macos-gnu
+  set target=x86_64-macos-gnu -fomit-frame-pointer
 ) else if "%platform%"=="android32" (
-  set target=armv7-a-linux-android -mthumb
+  set target=armv7-none-linux-androideabi -mfpu=neon -mfloat-abi=hard -mthumb -fPIC
 ) else if "%platform%"=="android64" (
   set target=aarch64-linux-android
 ) else if "%platform%"=="ios32" (
-  set target=armv7-a-darwin-gnu -mthumb
+  set target=armv7m-none-ios-gnueabi -mfpu=neon -mfloat-abi=hard -mthumb
 ) else if "%platform%"=="ios64" (
   set target=arm64-darwin-gnu
 ) else (
@@ -60,8 +60,10 @@ if not exist "%sourcefile%" (
 
 call clang -target %target% %flags% "%sourcefile%" -o"%targetfile%"
 if "%platform%"=="win32" (
-  coff2omf %targetfile%
-  omf2d %targetfile%
+  fixwin32 %targetfile%
+)
+if "%platform%"=="android32" (
+  fixandroid32 %targetfile%
 )
 
 goto :eof

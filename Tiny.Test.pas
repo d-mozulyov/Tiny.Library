@@ -1,4 +1,4 @@
-unit Tiny.Testing;
+unit Tiny.Test;
 
 {******************************************************************************}
 { Copyright (c) Dmitry Mozulyov                                                }

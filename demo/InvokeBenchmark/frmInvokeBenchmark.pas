@@ -1,18 +1,34 @@
-# Tiny.Rtti
+unit frmInvokeBenchmark;
 
-The project has the following conceptual features:
-* Standard types, including FreePascal, old and new versions of Delphi, convenient functions for managing them.
-* Universal data representation, regardless of programming language and compiler version.
-* Convert standard RTTI to universal data representation.
-* Minimizing dependencies on heavy units like Classes, Variants, Generics, etc.
-* Cross-platform functions invoke, including FreePascal and old versions of Delphi, creation of function and interface interpreters.
-* Marshalling (serialization and deserialization of data) through different formatters: JSON, XML, [FlexBin](FlexBin.RUS.md) and others.
-* Easy to use unit testing library that does not access the memory manager.
+{$define RTTION_METHODS}
+{$I TINY.DEFINES.inc}
 
-### Invoke benchmark
+interface
 
-![](data/InvokeBenchmark.png)
-```pascal
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
+  FMX.Controls.Presentation, FMX.StdCtrls, System.Diagnostics,
+  System.Rtti,
+  Tiny.Rtti, Tiny.Invoke;
+
+type
+  TForm1 = class(TForm)
+    Button1: TButton;
+    procedure Button1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    procedure SomeMethod(const X, Y, Z: Integer);
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.fmx}
+
 procedure TForm1.SomeMethod(const X, Y, Z: Integer);
 begin
   Tag := X + Y + Z;
@@ -20,7 +36,7 @@ end;
 
 procedure TForm1.Button1Click(Sender: TObject);
 const
-  COUNT = 100000;
+  COUNT = 1000000;
 var
   i: Integer;
   LStopwatch: TStopwatch;
@@ -39,6 +55,7 @@ begin
   LSignature.Init(LMethodEntry^);
   LInvokeFunc := LSignature.OptimalInvokeFunc;
 
+  LStopwatch.Reset;
   LStopwatch.Start;
   for i := 1 to Count do
   begin
@@ -46,6 +63,7 @@ begin
   end;
   T1 := LStopwatch.ElapsedMilliseconds;
 
+  LStopwatch.Reset;
   LStopwatch.Start;
   for i := 1 to Count do
   begin
@@ -59,4 +77,6 @@ begin
 
   Caption := Format('System.Rtti: %dms, Tiny.Rtti: %dms', [T1, T2]);
 end;
-```
+
+
+end.

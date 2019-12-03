@@ -30,7 +30,7 @@ unit Tiny.Properties;
 
 interface
 uses
-  Tiny.Rtti;
+  Tiny.Rtti, Tiny.Invoke;
 
 implementation
 

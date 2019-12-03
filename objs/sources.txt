@@ -1,1 +1,2 @@
-test.c
+tiny.invoke.c
+tiny.invoke.intrjumps.c

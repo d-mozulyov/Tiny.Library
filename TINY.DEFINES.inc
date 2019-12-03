@@ -32,6 +32,7 @@
   {$define INLINESUPPORT}
   {$define INLINESUPPORTSIMPLE}
   {$define OPERATORSUPPORT}
+  {$define STATICSUPPORT}
   {$define ANSISTRSUPPORT}
   {$define SHORTSTRSUPPORT}
   {$define WIDESTRSUPPORT}
@@ -64,12 +65,19 @@
   {$if CompilerVersion >= 17}
     {$define INLINESUPPORTSIMPLE}
   {$ifend}
+  {$if CompilerVersion >= 18}
+    {$define OPERATORSUPPORT}
+  {$ifend}
+  {$if CompilerVersion >= 18.5}
+    {$define STATICSUPPORT}
+  {$ifend}
   {$if CompilerVersion < 23}
     {$define CPUX86}
   {$ifend}
   {$if CompilerVersion >= 23}
     {$define UNITSCOPENAMES}
     {$define RETURNADDRESS}
+    {$define SYSARRAYSUPPORT}
   {$ifend}
   {$if CompilerVersion >= 21}
     {$WEAKLINKRTTI ON}
@@ -94,7 +102,19 @@
   {$if Defined(ANSISTRSUPPORT) and (CompilerVersion >= 20)}
     {$define INTERNALCODEPAGE}
   {$ifend}
+  {$if Defined(NEXTGEN)}
+    {$POINTERMATH ON}
+  {$ifend}
 {$endif}
+{$if (not Defined(FPC)) and Defined(IOS) and Defined(CPUARM32) and (CompilerVersion < 28)}
+  {$define ARM_NO_VFP_USE}
+{$ifend}
+{$if (Defined(CPUARM) or Defined(POSIX64)) and not Defined(ARM_NO_VFP_USE)}
+  {$define HFASUPPORT}
+{$ifend}
+{$if Defined(FPC) or Defined(MSWINDOWS)}
+  {$define OBJLINKSUPPORT}
+{$ifend}
 {$U-}{$V+}{$B-}{$X+}{$T+}{$P+}{$H+}{$J-}{$Z1}{$A4}
 {$O+}{$R-}{$I-}{$Q-}{$W-}
 {$ifdef CPUX86}
@@ -111,13 +131,17 @@
   {$ifend}
   {$define CPUINTEL}
 {$endif}
+{$if Defined(CPUINTEL) and Defined(POSIX)}
+  {$ifdef CPUX86}
+    {$define POSIXINTEL32}
+  {$else}
+    {$define POSIXINTEL64}
+  {$endif}
+{$ifend}
 {$if Defined(CPUX64) or Defined(CPUARM64)}
   {$define LARGEINT}
 {$else}
   {$define SMALLINT}
-{$ifend}
-{$if Defined(FPC) or (CompilerVersion >= 18)}
-  {$define OPERATORSUPPORT}
 {$ifend}
 {$ifdef KOL_MCK}
   {$define KOL}

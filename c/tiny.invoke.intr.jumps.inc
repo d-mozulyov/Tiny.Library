@@ -1,0 +1,2052 @@
+intercept_jump(0);
+intercept_jump(1);
+intercept_jump(2);
+intercept_jump(3);
+intercept_jump(4);
+intercept_jump(5);
+intercept_jump(6);
+intercept_jump(7);
+intercept_jump(8);
+intercept_jump(9);
+intercept_jump(10);
+intercept_jump(11);
+intercept_jump(12);
+intercept_jump(13);
+intercept_jump(14);
+intercept_jump(15);
+intercept_jump(16);
+intercept_jump(17);
+intercept_jump(18);
+intercept_jump(19);
+intercept_jump(20);
+intercept_jump(21);
+intercept_jump(22);
+intercept_jump(23);
+intercept_jump(24);
+intercept_jump(25);
+intercept_jump(26);
+intercept_jump(27);
+intercept_jump(28);
+intercept_jump(29);
+intercept_jump(30);
+intercept_jump(31);
+intercept_jump(32);
+intercept_jump(33);
+intercept_jump(34);
+intercept_jump(35);
+intercept_jump(36);
+intercept_jump(37);
+intercept_jump(38);
+intercept_jump(39);
+intercept_jump(40);
+intercept_jump(41);
+intercept_jump(42);
+intercept_jump(43);
+intercept_jump(44);
+intercept_jump(45);
+intercept_jump(46);
+intercept_jump(47);
+intercept_jump(48);
+intercept_jump(49);
+intercept_jump(50);
+intercept_jump(51);
+intercept_jump(52);
+intercept_jump(53);
+intercept_jump(54);
+intercept_jump(55);
+intercept_jump(56);
+intercept_jump(57);
+intercept_jump(58);
+intercept_jump(59);
+intercept_jump(60);
+intercept_jump(61);
+intercept_jump(62);
+intercept_jump(63);
+intercept_jump(64);
+intercept_jump(65);
+intercept_jump(66);
+intercept_jump(67);
+intercept_jump(68);
+intercept_jump(69);
+intercept_jump(70);
+intercept_jump(71);
+intercept_jump(72);
+intercept_jump(73);
+intercept_jump(74);
+intercept_jump(75);
+intercept_jump(76);
+intercept_jump(77);
+intercept_jump(78);
+intercept_jump(79);
+intercept_jump(80);
+intercept_jump(81);
+intercept_jump(82);
+intercept_jump(83);
+intercept_jump(84);
+intercept_jump(85);
+intercept_jump(86);
+intercept_jump(87);
+intercept_jump(88);
+intercept_jump(89);
+intercept_jump(90);
+intercept_jump(91);
+intercept_jump(92);
+intercept_jump(93);
+intercept_jump(94);
+intercept_jump(95);
+intercept_jump(96);
+intercept_jump(97);
+intercept_jump(98);
+intercept_jump(99);
+intercept_jump(100);
+intercept_jump(101);
+intercept_jump(102);
+intercept_jump(103);
+intercept_jump(104);
+intercept_jump(105);
+intercept_jump(106);
+intercept_jump(107);
+intercept_jump(108);
+intercept_jump(109);
+intercept_jump(110);
+intercept_jump(111);
+intercept_jump(112);
+intercept_jump(113);
+intercept_jump(114);
+intercept_jump(115);
+intercept_jump(116);
+intercept_jump(117);
+intercept_jump(118);
+intercept_jump(119);
+intercept_jump(120);
+intercept_jump(121);
+intercept_jump(122);
+intercept_jump(123);
+intercept_jump(124);
+intercept_jump(125);
+intercept_jump(126);
+intercept_jump(127);
+intercept_jump(128);
+intercept_jump(129);
+intercept_jump(130);
+intercept_jump(131);
+intercept_jump(132);
+intercept_jump(133);
+intercept_jump(134);
+intercept_jump(135);
+intercept_jump(136);
+intercept_jump(137);
+intercept_jump(138);
+intercept_jump(139);
+intercept_jump(140);
+intercept_jump(141);
+intercept_jump(142);
+intercept_jump(143);
+intercept_jump(144);
+intercept_jump(145);
+intercept_jump(146);
+intercept_jump(147);
+intercept_jump(148);
+intercept_jump(149);
+intercept_jump(150);
+intercept_jump(151);
+intercept_jump(152);
+intercept_jump(153);
+intercept_jump(154);
+intercept_jump(155);
+intercept_jump(156);
+intercept_jump(157);
+intercept_jump(158);
+intercept_jump(159);
+intercept_jump(160);
+intercept_jump(161);
+intercept_jump(162);
+intercept_jump(163);
+intercept_jump(164);
+intercept_jump(165);
+intercept_jump(166);
+intercept_jump(167);
+intercept_jump(168);
+intercept_jump(169);
+intercept_jump(170);
+intercept_jump(171);
+intercept_jump(172);
+intercept_jump(173);
+intercept_jump(174);
+intercept_jump(175);
+intercept_jump(176);
+intercept_jump(177);
+intercept_jump(178);
+intercept_jump(179);
+intercept_jump(180);
+intercept_jump(181);
+intercept_jump(182);
+intercept_jump(183);
+intercept_jump(184);
+intercept_jump(185);
+intercept_jump(186);
+intercept_jump(187);
+intercept_jump(188);
+intercept_jump(189);
+intercept_jump(190);
+intercept_jump(191);
+intercept_jump(192);
+intercept_jump(193);
+intercept_jump(194);
+intercept_jump(195);
+intercept_jump(196);
+intercept_jump(197);
+intercept_jump(198);
+intercept_jump(199);
+intercept_jump(200);
+intercept_jump(201);
+intercept_jump(202);
+intercept_jump(203);
+intercept_jump(204);
+intercept_jump(205);
+intercept_jump(206);
+intercept_jump(207);
+intercept_jump(208);
+intercept_jump(209);
+intercept_jump(210);
+intercept_jump(211);
+intercept_jump(212);
+intercept_jump(213);
+intercept_jump(214);
+intercept_jump(215);
+intercept_jump(216);
+intercept_jump(217);
+intercept_jump(218);
+intercept_jump(219);
+intercept_jump(220);
+intercept_jump(221);
+intercept_jump(222);
+intercept_jump(223);
+intercept_jump(224);
+intercept_jump(225);
+intercept_jump(226);
+intercept_jump(227);
+intercept_jump(228);
+intercept_jump(229);
+intercept_jump(230);
+intercept_jump(231);
+intercept_jump(232);
+intercept_jump(233);
+intercept_jump(234);
+intercept_jump(235);
+intercept_jump(236);
+intercept_jump(237);
+intercept_jump(238);
+intercept_jump(239);
+intercept_jump(240);
+intercept_jump(241);
+intercept_jump(242);
+intercept_jump(243);
+intercept_jump(244);
+intercept_jump(245);
+intercept_jump(246);
+intercept_jump(247);
+intercept_jump(248);
+intercept_jump(249);
+intercept_jump(250);
+intercept_jump(251);
+intercept_jump(252);
+intercept_jump(253);
+intercept_jump(254);
+intercept_jump(255);
+intercept_jump(256);
+intercept_jump(257);
+intercept_jump(258);
+intercept_jump(259);
+intercept_jump(260);
+intercept_jump(261);
+intercept_jump(262);
+intercept_jump(263);
+intercept_jump(264);
+intercept_jump(265);
+intercept_jump(266);
+intercept_jump(267);
+intercept_jump(268);
+intercept_jump(269);
+intercept_jump(270);
+intercept_jump(271);
+intercept_jump(272);
+intercept_jump(273);
+intercept_jump(274);
+intercept_jump(275);
+intercept_jump(276);
+intercept_jump(277);
+intercept_jump(278);
+intercept_jump(279);
+intercept_jump(280);
+intercept_jump(281);
+intercept_jump(282);
+intercept_jump(283);
+intercept_jump(284);
+intercept_jump(285);
+intercept_jump(286);
+intercept_jump(287);
+intercept_jump(288);
+intercept_jump(289);
+intercept_jump(290);
+intercept_jump(291);
+intercept_jump(292);
+intercept_jump(293);
+intercept_jump(294);
+intercept_jump(295);
+intercept_jump(296);
+intercept_jump(297);
+intercept_jump(298);
+intercept_jump(299);
+intercept_jump(300);
+intercept_jump(301);
+intercept_jump(302);
+intercept_jump(303);
+intercept_jump(304);
+intercept_jump(305);
+intercept_jump(306);
+intercept_jump(307);
+intercept_jump(308);
+intercept_jump(309);
+intercept_jump(310);
+intercept_jump(311);
+intercept_jump(312);
+intercept_jump(313);
+intercept_jump(314);
+intercept_jump(315);
+intercept_jump(316);
+intercept_jump(317);
+intercept_jump(318);
+intercept_jump(319);
+intercept_jump(320);
+intercept_jump(321);
+intercept_jump(322);
+intercept_jump(323);
+intercept_jump(324);
+intercept_jump(325);
+intercept_jump(326);
+intercept_jump(327);
+intercept_jump(328);
+intercept_jump(329);
+intercept_jump(330);
+intercept_jump(331);
+intercept_jump(332);
+intercept_jump(333);
+intercept_jump(334);
+intercept_jump(335);
+intercept_jump(336);
+intercept_jump(337);
+intercept_jump(338);
+intercept_jump(339);
+intercept_jump(340);
+intercept_jump(341);
+intercept_jump(342);
+intercept_jump(343);
+intercept_jump(344);
+intercept_jump(345);
+intercept_jump(346);
+intercept_jump(347);
+intercept_jump(348);
+intercept_jump(349);
+intercept_jump(350);
+intercept_jump(351);
+intercept_jump(352);
+intercept_jump(353);
+intercept_jump(354);
+intercept_jump(355);
+intercept_jump(356);
+intercept_jump(357);
+intercept_jump(358);
+intercept_jump(359);
+intercept_jump(360);
+intercept_jump(361);
+intercept_jump(362);
+intercept_jump(363);
+intercept_jump(364);
+intercept_jump(365);
+intercept_jump(366);
+intercept_jump(367);
+intercept_jump(368);
+intercept_jump(369);
+intercept_jump(370);
+intercept_jump(371);
+intercept_jump(372);
+intercept_jump(373);
+intercept_jump(374);
+intercept_jump(375);
+intercept_jump(376);
+intercept_jump(377);
+intercept_jump(378);
+intercept_jump(379);
+intercept_jump(380);
+intercept_jump(381);
+intercept_jump(382);
+intercept_jump(383);
+intercept_jump(384);
+intercept_jump(385);
+intercept_jump(386);
+intercept_jump(387);
+intercept_jump(388);
+intercept_jump(389);
+intercept_jump(390);
+intercept_jump(391);
+intercept_jump(392);
+intercept_jump(393);
+intercept_jump(394);
+intercept_jump(395);
+intercept_jump(396);
+intercept_jump(397);
+intercept_jump(398);
+intercept_jump(399);
+intercept_jump(400);
+intercept_jump(401);
+intercept_jump(402);
+intercept_jump(403);
+intercept_jump(404);
+intercept_jump(405);
+intercept_jump(406);
+intercept_jump(407);
+intercept_jump(408);
+intercept_jump(409);
+intercept_jump(410);
+intercept_jump(411);
+intercept_jump(412);
+intercept_jump(413);
+intercept_jump(414);
+intercept_jump(415);
+intercept_jump(416);
+intercept_jump(417);
+intercept_jump(418);
+intercept_jump(419);
+intercept_jump(420);
+intercept_jump(421);
+intercept_jump(422);
+intercept_jump(423);
+intercept_jump(424);
+intercept_jump(425);
+intercept_jump(426);
+intercept_jump(427);
+intercept_jump(428);
+intercept_jump(429);
+intercept_jump(430);
+intercept_jump(431);
+intercept_jump(432);
+intercept_jump(433);
+intercept_jump(434);
+intercept_jump(435);
+intercept_jump(436);
+intercept_jump(437);
+intercept_jump(438);
+intercept_jump(439);
+intercept_jump(440);
+intercept_jump(441);
+intercept_jump(442);
+intercept_jump(443);
+intercept_jump(444);
+intercept_jump(445);
+intercept_jump(446);
+intercept_jump(447);
+intercept_jump(448);
+intercept_jump(449);
+intercept_jump(450);
+intercept_jump(451);
+intercept_jump(452);
+intercept_jump(453);
+intercept_jump(454);
+intercept_jump(455);
+intercept_jump(456);
+intercept_jump(457);
+intercept_jump(458);
+intercept_jump(459);
+intercept_jump(460);
+intercept_jump(461);
+intercept_jump(462);
+intercept_jump(463);
+intercept_jump(464);
+intercept_jump(465);
+intercept_jump(466);
+intercept_jump(467);
+intercept_jump(468);
+intercept_jump(469);
+intercept_jump(470);
+intercept_jump(471);
+intercept_jump(472);
+intercept_jump(473);
+intercept_jump(474);
+intercept_jump(475);
+intercept_jump(476);
+intercept_jump(477);
+intercept_jump(478);
+intercept_jump(479);
+intercept_jump(480);
+intercept_jump(481);
+intercept_jump(482);
+intercept_jump(483);
+intercept_jump(484);
+intercept_jump(485);
+intercept_jump(486);
+intercept_jump(487);
+intercept_jump(488);
+intercept_jump(489);
+intercept_jump(490);
+intercept_jump(491);
+intercept_jump(492);
+intercept_jump(493);
+intercept_jump(494);
+intercept_jump(495);
+intercept_jump(496);
+intercept_jump(497);
+intercept_jump(498);
+intercept_jump(499);
+intercept_jump(500);
+intercept_jump(501);
+intercept_jump(502);
+intercept_jump(503);
+intercept_jump(504);
+intercept_jump(505);
+intercept_jump(506);
+intercept_jump(507);
+intercept_jump(508);
+intercept_jump(509);
+intercept_jump(510);
+intercept_jump(511);
+intercept_jump(512);
+intercept_jump(513);
+intercept_jump(514);
+intercept_jump(515);
+intercept_jump(516);
+intercept_jump(517);
+intercept_jump(518);
+intercept_jump(519);
+intercept_jump(520);
+intercept_jump(521);
+intercept_jump(522);
+intercept_jump(523);
+intercept_jump(524);
+intercept_jump(525);
+intercept_jump(526);
+intercept_jump(527);
+intercept_jump(528);
+intercept_jump(529);
+intercept_jump(530);
+intercept_jump(531);
+intercept_jump(532);
+intercept_jump(533);
+intercept_jump(534);
+intercept_jump(535);
+intercept_jump(536);
+intercept_jump(537);
+intercept_jump(538);
+intercept_jump(539);
+intercept_jump(540);
+intercept_jump(541);
+intercept_jump(542);
+intercept_jump(543);
+intercept_jump(544);
+intercept_jump(545);
+intercept_jump(546);
+intercept_jump(547);
+intercept_jump(548);
+intercept_jump(549);
+intercept_jump(550);
+intercept_jump(551);
+intercept_jump(552);
+intercept_jump(553);
+intercept_jump(554);
+intercept_jump(555);
+intercept_jump(556);
+intercept_jump(557);
+intercept_jump(558);
+intercept_jump(559);
+intercept_jump(560);
+intercept_jump(561);
+intercept_jump(562);
+intercept_jump(563);
+intercept_jump(564);
+intercept_jump(565);
+intercept_jump(566);
+intercept_jump(567);
+intercept_jump(568);
+intercept_jump(569);
+intercept_jump(570);
+intercept_jump(571);
+intercept_jump(572);
+intercept_jump(573);
+intercept_jump(574);
+intercept_jump(575);
+intercept_jump(576);
+intercept_jump(577);
+intercept_jump(578);
+intercept_jump(579);
+intercept_jump(580);
+intercept_jump(581);
+intercept_jump(582);
+intercept_jump(583);
+intercept_jump(584);
+intercept_jump(585);
+intercept_jump(586);
+intercept_jump(587);
+intercept_jump(588);
+intercept_jump(589);
+intercept_jump(590);
+intercept_jump(591);
+intercept_jump(592);
+intercept_jump(593);
+intercept_jump(594);
+intercept_jump(595);
+intercept_jump(596);
+intercept_jump(597);
+intercept_jump(598);
+intercept_jump(599);
+intercept_jump(600);
+intercept_jump(601);
+intercept_jump(602);
+intercept_jump(603);
+intercept_jump(604);
+intercept_jump(605);
+intercept_jump(606);
+intercept_jump(607);
+intercept_jump(608);
+intercept_jump(609);
+intercept_jump(610);
+intercept_jump(611);
+intercept_jump(612);
+intercept_jump(613);
+intercept_jump(614);
+intercept_jump(615);
+intercept_jump(616);
+intercept_jump(617);
+intercept_jump(618);
+intercept_jump(619);
+intercept_jump(620);
+intercept_jump(621);
+intercept_jump(622);
+intercept_jump(623);
+intercept_jump(624);
+intercept_jump(625);
+intercept_jump(626);
+intercept_jump(627);
+intercept_jump(628);
+intercept_jump(629);
+intercept_jump(630);
+intercept_jump(631);
+intercept_jump(632);
+intercept_jump(633);
+intercept_jump(634);
+intercept_jump(635);
+intercept_jump(636);
+intercept_jump(637);
+intercept_jump(638);
+intercept_jump(639);
+intercept_jump(640);
+intercept_jump(641);
+intercept_jump(642);
+intercept_jump(643);
+intercept_jump(644);
+intercept_jump(645);
+intercept_jump(646);
+intercept_jump(647);
+intercept_jump(648);
+intercept_jump(649);
+intercept_jump(650);
+intercept_jump(651);
+intercept_jump(652);
+intercept_jump(653);
+intercept_jump(654);
+intercept_jump(655);
+intercept_jump(656);
+intercept_jump(657);
+intercept_jump(658);
+intercept_jump(659);
+intercept_jump(660);
+intercept_jump(661);
+intercept_jump(662);
+intercept_jump(663);
+intercept_jump(664);
+intercept_jump(665);
+intercept_jump(666);
+intercept_jump(667);
+intercept_jump(668);
+intercept_jump(669);
+intercept_jump(670);
+intercept_jump(671);
+intercept_jump(672);
+intercept_jump(673);
+intercept_jump(674);
+intercept_jump(675);
+intercept_jump(676);
+intercept_jump(677);
+intercept_jump(678);
+intercept_jump(679);
+intercept_jump(680);
+intercept_jump(681);
+intercept_jump(682);
+intercept_jump(683);
+intercept_jump(684);
+intercept_jump(685);
+intercept_jump(686);
+intercept_jump(687);
+intercept_jump(688);
+intercept_jump(689);
+intercept_jump(690);
+intercept_jump(691);
+intercept_jump(692);
+intercept_jump(693);
+intercept_jump(694);
+intercept_jump(695);
+intercept_jump(696);
+intercept_jump(697);
+intercept_jump(698);
+intercept_jump(699);
+intercept_jump(700);
+intercept_jump(701);
+intercept_jump(702);
+intercept_jump(703);
+intercept_jump(704);
+intercept_jump(705);
+intercept_jump(706);
+intercept_jump(707);
+intercept_jump(708);
+intercept_jump(709);
+intercept_jump(710);
+intercept_jump(711);
+intercept_jump(712);
+intercept_jump(713);
+intercept_jump(714);
+intercept_jump(715);
+intercept_jump(716);
+intercept_jump(717);
+intercept_jump(718);
+intercept_jump(719);
+intercept_jump(720);
+intercept_jump(721);
+intercept_jump(722);
+intercept_jump(723);
+intercept_jump(724);
+intercept_jump(725);
+intercept_jump(726);
+intercept_jump(727);
+intercept_jump(728);
+intercept_jump(729);
+intercept_jump(730);
+intercept_jump(731);
+intercept_jump(732);
+intercept_jump(733);
+intercept_jump(734);
+intercept_jump(735);
+intercept_jump(736);
+intercept_jump(737);
+intercept_jump(738);
+intercept_jump(739);
+intercept_jump(740);
+intercept_jump(741);
+intercept_jump(742);
+intercept_jump(743);
+intercept_jump(744);
+intercept_jump(745);
+intercept_jump(746);
+intercept_jump(747);
+intercept_jump(748);
+intercept_jump(749);
+intercept_jump(750);
+intercept_jump(751);
+intercept_jump(752);
+intercept_jump(753);
+intercept_jump(754);
+intercept_jump(755);
+intercept_jump(756);
+intercept_jump(757);
+intercept_jump(758);
+intercept_jump(759);
+intercept_jump(760);
+intercept_jump(761);
+intercept_jump(762);
+intercept_jump(763);
+intercept_jump(764);
+intercept_jump(765);
+intercept_jump(766);
+intercept_jump(767);
+intercept_jump(768);
+intercept_jump(769);
+intercept_jump(770);
+intercept_jump(771);
+intercept_jump(772);
+intercept_jump(773);
+intercept_jump(774);
+intercept_jump(775);
+intercept_jump(776);
+intercept_jump(777);
+intercept_jump(778);
+intercept_jump(779);
+intercept_jump(780);
+intercept_jump(781);
+intercept_jump(782);
+intercept_jump(783);
+intercept_jump(784);
+intercept_jump(785);
+intercept_jump(786);
+intercept_jump(787);
+intercept_jump(788);
+intercept_jump(789);
+intercept_jump(790);
+intercept_jump(791);
+intercept_jump(792);
+intercept_jump(793);
+intercept_jump(794);
+intercept_jump(795);
+intercept_jump(796);
+intercept_jump(797);
+intercept_jump(798);
+intercept_jump(799);
+intercept_jump(800);
+intercept_jump(801);
+intercept_jump(802);
+intercept_jump(803);
+intercept_jump(804);
+intercept_jump(805);
+intercept_jump(806);
+intercept_jump(807);
+intercept_jump(808);
+intercept_jump(809);
+intercept_jump(810);
+intercept_jump(811);
+intercept_jump(812);
+intercept_jump(813);
+intercept_jump(814);
+intercept_jump(815);
+intercept_jump(816);
+intercept_jump(817);
+intercept_jump(818);
+intercept_jump(819);
+intercept_jump(820);
+intercept_jump(821);
+intercept_jump(822);
+intercept_jump(823);
+intercept_jump(824);
+intercept_jump(825);
+intercept_jump(826);
+intercept_jump(827);
+intercept_jump(828);
+intercept_jump(829);
+intercept_jump(830);
+intercept_jump(831);
+intercept_jump(832);
+intercept_jump(833);
+intercept_jump(834);
+intercept_jump(835);
+intercept_jump(836);
+intercept_jump(837);
+intercept_jump(838);
+intercept_jump(839);
+intercept_jump(840);
+intercept_jump(841);
+intercept_jump(842);
+intercept_jump(843);
+intercept_jump(844);
+intercept_jump(845);
+intercept_jump(846);
+intercept_jump(847);
+intercept_jump(848);
+intercept_jump(849);
+intercept_jump(850);
+intercept_jump(851);
+intercept_jump(852);
+intercept_jump(853);
+intercept_jump(854);
+intercept_jump(855);
+intercept_jump(856);
+intercept_jump(857);
+intercept_jump(858);
+intercept_jump(859);
+intercept_jump(860);
+intercept_jump(861);
+intercept_jump(862);
+intercept_jump(863);
+intercept_jump(864);
+intercept_jump(865);
+intercept_jump(866);
+intercept_jump(867);
+intercept_jump(868);
+intercept_jump(869);
+intercept_jump(870);
+intercept_jump(871);
+intercept_jump(872);
+intercept_jump(873);
+intercept_jump(874);
+intercept_jump(875);
+intercept_jump(876);
+intercept_jump(877);
+intercept_jump(878);
+intercept_jump(879);
+intercept_jump(880);
+intercept_jump(881);
+intercept_jump(882);
+intercept_jump(883);
+intercept_jump(884);
+intercept_jump(885);
+intercept_jump(886);
+intercept_jump(887);
+intercept_jump(888);
+intercept_jump(889);
+intercept_jump(890);
+intercept_jump(891);
+intercept_jump(892);
+intercept_jump(893);
+intercept_jump(894);
+intercept_jump(895);
+intercept_jump(896);
+intercept_jump(897);
+intercept_jump(898);
+intercept_jump(899);
+intercept_jump(900);
+intercept_jump(901);
+intercept_jump(902);
+intercept_jump(903);
+intercept_jump(904);
+intercept_jump(905);
+intercept_jump(906);
+intercept_jump(907);
+intercept_jump(908);
+intercept_jump(909);
+intercept_jump(910);
+intercept_jump(911);
+intercept_jump(912);
+intercept_jump(913);
+intercept_jump(914);
+intercept_jump(915);
+intercept_jump(916);
+intercept_jump(917);
+intercept_jump(918);
+intercept_jump(919);
+intercept_jump(920);
+intercept_jump(921);
+intercept_jump(922);
+intercept_jump(923);
+intercept_jump(924);
+intercept_jump(925);
+intercept_jump(926);
+intercept_jump(927);
+intercept_jump(928);
+intercept_jump(929);
+intercept_jump(930);
+intercept_jump(931);
+intercept_jump(932);
+intercept_jump(933);
+intercept_jump(934);
+intercept_jump(935);
+intercept_jump(936);
+intercept_jump(937);
+intercept_jump(938);
+intercept_jump(939);
+intercept_jump(940);
+intercept_jump(941);
+intercept_jump(942);
+intercept_jump(943);
+intercept_jump(944);
+intercept_jump(945);
+intercept_jump(946);
+intercept_jump(947);
+intercept_jump(948);
+intercept_jump(949);
+intercept_jump(950);
+intercept_jump(951);
+intercept_jump(952);
+intercept_jump(953);
+intercept_jump(954);
+intercept_jump(955);
+intercept_jump(956);
+intercept_jump(957);
+intercept_jump(958);
+intercept_jump(959);
+intercept_jump(960);
+intercept_jump(961);
+intercept_jump(962);
+intercept_jump(963);
+intercept_jump(964);
+intercept_jump(965);
+intercept_jump(966);
+intercept_jump(967);
+intercept_jump(968);
+intercept_jump(969);
+intercept_jump(970);
+intercept_jump(971);
+intercept_jump(972);
+intercept_jump(973);
+intercept_jump(974);
+intercept_jump(975);
+intercept_jump(976);
+intercept_jump(977);
+intercept_jump(978);
+intercept_jump(979);
+intercept_jump(980);
+intercept_jump(981);
+intercept_jump(982);
+intercept_jump(983);
+intercept_jump(984);
+intercept_jump(985);
+intercept_jump(986);
+intercept_jump(987);
+intercept_jump(988);
+intercept_jump(989);
+intercept_jump(990);
+intercept_jump(991);
+intercept_jump(992);
+intercept_jump(993);
+intercept_jump(994);
+intercept_jump(995);
+intercept_jump(996);
+intercept_jump(997);
+intercept_jump(998);
+intercept_jump(999);
+intercept_jump(1000);
+intercept_jump(1001);
+intercept_jump(1002);
+intercept_jump(1003);
+intercept_jump(1004);
+intercept_jump(1005);
+intercept_jump(1006);
+intercept_jump(1007);
+intercept_jump(1008);
+intercept_jump(1009);
+intercept_jump(1010);
+intercept_jump(1011);
+intercept_jump(1012);
+intercept_jump(1013);
+intercept_jump(1014);
+intercept_jump(1015);
+intercept_jump(1016);
+intercept_jump(1017);
+intercept_jump(1018);
+intercept_jump(1019);
+intercept_jump(1020);
+intercept_jump(1021);
+intercept_jump(1022);
+intercept_jump(1023);
+
+const
+    void* INTERCEPT_JUMPS[1024] = {
+        &intercept_jump0,
+        &intercept_jump1,
+        &intercept_jump2,
+        &intercept_jump3,
+        &intercept_jump4,
+        &intercept_jump5,
+        &intercept_jump6,
+        &intercept_jump7,
+        &intercept_jump8,
+        &intercept_jump9,
+        &intercept_jump10,
+        &intercept_jump11,
+        &intercept_jump12,
+        &intercept_jump13,
+        &intercept_jump14,
+        &intercept_jump15,
+        &intercept_jump16,
+        &intercept_jump17,
+        &intercept_jump18,
+        &intercept_jump19,
+        &intercept_jump20,
+        &intercept_jump21,
+        &intercept_jump22,
+        &intercept_jump23,
+        &intercept_jump24,
+        &intercept_jump25,
+        &intercept_jump26,
+        &intercept_jump27,
+        &intercept_jump28,
+        &intercept_jump29,
+        &intercept_jump30,
+        &intercept_jump31,
+        &intercept_jump32,
+        &intercept_jump33,
+        &intercept_jump34,
+        &intercept_jump35,
+        &intercept_jump36,
+        &intercept_jump37,
+        &intercept_jump38,
+        &intercept_jump39,
+        &intercept_jump40,
+        &intercept_jump41,
+        &intercept_jump42,
+        &intercept_jump43,
+        &intercept_jump44,
+        &intercept_jump45,
+        &intercept_jump46,
+        &intercept_jump47,
+        &intercept_jump48,
+        &intercept_jump49,
+        &intercept_jump50,
+        &intercept_jump51,
+        &intercept_jump52,
+        &intercept_jump53,
+        &intercept_jump54,
+        &intercept_jump55,
+        &intercept_jump56,
+        &intercept_jump57,
+        &intercept_jump58,
+        &intercept_jump59,
+        &intercept_jump60,
+        &intercept_jump61,
+        &intercept_jump62,
+        &intercept_jump63,
+        &intercept_jump64,
+        &intercept_jump65,
+        &intercept_jump66,
+        &intercept_jump67,
+        &intercept_jump68,
+        &intercept_jump69,
+        &intercept_jump70,
+        &intercept_jump71,
+        &intercept_jump72,
+        &intercept_jump73,
+        &intercept_jump74,
+        &intercept_jump75,
+        &intercept_jump76,
+        &intercept_jump77,
+        &intercept_jump78,
+        &intercept_jump79,
+        &intercept_jump80,
+        &intercept_jump81,
+        &intercept_jump82,
+        &intercept_jump83,
+        &intercept_jump84,
+        &intercept_jump85,
+        &intercept_jump86,
+        &intercept_jump87,
+        &intercept_jump88,
+        &intercept_jump89,
+        &intercept_jump90,
+        &intercept_jump91,
+        &intercept_jump92,
+        &intercept_jump93,
+        &intercept_jump94,
+        &intercept_jump95,
+        &intercept_jump96,
+        &intercept_jump97,
+        &intercept_jump98,
+        &intercept_jump99,
+        &intercept_jump100,
+        &intercept_jump101,
+        &intercept_jump102,
+        &intercept_jump103,
+        &intercept_jump104,
+        &intercept_jump105,
+        &intercept_jump106,
+        &intercept_jump107,
+        &intercept_jump108,
+        &intercept_jump109,
+        &intercept_jump110,
+        &intercept_jump111,
+        &intercept_jump112,
+        &intercept_jump113,
+        &intercept_jump114,
+        &intercept_jump115,
+        &intercept_jump116,
+        &intercept_jump117,
+        &intercept_jump118,
+        &intercept_jump119,
+        &intercept_jump120,
+        &intercept_jump121,
+        &intercept_jump122,
+        &intercept_jump123,
+        &intercept_jump124,
+        &intercept_jump125,
+        &intercept_jump126,
+        &intercept_jump127,
+        &intercept_jump128,
+        &intercept_jump129,
+        &intercept_jump130,
+        &intercept_jump131,
+        &intercept_jump132,
+        &intercept_jump133,
+        &intercept_jump134,
+        &intercept_jump135,
+        &intercept_jump136,
+        &intercept_jump137,
+        &intercept_jump138,
+        &intercept_jump139,
+        &intercept_jump140,
+        &intercept_jump141,
+        &intercept_jump142,
+        &intercept_jump143,
+        &intercept_jump144,
+        &intercept_jump145,
+        &intercept_jump146,
+        &intercept_jump147,
+        &intercept_jump148,
+        &intercept_jump149,
+        &intercept_jump150,
+        &intercept_jump151,
+        &intercept_jump152,
+        &intercept_jump153,
+        &intercept_jump154,
+        &intercept_jump155,
+        &intercept_jump156,
+        &intercept_jump157,
+        &intercept_jump158,
+        &intercept_jump159,
+        &intercept_jump160,
+        &intercept_jump161,
+        &intercept_jump162,
+        &intercept_jump163,
+        &intercept_jump164,
+        &intercept_jump165,
+        &intercept_jump166,
+        &intercept_jump167,
+        &intercept_jump168,
+        &intercept_jump169,
+        &intercept_jump170,
+        &intercept_jump171,
+        &intercept_jump172,
+        &intercept_jump173,
+        &intercept_jump174,
+        &intercept_jump175,
+        &intercept_jump176,
+        &intercept_jump177,
+        &intercept_jump178,
+        &intercept_jump179,
+        &intercept_jump180,
+        &intercept_jump181,
+        &intercept_jump182,
+        &intercept_jump183,
+        &intercept_jump184,
+        &intercept_jump185,
+        &intercept_jump186,
+        &intercept_jump187,
+        &intercept_jump188,
+        &intercept_jump189,
+        &intercept_jump190,
+        &intercept_jump191,
+        &intercept_jump192,
+        &intercept_jump193,
+        &intercept_jump194,
+        &intercept_jump195,
+        &intercept_jump196,
+        &intercept_jump197,
+        &intercept_jump198,
+        &intercept_jump199,
+        &intercept_jump200,
+        &intercept_jump201,
+        &intercept_jump202,
+        &intercept_jump203,
+        &intercept_jump204,
+        &intercept_jump205,
+        &intercept_jump206,
+        &intercept_jump207,
+        &intercept_jump208,
+        &intercept_jump209,
+        &intercept_jump210,
+        &intercept_jump211,
+        &intercept_jump212,
+        &intercept_jump213,
+        &intercept_jump214,
+        &intercept_jump215,
+        &intercept_jump216,
+        &intercept_jump217,
+        &intercept_jump218,
+        &intercept_jump219,
+        &intercept_jump220,
+        &intercept_jump221,
+        &intercept_jump222,
+        &intercept_jump223,
+        &intercept_jump224,
+        &intercept_jump225,
+        &intercept_jump226,
+        &intercept_jump227,
+        &intercept_jump228,
+        &intercept_jump229,
+        &intercept_jump230,
+        &intercept_jump231,
+        &intercept_jump232,
+        &intercept_jump233,
+        &intercept_jump234,
+        &intercept_jump235,
+        &intercept_jump236,
+        &intercept_jump237,
+        &intercept_jump238,
+        &intercept_jump239,
+        &intercept_jump240,
+        &intercept_jump241,
+        &intercept_jump242,
+        &intercept_jump243,
+        &intercept_jump244,
+        &intercept_jump245,
+        &intercept_jump246,
+        &intercept_jump247,
+        &intercept_jump248,
+        &intercept_jump249,
+        &intercept_jump250,
+        &intercept_jump251,
+        &intercept_jump252,
+        &intercept_jump253,
+        &intercept_jump254,
+        &intercept_jump255,
+        &intercept_jump256,
+        &intercept_jump257,
+        &intercept_jump258,
+        &intercept_jump259,
+        &intercept_jump260,
+        &intercept_jump261,
+        &intercept_jump262,
+        &intercept_jump263,
+        &intercept_jump264,
+        &intercept_jump265,
+        &intercept_jump266,
+        &intercept_jump267,
+        &intercept_jump268,
+        &intercept_jump269,
+        &intercept_jump270,
+        &intercept_jump271,
+        &intercept_jump272,
+        &intercept_jump273,
+        &intercept_jump274,
+        &intercept_jump275,
+        &intercept_jump276,
+        &intercept_jump277,
+        &intercept_jump278,
+        &intercept_jump279,
+        &intercept_jump280,
+        &intercept_jump281,
+        &intercept_jump282,
+        &intercept_jump283,
+        &intercept_jump284,
+        &intercept_jump285,
+        &intercept_jump286,
+        &intercept_jump287,
+        &intercept_jump288,
+        &intercept_jump289,
+        &intercept_jump290,
+        &intercept_jump291,
+        &intercept_jump292,
+        &intercept_jump293,
+        &intercept_jump294,
+        &intercept_jump295,
+        &intercept_jump296,
+        &intercept_jump297,
+        &intercept_jump298,
+        &intercept_jump299,
+        &intercept_jump300,
+        &intercept_jump301,
+        &intercept_jump302,
+        &intercept_jump303,
+        &intercept_jump304,
+        &intercept_jump305,
+        &intercept_jump306,
+        &intercept_jump307,
+        &intercept_jump308,
+        &intercept_jump309,
+        &intercept_jump310,
+        &intercept_jump311,
+        &intercept_jump312,
+        &intercept_jump313,
+        &intercept_jump314,
+        &intercept_jump315,
+        &intercept_jump316,
+        &intercept_jump317,
+        &intercept_jump318,
+        &intercept_jump319,
+        &intercept_jump320,
+        &intercept_jump321,
+        &intercept_jump322,
+        &intercept_jump323,
+        &intercept_jump324,
+        &intercept_jump325,
+        &intercept_jump326,
+        &intercept_jump327,
+        &intercept_jump328,
+        &intercept_jump329,
+        &intercept_jump330,
+        &intercept_jump331,
+        &intercept_jump332,
+        &intercept_jump333,
+        &intercept_jump334,
+        &intercept_jump335,
+        &intercept_jump336,
+        &intercept_jump337,
+        &intercept_jump338,
+        &intercept_jump339,
+        &intercept_jump340,
+        &intercept_jump341,
+        &intercept_jump342,
+        &intercept_jump343,
+        &intercept_jump344,
+        &intercept_jump345,
+        &intercept_jump346,
+        &intercept_jump347,
+        &intercept_jump348,
+        &intercept_jump349,
+        &intercept_jump350,
+        &intercept_jump351,
+        &intercept_jump352,
+        &intercept_jump353,
+        &intercept_jump354,
+        &intercept_jump355,
+        &intercept_jump356,
+        &intercept_jump357,
+        &intercept_jump358,
+        &intercept_jump359,
+        &intercept_jump360,
+        &intercept_jump361,
+        &intercept_jump362,
+        &intercept_jump363,
+        &intercept_jump364,
+        &intercept_jump365,
+        &intercept_jump366,
+        &intercept_jump367,
+        &intercept_jump368,
+        &intercept_jump369,
+        &intercept_jump370,
+        &intercept_jump371,
+        &intercept_jump372,
+        &intercept_jump373,
+        &intercept_jump374,
+        &intercept_jump375,
+        &intercept_jump376,
+        &intercept_jump377,
+        &intercept_jump378,
+        &intercept_jump379,
+        &intercept_jump380,
+        &intercept_jump381,
+        &intercept_jump382,
+        &intercept_jump383,
+        &intercept_jump384,
+        &intercept_jump385,
+        &intercept_jump386,
+        &intercept_jump387,
+        &intercept_jump388,
+        &intercept_jump389,
+        &intercept_jump390,
+        &intercept_jump391,
+        &intercept_jump392,
+        &intercept_jump393,
+        &intercept_jump394,
+        &intercept_jump395,
+        &intercept_jump396,
+        &intercept_jump397,
+        &intercept_jump398,
+        &intercept_jump399,
+        &intercept_jump400,
+        &intercept_jump401,
+        &intercept_jump402,
+        &intercept_jump403,
+        &intercept_jump404,
+        &intercept_jump405,
+        &intercept_jump406,
+        &intercept_jump407,
+        &intercept_jump408,
+        &intercept_jump409,
+        &intercept_jump410,
+        &intercept_jump411,
+        &intercept_jump412,
+        &intercept_jump413,
+        &intercept_jump414,
+        &intercept_jump415,
+        &intercept_jump416,
+        &intercept_jump417,
+        &intercept_jump418,
+        &intercept_jump419,
+        &intercept_jump420,
+        &intercept_jump421,
+        &intercept_jump422,
+        &intercept_jump423,
+        &intercept_jump424,
+        &intercept_jump425,
+        &intercept_jump426,
+        &intercept_jump427,
+        &intercept_jump428,
+        &intercept_jump429,
+        &intercept_jump430,
+        &intercept_jump431,
+        &intercept_jump432,
+        &intercept_jump433,
+        &intercept_jump434,
+        &intercept_jump435,
+        &intercept_jump436,
+        &intercept_jump437,
+        &intercept_jump438,
+        &intercept_jump439,
+        &intercept_jump440,
+        &intercept_jump441,
+        &intercept_jump442,
+        &intercept_jump443,
+        &intercept_jump444,
+        &intercept_jump445,
+        &intercept_jump446,
+        &intercept_jump447,
+        &intercept_jump448,
+        &intercept_jump449,
+        &intercept_jump450,
+        &intercept_jump451,
+        &intercept_jump452,
+        &intercept_jump453,
+        &intercept_jump454,
+        &intercept_jump455,
+        &intercept_jump456,
+        &intercept_jump457,
+        &intercept_jump458,
+        &intercept_jump459,
+        &intercept_jump460,
+        &intercept_jump461,
+        &intercept_jump462,
+        &intercept_jump463,
+        &intercept_jump464,
+        &intercept_jump465,
+        &intercept_jump466,
+        &intercept_jump467,
+        &intercept_jump468,
+        &intercept_jump469,
+        &intercept_jump470,
+        &intercept_jump471,
+        &intercept_jump472,
+        &intercept_jump473,
+        &intercept_jump474,
+        &intercept_jump475,
+        &intercept_jump476,
+        &intercept_jump477,
+        &intercept_jump478,
+        &intercept_jump479,
+        &intercept_jump480,
+        &intercept_jump481,
+        &intercept_jump482,
+        &intercept_jump483,
+        &intercept_jump484,
+        &intercept_jump485,
+        &intercept_jump486,
+        &intercept_jump487,
+        &intercept_jump488,
+        &intercept_jump489,
+        &intercept_jump490,
+        &intercept_jump491,
+        &intercept_jump492,
+        &intercept_jump493,
+        &intercept_jump494,
+        &intercept_jump495,
+        &intercept_jump496,
+        &intercept_jump497,
+        &intercept_jump498,
+        &intercept_jump499,
+        &intercept_jump500,
+        &intercept_jump501,
+        &intercept_jump502,
+        &intercept_jump503,
+        &intercept_jump504,
+        &intercept_jump505,
+        &intercept_jump506,
+        &intercept_jump507,
+        &intercept_jump508,
+        &intercept_jump509,
+        &intercept_jump510,
+        &intercept_jump511,
+        &intercept_jump512,
+        &intercept_jump513,
+        &intercept_jump514,
+        &intercept_jump515,
+        &intercept_jump516,
+        &intercept_jump517,
+        &intercept_jump518,
+        &intercept_jump519,
+        &intercept_jump520,
+        &intercept_jump521,
+        &intercept_jump522,
+        &intercept_jump523,
+        &intercept_jump524,
+        &intercept_jump525,
+        &intercept_jump526,
+        &intercept_jump527,
+        &intercept_jump528,
+        &intercept_jump529,
+        &intercept_jump530,
+        &intercept_jump531,
+        &intercept_jump532,
+        &intercept_jump533,
+        &intercept_jump534,
+        &intercept_jump535,
+        &intercept_jump536,
+        &intercept_jump537,
+        &intercept_jump538,
+        &intercept_jump539,
+        &intercept_jump540,
+        &intercept_jump541,
+        &intercept_jump542,
+        &intercept_jump543,
+        &intercept_jump544,
+        &intercept_jump545,
+        &intercept_jump546,
+        &intercept_jump547,
+        &intercept_jump548,
+        &intercept_jump549,
+        &intercept_jump550,
+        &intercept_jump551,
+        &intercept_jump552,
+        &intercept_jump553,
+        &intercept_jump554,
+        &intercept_jump555,
+        &intercept_jump556,
+        &intercept_jump557,
+        &intercept_jump558,
+        &intercept_jump559,
+        &intercept_jump560,
+        &intercept_jump561,
+        &intercept_jump562,
+        &intercept_jump563,
+        &intercept_jump564,
+        &intercept_jump565,
+        &intercept_jump566,
+        &intercept_jump567,
+        &intercept_jump568,
+        &intercept_jump569,
+        &intercept_jump570,
+        &intercept_jump571,
+        &intercept_jump572,
+        &intercept_jump573,
+        &intercept_jump574,
+        &intercept_jump575,
+        &intercept_jump576,
+        &intercept_jump577,
+        &intercept_jump578,
+        &intercept_jump579,
+        &intercept_jump580,
+        &intercept_jump581,
+        &intercept_jump582,
+        &intercept_jump583,
+        &intercept_jump584,
+        &intercept_jump585,
+        &intercept_jump586,
+        &intercept_jump587,
+        &intercept_jump588,
+        &intercept_jump589,
+        &intercept_jump590,
+        &intercept_jump591,
+        &intercept_jump592,
+        &intercept_jump593,
+        &intercept_jump594,
+        &intercept_jump595,
+        &intercept_jump596,
+        &intercept_jump597,
+        &intercept_jump598,
+        &intercept_jump599,
+        &intercept_jump600,
+        &intercept_jump601,
+        &intercept_jump602,
+        &intercept_jump603,
+        &intercept_jump604,
+        &intercept_jump605,
+        &intercept_jump606,
+        &intercept_jump607,
+        &intercept_jump608,
+        &intercept_jump609,
+        &intercept_jump610,
+        &intercept_jump611,
+        &intercept_jump612,
+        &intercept_jump613,
+        &intercept_jump614,
+        &intercept_jump615,
+        &intercept_jump616,
+        &intercept_jump617,
+        &intercept_jump618,
+        &intercept_jump619,
+        &intercept_jump620,
+        &intercept_jump621,
+        &intercept_jump622,
+        &intercept_jump623,
+        &intercept_jump624,
+        &intercept_jump625,
+        &intercept_jump626,
+        &intercept_jump627,
+        &intercept_jump628,
+        &intercept_jump629,
+        &intercept_jump630,
+        &intercept_jump631,
+        &intercept_jump632,
+        &intercept_jump633,
+        &intercept_jump634,
+        &intercept_jump635,
+        &intercept_jump636,
+        &intercept_jump637,
+        &intercept_jump638,
+        &intercept_jump639,
+        &intercept_jump640,
+        &intercept_jump641,
+        &intercept_jump642,
+        &intercept_jump643,
+        &intercept_jump644,
+        &intercept_jump645,
+        &intercept_jump646,
+        &intercept_jump647,
+        &intercept_jump648,
+        &intercept_jump649,
+        &intercept_jump650,
+        &intercept_jump651,
+        &intercept_jump652,
+        &intercept_jump653,
+        &intercept_jump654,
+        &intercept_jump655,
+        &intercept_jump656,
+        &intercept_jump657,
+        &intercept_jump658,
+        &intercept_jump659,
+        &intercept_jump660,
+        &intercept_jump661,
+        &intercept_jump662,
+        &intercept_jump663,
+        &intercept_jump664,
+        &intercept_jump665,
+        &intercept_jump666,
+        &intercept_jump667,
+        &intercept_jump668,
+        &intercept_jump669,
+        &intercept_jump670,
+        &intercept_jump671,
+        &intercept_jump672,
+        &intercept_jump673,
+        &intercept_jump674,
+        &intercept_jump675,
+        &intercept_jump676,
+        &intercept_jump677,
+        &intercept_jump678,
+        &intercept_jump679,
+        &intercept_jump680,
+        &intercept_jump681,
+        &intercept_jump682,
+        &intercept_jump683,
+        &intercept_jump684,
+        &intercept_jump685,
+        &intercept_jump686,
+        &intercept_jump687,
+        &intercept_jump688,
+        &intercept_jump689,
+        &intercept_jump690,
+        &intercept_jump691,
+        &intercept_jump692,
+        &intercept_jump693,
+        &intercept_jump694,
+        &intercept_jump695,
+        &intercept_jump696,
+        &intercept_jump697,
+        &intercept_jump698,
+        &intercept_jump699,
+        &intercept_jump700,
+        &intercept_jump701,
+        &intercept_jump702,
+        &intercept_jump703,
+        &intercept_jump704,
+        &intercept_jump705,
+        &intercept_jump706,
+        &intercept_jump707,
+        &intercept_jump708,
+        &intercept_jump709,
+        &intercept_jump710,
+        &intercept_jump711,
+        &intercept_jump712,
+        &intercept_jump713,
+        &intercept_jump714,
+        &intercept_jump715,
+        &intercept_jump716,
+        &intercept_jump717,
+        &intercept_jump718,
+        &intercept_jump719,
+        &intercept_jump720,
+        &intercept_jump721,
+        &intercept_jump722,
+        &intercept_jump723,
+        &intercept_jump724,
+        &intercept_jump725,
+        &intercept_jump726,
+        &intercept_jump727,
+        &intercept_jump728,
+        &intercept_jump729,
+        &intercept_jump730,
+        &intercept_jump731,
+        &intercept_jump732,
+        &intercept_jump733,
+        &intercept_jump734,
+        &intercept_jump735,
+        &intercept_jump736,
+        &intercept_jump737,
+        &intercept_jump738,
+        &intercept_jump739,
+        &intercept_jump740,
+        &intercept_jump741,
+        &intercept_jump742,
+        &intercept_jump743,
+        &intercept_jump744,
+        &intercept_jump745,
+        &intercept_jump746,
+        &intercept_jump747,
+        &intercept_jump748,
+        &intercept_jump749,
+        &intercept_jump750,
+        &intercept_jump751,
+        &intercept_jump752,
+        &intercept_jump753,
+        &intercept_jump754,
+        &intercept_jump755,
+        &intercept_jump756,
+        &intercept_jump757,
+        &intercept_jump758,
+        &intercept_jump759,
+        &intercept_jump760,
+        &intercept_jump761,
+        &intercept_jump762,
+        &intercept_jump763,
+        &intercept_jump764,
+        &intercept_jump765,
+        &intercept_jump766,
+        &intercept_jump767,
+        &intercept_jump768,
+        &intercept_jump769,
+        &intercept_jump770,
+        &intercept_jump771,
+        &intercept_jump772,
+        &intercept_jump773,
+        &intercept_jump774,
+        &intercept_jump775,
+        &intercept_jump776,
+        &intercept_jump777,
+        &intercept_jump778,
+        &intercept_jump779,
+        &intercept_jump780,
+        &intercept_jump781,
+        &intercept_jump782,
+        &intercept_jump783,
+        &intercept_jump784,
+        &intercept_jump785,
+        &intercept_jump786,
+        &intercept_jump787,
+        &intercept_jump788,
+        &intercept_jump789,
+        &intercept_jump790,
+        &intercept_jump791,
+        &intercept_jump792,
+        &intercept_jump793,
+        &intercept_jump794,
+        &intercept_jump795,
+        &intercept_jump796,
+        &intercept_jump797,
+        &intercept_jump798,
+        &intercept_jump799,
+        &intercept_jump800,
+        &intercept_jump801,
+        &intercept_jump802,
+        &intercept_jump803,
+        &intercept_jump804,
+        &intercept_jump805,
+        &intercept_jump806,
+        &intercept_jump807,
+        &intercept_jump808,
+        &intercept_jump809,
+        &intercept_jump810,
+        &intercept_jump811,
+        &intercept_jump812,
+        &intercept_jump813,
+        &intercept_jump814,
+        &intercept_jump815,
+        &intercept_jump816,
+        &intercept_jump817,
+        &intercept_jump818,
+        &intercept_jump819,
+        &intercept_jump820,
+        &intercept_jump821,
+        &intercept_jump822,
+        &intercept_jump823,
+        &intercept_jump824,
+        &intercept_jump825,
+        &intercept_jump826,
+        &intercept_jump827,
+        &intercept_jump828,
+        &intercept_jump829,
+        &intercept_jump830,
+        &intercept_jump831,
+        &intercept_jump832,
+        &intercept_jump833,
+        &intercept_jump834,
+        &intercept_jump835,
+        &intercept_jump836,
+        &intercept_jump837,
+        &intercept_jump838,
+        &intercept_jump839,
+        &intercept_jump840,
+        &intercept_jump841,
+        &intercept_jump842,
+        &intercept_jump843,
+        &intercept_jump844,
+        &intercept_jump845,
+        &intercept_jump846,
+        &intercept_jump847,
+        &intercept_jump848,
+        &intercept_jump849,
+        &intercept_jump850,
+        &intercept_jump851,
+        &intercept_jump852,
+        &intercept_jump853,
+        &intercept_jump854,
+        &intercept_jump855,
+        &intercept_jump856,
+        &intercept_jump857,
+        &intercept_jump858,
+        &intercept_jump859,
+        &intercept_jump860,
+        &intercept_jump861,
+        &intercept_jump862,
+        &intercept_jump863,
+        &intercept_jump864,
+        &intercept_jump865,
+        &intercept_jump866,
+        &intercept_jump867,
+        &intercept_jump868,
+        &intercept_jump869,
+        &intercept_jump870,
+        &intercept_jump871,
+        &intercept_jump872,
+        &intercept_jump873,
+        &intercept_jump874,
+        &intercept_jump875,
+        &intercept_jump876,
+        &intercept_jump877,
+        &intercept_jump878,
+        &intercept_jump879,
+        &intercept_jump880,
+        &intercept_jump881,
+        &intercept_jump882,
+        &intercept_jump883,
+        &intercept_jump884,
+        &intercept_jump885,
+        &intercept_jump886,
+        &intercept_jump887,
+        &intercept_jump888,
+        &intercept_jump889,
+        &intercept_jump890,
+        &intercept_jump891,
+        &intercept_jump892,
+        &intercept_jump893,
+        &intercept_jump894,
+        &intercept_jump895,
+        &intercept_jump896,
+        &intercept_jump897,
+        &intercept_jump898,
+        &intercept_jump899,
+        &intercept_jump900,
+        &intercept_jump901,
+        &intercept_jump902,
+        &intercept_jump903,
+        &intercept_jump904,
+        &intercept_jump905,
+        &intercept_jump906,
+        &intercept_jump907,
+        &intercept_jump908,
+        &intercept_jump909,
+        &intercept_jump910,
+        &intercept_jump911,
+        &intercept_jump912,
+        &intercept_jump913,
+        &intercept_jump914,
+        &intercept_jump915,
+        &intercept_jump916,
+        &intercept_jump917,
+        &intercept_jump918,
+        &intercept_jump919,
+        &intercept_jump920,
+        &intercept_jump921,
+        &intercept_jump922,
+        &intercept_jump923,
+        &intercept_jump924,
+        &intercept_jump925,
+        &intercept_jump926,
+        &intercept_jump927,
+        &intercept_jump928,
+        &intercept_jump929,
+        &intercept_jump930,
+        &intercept_jump931,
+        &intercept_jump932,
+        &intercept_jump933,
+        &intercept_jump934,
+        &intercept_jump935,
+        &intercept_jump936,
+        &intercept_jump937,
+        &intercept_jump938,
+        &intercept_jump939,
+        &intercept_jump940,
+        &intercept_jump941,
+        &intercept_jump942,
+        &intercept_jump943,
+        &intercept_jump944,
+        &intercept_jump945,
+        &intercept_jump946,
+        &intercept_jump947,
+        &intercept_jump948,
+        &intercept_jump949,
+        &intercept_jump950,
+        &intercept_jump951,
+        &intercept_jump952,
+        &intercept_jump953,
+        &intercept_jump954,
+        &intercept_jump955,
+        &intercept_jump956,
+        &intercept_jump957,
+        &intercept_jump958,
+        &intercept_jump959,
+        &intercept_jump960,
+        &intercept_jump961,
+        &intercept_jump962,
+        &intercept_jump963,
+        &intercept_jump964,
+        &intercept_jump965,
+        &intercept_jump966,
+        &intercept_jump967,
+        &intercept_jump968,
+        &intercept_jump969,
+        &intercept_jump970,
+        &intercept_jump971,
+        &intercept_jump972,
+        &intercept_jump973,
+        &intercept_jump974,
+        &intercept_jump975,
+        &intercept_jump976,
+        &intercept_jump977,
+        &intercept_jump978,
+        &intercept_jump979,
+        &intercept_jump980,
+        &intercept_jump981,
+        &intercept_jump982,
+        &intercept_jump983,
+        &intercept_jump984,
+        &intercept_jump985,
+        &intercept_jump986,
+        &intercept_jump987,
+        &intercept_jump988,
+        &intercept_jump989,
+        &intercept_jump990,
+        &intercept_jump991,
+        &intercept_jump992,
+        &intercept_jump993,
+        &intercept_jump994,
+        &intercept_jump995,
+        &intercept_jump996,
+        &intercept_jump997,
+        &intercept_jump998,
+        &intercept_jump999,
+        &intercept_jump1000,
+        &intercept_jump1001,
+        &intercept_jump1002,
+        &intercept_jump1003,
+        &intercept_jump1004,
+        &intercept_jump1005,
+        &intercept_jump1006,
+        &intercept_jump1007,
+        &intercept_jump1008,
+        &intercept_jump1009,
+        &intercept_jump1010,
+        &intercept_jump1011,
+        &intercept_jump1012,
+        &intercept_jump1013,
+        &intercept_jump1014,
+        &intercept_jump1015,
+        &intercept_jump1016,
+        &intercept_jump1017,
+        &intercept_jump1018,
+        &intercept_jump1019,
+        &intercept_jump1020,
+        &intercept_jump1021,
+        &intercept_jump1022,
+        &intercept_jump1023
+    };

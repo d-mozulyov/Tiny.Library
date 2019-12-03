@@ -30,18 +30,38 @@ unit Tiny.Namespace;
 
 interface
 uses
-  Tiny.Rtti, UniConv;
+  Tiny.Rtti, Tiny.Invoke, Tiny.Properties, UniConv;
 
 
 type
 
+{ TRttiNamespace object
+  Universal storage for arbitrary namespace }
+
+  TRttiNamespaceAPI = class(TRttiContextAPI)
+
+  end;
+
+  PRttiNamespaceVisibility = ^TRttiNamespaceVisibility;
+  {$A1}
+  TRttiNamespaceVisibility = object
+    Fields: TMemberVisibilities;
+    Properties: TMemberVisibilities;
+    Methods: TMemberVisibilities;
+  end;
+  {$A4}
+
   PRttiNamespace = ^TRttiNamespace;
-  TRttiNamespace = packed object(TRttiContext)
+  {$A1}
+  TRttiNamespace = object(TRttiContext)
   protected
 
   public
-    procedure Init;
+    Visibility: TRttiNamespaceVisibility;
+
+    procedure Init(const ASynchronization: Boolean = False);
   end;
+  {$A4}
 
 
 implementation
@@ -49,9 +69,19 @@ implementation
 
 { TRttiNamespace }
 
-procedure TRttiNamespace.Init;
+procedure TRttiNamespace.Init(const ASynchronization: Boolean);
+const
+  DEFAULT_VISIBILITY = [mvPublic, mvPublished];
 begin
-  inherited;
+  inherited Init(TRttiNamespaceAPI, ASynchronization);
+  Visibility.Fields := DEFAULT_VISIBILITY;
+  Visibility.Properties := DEFAULT_VISIBILITY;
+  Visibility.Methods := DEFAULT_VISIBILITY;
 end;
+
+initialization
+  {$ifdef UNICODE}
+  @Tiny.Rtti._utf8_equal_utf8_ignorecase := Pointer(@UniConv.utf8_equal_utf8_ignorecase);
+  {$endif}
 
 end.

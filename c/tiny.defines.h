@@ -42,6 +42,24 @@
 
 #if !defined (MSWINDOWS)
   #define POSIX
+  #if defined (SMALLINT)
+    #define POSIX32
+  #else
+    #define POSIX64
+  #endif
+  #if defined (CPUINTEL)
+    #if defined (SMALLINT)
+      #define POSIXINTEL32
+    #else
+      #define POSIXINTEL64
+    #endif
+  #else
+    #if defined (SMALLINT)
+      #define POSIXARM32
+    #else
+      #define POSIXARM64
+    #endif
+  #endif
 #endif
 
 #if defined (__linux__) && !defined (__ANDROID__)
@@ -87,14 +105,43 @@
   #endif
 #endif
 
-#define NO_INLINE __attribute__((noinline))
-
 #if defined (CPUX86)
-  #define BORLAND_DECL __attribute__((stdcall)) __attribute__((regparm(3)))
+  #define REGISTER_DECL __attribute__((stdcall)) __attribute__((regparm(3)))
   #define STDCALL __attribute__((stdcall))
 #else
-  #define BORLAND_DECL
+  #define REGISTER_DECL
   #define STDCALL
+#endif
+
+#define NOINLINE __attribute__((noinline))
+#define NAKED __attribute__((naked))
+
+
+#if defined (CPUINTEL)
+  #define asm_syntax_intel ".intel_syntax noprefix\n\t"
+#else
+  #define asm_syntax_intel
+#endif
+
+#define offsetof(s,m) (size_t)&(((s *)0)->m)
+
+
+#if defined (CPUX86) && defined (MSWINDOWS)
+  #define platform_stack_align sizeof(void*)
+#elif defined (CPUX86)
+  #define platform_stack_align 16
+#else
+  #define platform_stack_align (sizeof(void*) * 2)
+#endif
+#if defined (CPUARM)
+  #define platform_stack_retsize 0
+#else
+  #define platform_stack_retsize sizeof(void*)
+#endif
+#if defined (WIN64)
+  #define platform_stack_window 32
+#else
+  #define platform_stack_window 0
 #endif
 
 
