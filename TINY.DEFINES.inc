@@ -27,12 +27,15 @@
 { Compiler options }
 
 {$ifdef FPC}
-  {$mode delphiunicode}
-  {$asmmode intel}
+  {$MODE DELPHIUNICODE}
+  {$ASMMODE INTEL}
   {$define INLINESUPPORT}
   {$define INLINESUPPORTSIMPLE}
   {$define OPERATORSUPPORT}
   {$define STATICSUPPORT}
+  {$define SMALLOBJECTSUPPORT}
+  {$define CLASSCONSTRUCTORSUPPORT}
+  {$define GENERICSUPPORT}
   {$define ANSISTRSUPPORT}
   {$define SHORTSTRSUPPORT}
   {$define WIDESTRSUPPORT}
@@ -61,6 +64,8 @@
   {$ifend}
   {$if CompilerVersion >= 20}
     {$define INLINESUPPORT}
+    {$define SMALLOBJECTSUPPORT}
+    {$define CLASSCONSTRUCTORSUPPORT}
   {$ifend}
   {$if CompilerVersion >= 17}
     {$define INLINESUPPORTSIMPLE}
@@ -71,13 +76,17 @@
   {$if CompilerVersion >= 18.5}
     {$define STATICSUPPORT}
   {$ifend}
+  {$if CompilerVersion >= 20}
+    {$define GENERICSUPPORT}
+    {$define GENERICMETHODSUPPORT}
+    {$define SYSARRAYSUPPORT}
+  {$ifend}
   {$if CompilerVersion < 23}
     {$define CPUX86}
   {$ifend}
   {$if CompilerVersion >= 23}
     {$define UNITSCOPENAMES}
     {$define RETURNADDRESS}
-    {$define SYSARRAYSUPPORT}
   {$ifend}
   {$if CompilerVersion >= 21}
     {$WEAKLINKRTTI ON}
@@ -109,7 +118,10 @@
 {$if (not Defined(FPC)) and Defined(IOS) and Defined(CPUARM32) and (CompilerVersion < 28)}
   {$define ARM_NO_VFP_USE}
 {$ifend}
-{$if (Defined(CPUARM) or Defined(POSIX64)) and not Defined(ARM_NO_VFP_USE)}
+{$if Defined(CPUX86) or (Defined(CPUX64) and not Defined(MSWINDOWS))}
+  {$define EXTENDEDSUPPORT}
+{$ifend}
+{$if (not Defined(FPC)) and Defined(POSIX64)}
   {$define HFASUPPORT}
 {$ifend}
 {$if Defined(FPC) or Defined(MSWINDOWS)}

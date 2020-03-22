@@ -333,6 +333,18 @@ intercept_func(fpuint64_ggg7, 5, 3, 0, 7);
 intercept_func(fpuint64_ggg8, 5, 3, 0, 8);
 #endif
 
+#if !defined (CPUX86)
+intercept_func(none_gggg, 0, 4, 0, 0);
+#endif
+
+#if !defined (CPUX86)
+intercept_func(gen_gggg, 1, 4, 0, 0);
+#endif
+
+#if !defined (CPUX86)
+intercept_func(ext_gggg, 2, 4, 0, 0);
+#endif
+
 #if defined (POSIXINTEL64)
 intercept_func(fpu_gggg, 3, 4, 0, 0);
 #endif

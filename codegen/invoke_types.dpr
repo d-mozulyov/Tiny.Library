@@ -75,7 +75,7 @@ begin
               ]);
           end, isMicrosoftGeneralExtended, True, False);
 
-      List.SaveToFile('..\tiny.invoke.functypes.inc');
+      List.SaveToFile('..\c\tiny.invoke.functypes.inc');
     finally
       List.Free;
     end;

@@ -10,10 +10,18 @@
 #endif
 #define offsetof(s,m) (size_t)&(((s *)0)->m)
 
+
 REGISTER_DECL void TinyThrowSafeCall(int32_t code, void* return_address); /*forward*/
 
+REGISTER_DECL void safecall_error_handler(int32_t code, void* return_address)
+{
+    //get_rtti_options()->error_handler(ERRORCODE_SAFECALLERROR, code, return_address);
+    TinyThrowSafeCall(code, return_address);
+}
+
+
 /* universal invoke implementation */
-REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* address, RttiInvokeDump* dump)
+REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* code_address, RttiInvokeDump* dump)
 #if defined (CPUX86)
 {
     /* Windows32, Linux32, MacOS32 */
@@ -29,7 +37,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
         "sub esp, 12 \n\t"
         "mov esi, eax \n\t" // esi = signature
         "mov edi, ecx \n\t" // edi = dump
-        "push edx \n\t" // [ebp - 24] = address
+        "push edx \n\t" // [ebp - 24] = code_address
 
          // stack (large) allocation
         "mov ecx, [ESI + %c[signature_stack_size]] \n\t" // ecx = stack_size
@@ -100,7 +108,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
     "L.check_safecall: \n\t"
         "mov edx, [esp] \n\t"
         "test eax, eax \n\t"
-        "jl TinyThrowSafeCall \n\t"
+        "jl safecall_error_handler \n\t"
 
     "L.done: \n\t"
     "ret \n\t"
@@ -134,7 +142,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
 
         // initialization
         "mov [rbp + %c[stored_Signature]], rcx \n\t"
-        "mov [rbp + %c[stored_Address]], rdx \n\t"
+        "mov [rbp + %c[stored_CodeAddress]], rdx \n\t"
         "mov [rbp + %c[stored_Dump]], r8 \n\t"
         "mov rdx, r8 \n\t" // rdx = dump
 
@@ -160,7 +168,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
         "movq xmm1, [RDX + %c[dump_RegXMM1]] \n\t"
         "movq xmm2, [RDX + %c[dump_RegXMM2]] \n\t"
         "movq xmm3, [RDX + %c[dump_RegXMM3]] \n\t"
-        "call [rbp + %c[stored_Address]] \n\t"
+        "call [rbp + %c[stored_CodeAddress]] \n\t"
         "mov rdx, [rbp + %c[stored_Dump]] \n\t"
         "mov [RDX + %c[dump_OutRAX]], rax \n\t"
 
@@ -182,14 +190,14 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
         "mov rdx, [rsp] \n\t"
         "test eax, eax \n\t"
         "xchg rax, rcx \n\t"
-        "jl TinyThrowSafeCall \n\t"
+        "jl safecall_error_handler \n\t"
 
     "L.done: \n\t"
     "ret \n\t"
     :
     :   /* input */
         [stored_Signature] "n" (0x208),
-        [stored_Address] "n" (0x210),
+        [stored_CodeAddress] "n" (0x210),
         [stored_Dump] "n" (0x218),
         [signature_stack_size] "n" (offsetof(RttiSignature, dump_options.stack_size)),
         [signature_return_strategy] "n" (offsetof(RttiSignature, dump_options.return_strategy)),
@@ -224,7 +232,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
 
         // stack copying
         "mov ecx, [RDI + %c[signature_stack_size]] \n\t" // rcx = stack_size
-        "mov rax, rsi \n\t" // rax = address
+        "mov rax, rsi \n\t" // rax = code_address
         "and rcx, -8 \n\t"
         "jz L.call \n\t"
         "sub rsp, rcx \n\t"
@@ -278,7 +286,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
         "mov rsi, [rsp] \n\t"
         "test eax, eax \n\t"
         "xchg rax, rdi \n\t"
-        "jl TinyThrowSafeCall \n\t"
+        "jl safecall_error_handler \n\t"
 
     "L.done: \n\t"
     "ret \n\t"
@@ -321,7 +329,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
 
         // initialization
         "mov r4, r0 \n\t" // r4 = signature
-        "mov r5, r1 \n\t" // r5 = address
+        "mov r5, r1 \n\t" // r5 = code_address
         "mov r6, r2 \n\t" // r6 = dump
 
         // stack copying
@@ -369,7 +377,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
         "cmp r0, 0 \n\t"
         "bge L.done \n\t"
         "mov r1, lr \n\t"
-        "b TinyThrowSafeCall \n\t"
+        "b safecall_error_handler \n\t"
 
     "L.done: \n\t"
     "bx lr \n\t"
@@ -400,7 +408,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
 
         // initialization
         "stp x0, x2, [sp, -16]! \n\t" // [sp] = signature, dump
-        "mov x16, x1 \n\t" // x16 = address
+        "mov x16, x1 \n\t" // x16 = code_address
         "mov x17, x2 \n\t" // x17 = dump
 
         // stack copying
@@ -449,7 +457,7 @@ REGISTER_DECL NAKED void invoke_universal(RttiSignature* signature, void* addres
         "cmp w0, 0 \n\t"
         "bge L.done \n\t"
         "mov x1, x30 \n\t"
-        "b TinyThrowSafeCall \n\t"
+        "b safecall_error_handler \n\t"
 
     "L.done: \n\t"
     "ret \n\t"
@@ -517,7 +525,7 @@ typedef struct{char a[sizeof(out_general) + 1];} retptr;
   #define dumpsafegen(n) dumpgens[n]
 #endif
 
-#define arm64prefix48 register void* x4 asm("x4") = address; register size_t x8 asm("x8") = dumpregs.RegX8;
+#define arm64prefix48 register void* x4 asm("x4") = code_address; register size_t x8 asm("x8") = dumpregs.RegX8;
 #define arm64gen(n) register size_t x##n asm("x" #n) = dumpregs.RegX##n;
 #define arm64ext(n) register double d##n asm("d" #n) = dumpregs.RegD##n;
 #define arm64gens0

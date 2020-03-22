@@ -117,19 +117,25 @@
     case 0x570015: return &intercept_fpuint64_ggg7;
     case 0x580015: return &intercept_fpuint64_ggg8;
     #endif
-    /* 16. (f)       gggg [X64] */
+    /* 16. (n/g/d)   gggg [all - x86] */
+    #if !defined (CPUX86)
+    case 0x000055: return &intercept_none_gggg;
+    case 0x100055: return &intercept_gen_gggg;
+    case 0x200055: return &intercept_ext_gggg;
+    #endif
+    /* 17. (f)       gggg [X64] */
     #if defined (POSIXINTEL64)
     case 0x300055: return &intercept_fpu_gggg;
     #endif
-    /* 17. (h)       gggg [X64, ARM] */
+    /* 18. (h)       gggg [X64, ARM] */
     #if defined (POSIXINTEL64) || defined (CPUARM)
     case 0x600055: return &intercept_hfa_gggg;
     #endif
-    /* 18. (p)       gggg [ARM64] */
+    /* 19. (p)       gggg [ARM64] */
     #if defined (CPUARM64)
     case 0x700055: return &intercept_retptr_gggg;
     #endif
-    /* 19. (n/g/d)   eeee [all - x86] */
+    /* 20. (n/g/d)   eeee [all - x86] */
     #if !defined (CPUX86)
     case 0x000002: return &intercept_none_e;
     case 0x00000A: return &intercept_none_ee;
@@ -144,28 +150,28 @@
     case 0x20002A: return &intercept_ext_eee;
     case 0x2000AA: return &intercept_ext_eeee;
     #endif
-    /* 20. (f)       eeee [X64] */
+    /* 21. (f)       eeee [X64] */
     #if defined (POSIXINTEL64)
     case 0x300002: return &intercept_fpu_e;
     case 0x30000A: return &intercept_fpu_ee;
     case 0x30002A: return &intercept_fpu_eee;
     case 0x3000AA: return &intercept_fpu_eeee;
     #endif
-    /* 21. (h)       eeee [X64, ARM] */
+    /* 22. (h)       eeee [X64, ARM] */
     #if defined (POSIXINTEL64) || defined (CPUARM)
     case 0x600002: return &intercept_hfa_e;
     case 0x60000A: return &intercept_hfa_ee;
     case 0x60002A: return &intercept_hfa_eee;
     case 0x6000AA: return &intercept_hfa_eeee;
     #endif
-    /* 22. (p)       eeee [ARM64] */
+    /* 23. (p)       eeee [ARM64] */
     #if defined (CPUARM64)
     case 0x700002: return &intercept_retptr_e;
     case 0x70000A: return &intercept_retptr_ee;
     case 0x70002A: return &intercept_retptr_eee;
     case 0x7000AA: return &intercept_retptr_eeee;
     #endif
-    /* 23. (n/g/d)   gege [Win64, X64] */
+    /* 24. (n/g/d)   gege [Win64, X64] */
     #if defined (CPUX64)
     case 0x010095: return &intercept_msabi_none_ggge;
     case 0x010025: return &intercept_msabi_none_gge;
@@ -234,7 +240,7 @@
     case 0x21009A: return &intercept_msabi_ext_eege;
     case 0x21006A: return &intercept_msabi_ext_eeeg;
     #endif
-    /* 24. (f)!h     gege [X64] */
+    /* 25. (f)!h     gege [X64] */
     #if defined (POSIXINTEL64)
     case 0x310095: return &intercept_msabi_fpu_ggge;
     case 0x310025: return &intercept_msabi_fpu_gge;
@@ -259,7 +265,7 @@
     case 0x31009A: return &intercept_msabi_fpu_eege;
     case 0x31006A: return &intercept_msabi_fpu_eeeg;
     #endif
-    /* 25. (n/g/d/h) ggee [X64/ARM] */
+    /* 26. (n/g/d/h) ggee [X64/ARM] */
     #if defined (POSIXINTEL64) || defined (CPUARM)
     case 0x000009: return &intercept_none_ge;
     case 0x000029: return &intercept_none_gee;
@@ -326,7 +332,7 @@
     case 0x602A55: return &intercept_hfa_ggggeee;
     case 0x60AA55: return &intercept_hfa_ggggeeee;
     #endif
-    /* 26. (f)       ggee [X64] */
+    /* 27. (f)       ggee [X64] */
     #if defined (POSIXINTEL64)
     case 0x300009: return &intercept_fpu_ge;
     case 0x300029: return &intercept_fpu_gee;
@@ -345,7 +351,7 @@
     case 0x302A55: return &intercept_fpu_ggggeee;
     case 0x30AA55: return &intercept_fpu_ggggeeee;
     #endif
-    /* 27. (p)       ggee [ARM64] */
+    /* 28. (p)       ggee [ARM64] */
     #if defined (CPUARM64)
     case 0x700009: return &intercept_retptr_ge;
     case 0x700029: return &intercept_retptr_gee;

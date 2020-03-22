@@ -5,7 +5,7 @@ set platform=%~1
 set file=%~2
 set folder=%~3
 set target=unknown
-set flags=-c -O3 -mllvm -align-all-functions=2
+set flags=-c -O3 -mllvm -align-all-functions=2 -DDELPHI
 
 if "%platform%"=="win32" (
   set target=i386-windows-gnu -mno-sse

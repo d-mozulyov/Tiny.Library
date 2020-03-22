@@ -1,4 +1,4 @@
-unit Tiny.Namespace;
+unit Tiny.Namespaces;
 
 {******************************************************************************}
 { Copyright (c) Dmitry Mozulyov                                                }
@@ -38,9 +38,10 @@ type
 { TRttiNamespace object
   Universal storage for arbitrary namespace }
 
-  TRttiNamespaceAPI = class(TRttiContextAPI)
+  TRttiNamespaceVmt = class(TRttiContextVmt)
 
   end;
+  TRttiNamespaceVmtClass = class of TRttiNamespaceVmt;
 
   PRttiNamespaceVisibility = ^TRttiNamespaceVisibility;
   {$A1}
@@ -59,7 +60,7 @@ type
   public
     Visibility: TRttiNamespaceVisibility;
 
-    procedure Init(const ASynchronization: Boolean = False);
+    procedure Init(const AVmt: TRttiNamespaceVmtClass = nil; const AThreadSync: Boolean = False);
   end;
   {$A4}
 
@@ -69,11 +70,19 @@ implementation
 
 { TRttiNamespace }
 
-procedure TRttiNamespace.Init(const ASynchronization: Boolean);
+procedure TRttiNamespace.Init(const AVmt: TRttiNamespaceVmtClass; const AThreadSync: Boolean);
 const
   DEFAULT_VISIBILITY = [mvPublic, mvPublished];
+var
+  LVmt: TRttiNamespaceVmtClass;
 begin
-  inherited Init(TRttiNamespaceAPI, ASynchronization);
+  LVmt := AVmt;
+  if (not Assigned(LVmt)) then
+  begin
+    LVmt := TRttiNamespaceVmt;
+  end;
+  inherited Init(LVmt, AThreadSync);
+
   Visibility.Fields := DEFAULT_VISIBILITY;
   Visibility.Properties := DEFAULT_VISIBILITY;
   Visibility.Methods := DEFAULT_VISIBILITY;

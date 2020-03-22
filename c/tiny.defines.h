@@ -112,8 +112,9 @@
   #define REGISTER_DECL
   #define STDCALL
 #endif
-
+#define CDECL
 #define NOINLINE __attribute__((noinline))
+#define FORCEINLINE __attribute__((always_inline))
 #define NAKED __attribute__((naked))
 
 
@@ -124,6 +125,7 @@
 #endif
 
 #define offsetof(s,m) (size_t)&(((s *)0)->m)
+#define RETURN_ADDRESS __builtin_return_address(0)
 
 
 #if defined (CPUX86) && defined (MSWINDOWS)

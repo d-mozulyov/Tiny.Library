@@ -425,7 +425,7 @@ begin
 
     if (not AStdCode) then
     begin
-      AddFmt('    // ((%s)(address))(%s);', [LFuncType, LSignature]);
+      AddFmt('    // ((%s)(code_address))(%s);', [LFuncType, LSignature]);
     end;
 
     if (AParams.Decl = idRegister) then
@@ -450,7 +450,7 @@ begin
     end else
     begin
       if (LResult <> '') then LResult := LResult + ' = ';
-      AddFmt(LOffset + '    %s((%s)(address))(%s);', [LResult, LFuncType, LSignature]);
+      AddFmt(LOffset + '    %s((%s)(code_address))(%s);', [LResult, LFuncType, LSignature]);
     end;
 
     // fpuint64 routine
@@ -463,7 +463,7 @@ begin
     if (AParams.Decl = idSafeCall) then
     begin
       LParam := Regs('OutInt32');
-      AddFmt('    if (%s < 0) TinyThrowSafeCall(%s, __builtin_return_address(0));', [LParam, LParam]);
+      AddFmt('    if (%s < 0) safecall_error_handler(%s, RETURN_ADDRESS);', [LParam, LParam]);
     end;
   end;
 
@@ -673,7 +673,7 @@ begin
             Result := True;
           end);
       end;
-      List.SaveToFile('..\tiny.invoke.funcswitch.inc');
+      List.SaveToFile('..\c\tiny.invoke.funcswitch.inc');
 
       // function implementation
       List.Clear;
@@ -704,7 +704,7 @@ begin
             nmWin32: Add('WIN32NAKED');
           end;
 
-          AddFmt('REGISTER_DECL void %s(RttiSignature* signature, void* address, RttiInvokeDump* dump)', [AParams.FuncName]);
+          AddFmt('REGISTER_DECL void %s(RttiSignature* signature, void* code_address, RttiInvokeDump* dump)', [AParams.FuncName]);
           Add('{');
           begin
             AddFuncImplementation(AParams, LNakedMode, (LNakedMode <> nmX86) or (APlatforms <> [ipX86]));
@@ -714,7 +714,7 @@ begin
           AddEndifPlatforms(APlatforms, 0);
         end);
 
-      List.SaveToFile('..\tiny.invoke.funcimpl.inc');
+      List.SaveToFile('..\c\tiny.invoke.funcimpl.inc');
     finally
       List.Free;
     end;

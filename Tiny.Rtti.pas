@@ -27,12 +27,15 @@ unit Tiny.Rtti;
 {******************************************************************************}
 
 {$I TINY.DEFINES.inc}
+{$if not Defined(FPC) and (CompilerVersion < 20)}
+  {$undef OPERATORSUPPORT}
+{$ifend}
 
 interface
   uses {$ifdef MSWINDOWS}
          {$ifdef UNITSCOPENAMES}Winapi.Windows{$else}Windows{$endif}
        {$else .POSIX}
-          Posix.Sched, Posix.Unistd
+          Posix.Sched, Posix.Unistd, Posix.Pthread
        {$endif}
        ;
 
@@ -45,11 +48,18 @@ type
     PBoolean = ^Boolean;
     PString = ^string;
   {$else}
+    {$if CompilerVersion < 15}
+      PWord = ^Word;
+    {$ifend}
     {$if CompilerVersion < 16}
       UInt64 = Int64;
+    {$ifend}
+    {$if CompilerVersion < 20}
+      TDate = type TDateTime;
+      TTime = type TDateTime;
       PUInt64 = ^UInt64;
     {$ifend}
-    {$if CompilerVersion < 21}
+     {$if CompilerVersion < 21}
       NativeInt = Integer;
       NativeUInt = Cardinal;
     {$ifend}
@@ -57,17 +67,12 @@ type
       PNativeInt = ^NativeInt;
       PNativeUInt = ^NativeUInt;
     {$ifend}
-    PWord = ^Word;
+    {$if CompilerVersion < 24}
+      PMethod = ^TMethod;
+    {$ifend}
   {$endif}
-  {$if not Defined(FPC) and (CompilerVersion < 20)}
-  TDate = type TDateTime;
-  TTime = type TDateTime;
-  {$ifend}
   PDate = ^TDate;
   PTime = ^TTime;
-  {$if SizeOf(Extended) >= 10}
-    {$define EXTENDEDSUPPORT}
-  {$ifend}
   TBytes = {$ifdef SYSARRAYSUPPORT}TArray<Byte>{$else}array of Byte{$endif};
   PBytes = ^TBytes;
 
@@ -153,6 +158,9 @@ type
   InternalInt = {$ifdef FPC}NativeInt{$else .DELPHI}Integer{$endif};
   PInternalUInt = ^InternalUInt;
   InternalUInt = {$ifdef FPC}NativeUInt{$else .DELPHI}Cardinal{$endif};
+
+  PAlterNativeInt = ^TAlterNativeInt;
+  TAlterNativeInt = {$ifdef SMALLINT}Int64{$else .LARGEINT}Integer{$endif};
 
 type
   PDynArrayRec = ^TDynArrayRec;
@@ -291,24 +299,90 @@ type
   TUCS4StrRec = TDynArrayRec;
 
 type
+  TCharacters = class
+  public
+    class function LStrLen(const S: PAnsiChar): NativeUInt; {$ifdef STATICSUPPORT}static;{$endif}
+    class function WStrLen(const S: PWideChar): NativeUInt; {$ifdef STATICSUPPORT}static;{$endif}
+    class function UStrLen(const S: PUCS4Char): NativeUInt; {$ifdef STATICSUPPORT}static;{$endif}
+    class function UCS4StringLen(const S: UCS4String): NativeUInt; {$ifdef STATICSUPPORT}static;{$endif}
+
+    class function PSBCSChars(const S: AnsiString): PAnsiChar; {$ifdef STATICSUPPORT}static;{$endif} {$ifdef INLINESUPPORTSIMPLE}inline;{$endif}
+    class function PUTF8Chars(const S: UTF8String): PUTF8Char; {$ifdef STATICSUPPORT}static;{$endif} {$ifdef INLINESUPPORTSIMPLE}inline;{$endif}
+    class function PWideChars(const S: UnicodeString): PWideChar; {$ifdef STATICSUPPORT}static;{$endif} {$ifdef INLINESUPPORTSIMPLE}inline;{$endif}
+    class function PUCS4Chars(const S: UCS4String): PUCS4Char; {$ifdef STATICSUPPORT}static;{$endif} {$ifdef INLINESUPPORTSIMPLE}inline;{$endif}
+
+    {$ifNdef MSWINDOWS}
+    class function MultiByteToWideChar(CodePage, Flags: Cardinal; LocaleStr: PAnsiChar;
+      LocaleStrLen: Integer; UnicodeStr: PWideChar; UnicodeStrLen: Integer): Integer; static; inline;
+    class function WideCharToMultiByte(CodePage, Flags: Cardinal;
+      UnicodeStr: PWideChar; UnicodeStrLen: Integer; LocaleStr: PAnsiChar;
+      LocaleStrLen: Integer; DefaultChar: PAnsiChar; UsedDefaultChar: Pointer): Integer; static; inline;
+    {$endif}
+
+    class function UCS4CharFromUnicode(
+      const ASource: PWideChar; const ASourceCount: NativeUInt): UCS4Char; {$ifdef STATICSUPPORT}static;{$endif}
+    class function UCS4CharFromAnsi(const ASourceCP: Word;
+      const ASource: PAnsiChar; const ASourceCount: NativeUInt): UCS4Char; {$ifdef STATICSUPPORT}static;{$endif}
+
+    class function UCS4FromUnicode(const ATarget: PUCS4Char;
+      const ASource: PWideChar; const ASourceCount: NativeUInt): NativeUInt; overload; {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure UCS4FromUnicode(var ATarget: UCS4String;
+      const ASource: PWideChar; const ASourceCount: NativeUInt); overload; {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure UCS4FromAnsi(var ATarget: UCS4String; const ASourceCP: Word;
+      const ASource: PAnsiChar; const ASourceCount: NativeUInt); {$ifdef STATICSUPPORT}static;{$endif}
+
+    class function UnicodeFromUCS4(const ATarget: PWideChar;
+      const ASource: PUCS4Char; const ASourceCount: NativeUInt): NativeUInt; overload; {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure UnicodeFromUCS4(var ATarget: WideString;
+      const ASource: PUCS4Char; const ASourceCount: NativeUInt); overload; {$ifdef STATICSUPPORT}static;{$endif}
+    {$ifdef UNICODE}
+    class procedure UnicodeFromUCS4(var ATarget: UnicodeString;
+      const ASource: PUCS4Char; const ASourceCount: NativeUInt); overload; {$ifdef STATICSUPPORT}static;{$endif}
+    {$endif}
+    class procedure UnicodeFromAnsi(var ATarget: WideString;
+      const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt);
+    {$ifdef UNICODE} overload; {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure UnicodeFromAnsi(var ATarget: UnicodeString;
+      const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt); overload; {$ifdef STATICSUPPORT}static;{$endif}
+    {$endif}
+
+    class procedure AnsiFromUnicode(const ATargetCP: Word; var ATarget: AnsiString;
+      const ASource: PWideChar; const ASourceCount: NativeUInt); {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure AnsiFromAnsi(const ATargetCP: Word; var ATarget: AnsiString;
+      const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt); {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure AnsiFromUCS4(const ATargetCP: Word; var ATarget: AnsiString;
+      const ASource: PUCS4Char; const ASourceCount: NativeUInt); {$ifdef STATICSUPPORT}static;{$endif}
+
+    class procedure ShortStringFromUnicode(var ATarget: ShortString; const AMaxLength: Byte;
+      const ASource: PWideChar; const ASourceCount: NativeUInt); {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure ShortStringFromAnsi(var ATarget: ShortString; const AMaxLength: Byte;
+      const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt); {$ifdef STATICSUPPORT}static;{$endif}
+    class procedure ShortStringFromUCS4(var ATarget: ShortString; const AMaxLength: Byte;
+      const ASource: PUCS4Char; const ASourceCount: NativeUInt); {$ifdef STATICSUPPORT}static;{$endif}
+  end;
+
+type
   PShortStringHelper = ^ShortStringHelper;
   {$A1}
   ShortStringHelper = object
   protected
     function GetValue: Integer; {$ifdef INLINESUPPORT}inline;{$endif}
     procedure SetValue(const AValue: Integer); {$ifdef INLINESUPPORT}inline;{$endif}
-    function GetAnsiValue: AnsiString;
-    function GetUTF8Value: UTF8String;
-    function GetUnicodeValue: UnicodeString;
+    procedure InternalGetAnsiString(var Result: AnsiString);
+    procedure InternalGetUTF8String(var Result: UTF8String);
+    procedure InternalGetUnicodeString(var Result: UnicodeString);
+    function GetAnsiString: AnsiString; {$ifNdef CPUINTELASM}inline;{$endif}
+    function GetUTF8String: UTF8String; {$ifNdef CPUINTELASM}inline;{$endif}
+    function GetUnicodeString: UnicodeString; {$ifNdef CPUINTELASM}inline;{$endif}
     function GetTail: Pointer; {$ifdef INLINESUPPORT}inline;{$endif}
   public
     Value: ShortString;
 
     property Length: Integer read GetValue write SetValue;
-    property AnsiValue: AnsiString read GetAnsiValue;
-    property UTF8Value: UTF8String read GetUTF8Value;
-    property UnicodeValue: UnicodeString read GetUnicodeValue;
-    property StringValue: string read {$ifdef UNICODE}GetUnicodeValue{$else .ANSI}GetAnsiValue{$endif};
+    property AsAnsiString: AnsiString read GetAnsiString;
+    property AsUTF8String: UTF8String read GetUTF8String;
+    property AsUnicodeString: UnicodeString read GetUnicodeString;
+    property AsString: string read {$ifdef UNICODE}GetUnicodeString{$else .ANSI}GetAnsiString{$endif};
     property Tail: Pointer read GetTail;
   end;
   {$A4}
@@ -577,11 +651,23 @@ type
 
 { Universal timestamp format
   Recommendation:
-    The number of 100-nanosecond intervals since January 1, 1601 UTC (Windows FILETIME format) }
+    The number of 100-nanosecond intervals since January 1, 1601 (Windows FILETIME format) }
 
   TimeStamp = type Int64;
   PTimeStamp = ^TimeStamp;
 
+const
+  TIMESTAMP_MICROSECOND = 10;
+  TIMESTAMP_MILLISECOND = TIMESTAMP_MICROSECOND * 1000;
+  TIMESTAMP_SECOND = TIMESTAMP_MILLISECOND * 1000;
+  TIMESTAMP_MINUT = TIMESTAMP_SECOND * 60;
+  TIMESTAMP_HOUR = Int64(TIMESTAMP_MINUT) * 60;
+  TIMESTAMP_DAY = TIMESTAMP_HOUR * 24;
+  TIMESTAMP_UNDAY = 1 / TIMESTAMP_DAY;
+  TIMESTAMP_DELTA = 109205 * TIMESTAMP_DAY;
+
+
+type
 
 { References (interfaces, objects, methods) }
 
@@ -813,9 +899,9 @@ type
 
   PPTypeInfoRef = ^PTypeInfoRef;
   {$A1}
-  PTypeInfoRef = {$ifdef INLINESUPPORT}object{$else}class{$endif}
+  PTypeInfoRef = {$ifdef SMALLOBJECTSUPPORT}object{$else}class{$endif}
   protected
-    {$ifdef INLINESUPPORT}
+    {$ifdef SMALLOBJECTSUPPORT}
     F: packed record
     case Integer of
       0: (Value: {$ifdef FPC}PTypeInfo{$else .DELPHI}PPTypeInfo{$endif});
@@ -833,7 +919,7 @@ type
   public
     property Value: PTypeInfo read GetValue;
   {$endif}
-    property Address: Pointer read {$ifdef INLINESUPPORT}F.Address{$else}GetAddress{$endif};
+    property Address: Pointer read {$ifdef SMALLOBJECTSUPPORT}F.Address{$else}GetAddress{$endif};
     property Assigned: Boolean read GetAssigned;
   end;
   {$A4}
@@ -1441,6 +1527,7 @@ type
   protected
     function GetMemberVisibility: TMemberVisibility; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetMethodKind: TMethodKind; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetSignatureData: PProcedureSignature; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetSignature: PProcedureSignature; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetAttrDataRec: PAttrData; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetAttrData: PAttrData; {$ifdef INLINESUPPORT}inline;{$endif}
@@ -1781,7 +1868,7 @@ type
           tkClass: (ClassData: TClassTypeData);
           tkInterface: (InterfaceData: TInterfaceTypeData);
           tkDynArray: (DynArrayData: TDynArrayTypeData);
-          tkRecord: (RecordData: TRecordTypeData);
+          tkRecord{, tkMRecord}: (RecordData: TRecordTypeData);
           tkInteger{, ...}: (RangeData: TRangeTypeData);
           tkUnknown: (__: packed record end);
       );
@@ -1886,7 +1973,7 @@ type
       tkArray: (
         ArrayData: TArrayTypeData;
         {ArrAttrData: TAttrData;});
-      tkRecord: ( {RecordData: TRecordTypeData;}
+      tkRecord{, tkMRecord}: ( {RecordData: TRecordTypeData;}
         RecSize: Integer;
         ManagedFldCount: Integer;
         ManagedFields: TManagedField;
@@ -1931,7 +2018,6 @@ type
 { UniConv aliases
   More details: https://github.com/d-mozulyov/UniConv}
 
-
 {$ifdef UNICODE}
 var
   _utf8_equal_utf8_ignorecase: function(S1: PUTF8Char; L1: NativeUInt; S2: PUTF8Char; L2: NativeUInt): Boolean;
@@ -1972,8 +2058,8 @@ type
     {007} rgEnumeration,
     {008} rgMetaType,
     {009} rgMetaTypeRef,
-    {000} rgVariant,
-    {011} rgFunction,
+    {010} rgFunction,
+    {011} rgVariant,
     // Reserved
     {012} rg012, {013} rg013, {014} rg014, {015} rg015,
     {016} rg016, {017} rg017, {018} rg018, {019} rg019, {020} rg020, {021} rg021, {022} rg022, {023} rg023,
@@ -2050,37 +2136,43 @@ type
     {029} rtSBCSChar,
     {030} rtUTF8Char,
     {031} rtWideChar,
-    {032} rtSBCSString,
-    {033} rtUTF8String,
-    {034} rtWideString,
-    {035} rtUnicodeString,
-    {036} rtUCS4String,
-    {037} rtShortString,
+    {032} rtUCS4Char,
+    {033} rtPSBCSChars,
+    {034} rtPUTF8Chars,
+    {035} rtPWideChars,
+    {036} rtPUCS4Chars,
+    {037} rtSBCSString,
+    {038} rtUTF8String,
+    {039} rtWideString,
+    {040} rtUnicodeString,
+    {041} rtUCS4String,
+    {042} rtShortString,
     // rgEnumeration
-    {038} rtEnumeration8,
-    {039} rtEnumeration16,
-    {040} rtEnumeration32,
-    {041} rtEnumeration64,
+    {043} rtEnumeration8,
+    {044} rtEnumeration16,
+    {045} rtEnumeration32,
+    {046} rtEnumeration64,
     // rgMetaType
-    {042} rtSet,
-    {043} rtStaticArray,
-    {044} rtDynamicArray,
-    {045} rtStructure,
-    {046} rtObject,
-    {047} rtInterface,
+    {047} rtSet,
+    {048} rtStaticArray,
+    {049} rtDynamicArray,
+    {050} rtStructure,
+    {051} rtObject,
+    {052} rtInterface,
     // rgMetaTypeRef
-    {048} rtClassRef,
-    // rgVariant
-    {049} rtBytes,
-    {050} rtVariant,
-    {051} rtOleVariant,
-    {052} rtVarRec,
+    {053} rtClassRef,
     // rgFunction
-    {053} rtFunction,
-    {054} rtMethod,
-    {055} rtClosure,
+    {054} rtFunction,
+    {055} rtMethod,
+    {056} rtClosure,
+    // rgVariant
+    {057} rtBytes,
+    {058} rtOleVariant,
+    {059} rtVariant,
+    {060} rtVarRec,
+    {061} rtValue,
     // Reserved
-    {056} rt056, {057} rt057, {058} rt058, {059} rt059, {060} rt060, {061} rt061, {062} rt062, {063} rt063,
+    {062} rt062, {063} rt063,
     {064} rt064, {065} rt065, {066} rt066, {067} rt067, {068} rt068, {069} rt069, {070} rt070, {071} rt071,
     {072} rt072, {073} rt073, {074} rt074, {075} rt075, {076} rt076, {077} rt077, {078} rt078, {079} rt079,
     {080} rt080, {081} rt081, {082} rt082, {083} rt083, {084} rt084, {085} rt085, {086} rt086, {087} rt087,
@@ -2108,6 +2200,10 @@ type
   PRttiTypes = ^TRttiTypes;
   TRttiTypes = set of TRttiType;
 
+
+{ TRttiTypeRules object
+  General set of rules for interacting with a type }
+
   PRttiTypeReturn = ^TRttiTypeReturn;
   TRttiTypeReturn = (trReference, trGeneral, trGeneralPair, trFPUInt64, trFPU,
     trFloat1, trDouble1, trFloat2, trDouble2, trFloat3, trDouble3, trFloat4, trDouble4);
@@ -2115,8 +2211,8 @@ type
   TRttiTypeReturns = set of TRttiTypeReturn;
 
   PRttiTypeFlag = ^TRttiTypeFlag;
-  TRttiTypeFlag = (tfRegValueArg, tfGenUseArg {stack 0/0, ref 0/1, ext 1/0, gen 1/1}, tfEspecialArg,
-    tfManaged, tfWeak, tfVarHigh);
+  TRttiTypeFlag = (tfRegValueArg, tfGenUseArg {stack 0/0, ref 0/1, ext 1/0, gen 1/1},
+    tfOptionalRefArg, tfManaged, tfUnsafable, tfWeakable, tfHasWeakRef, tfVarHigh);
   PRttiTypeFlags = ^TRttiTypeFlags;
   TRttiTypeFlags = set of TRttiTypeFlag;
 
@@ -2131,10 +2227,14 @@ type
     function GetHFA: TRttiHFA; {$ifdef INLINESUPPORT}inline;{$endif}
   public
     Size: Cardinal;
-    StackSize: Byte;
-    CopyFunc: Byte;
     Return: TRttiTypeReturn;
     Flags: TRttiTypeFlags;
+    Reserved: Byte;
+    InitFunc: Byte;
+    FinalFunc: Byte;
+    WeakFinalFunc: Byte;
+    CopyFunc: Byte;
+    WeakCopyFunc: Byte;
 
     property IsRefArg: Boolean read GetIsRefArg;
     property IsStackArg: Boolean read GetIsStackArg;
@@ -2143,6 +2243,10 @@ type
     property HFA: TRttiHFA read GetHFA;
   end;
   {$A4}
+
+
+{ TRttiBound/TRttiBound64/TRttiCustomTypeData objects
+  Structures involved in describing additional type information }
 
   PRttiBound = ^TRttiBound;
   {$A1}
@@ -2184,17 +2288,16 @@ type
   end;
   {$A4}
 
+
+{ TRttiTypeData object
+  Basic structure for storing additional type information }
+
 const
   RTTI_TYPEDATA_MASK = Cardinal($00ffffff);
   RTTI_TYPEDATA_MARKER = Cardinal(Ord('R') + (Ord('M') shl 8) + (Ord('T') shl 16));
 
 type
-
   PRttiContext = ^TRttiContext;
-
-{ TRttiTypeData object
-  Basic structure for storing additional type information }
-
   PRttiTypeData = ^TRttiTypeData;
   {$A1}
   TRttiTypeData = object(TRttiCustomTypeData)
@@ -2276,11 +2379,26 @@ type
   types whose rules of behavior are determined by content }
 
   PRttiMetaType = ^TRttiMetaType;
+  PRttiMetaTypeFunc = ^TRttiMetaTypeFunc;
+  TRttiMetaTypeFunc = procedure(const AMetaType: PRttiMetaType; const AValue: Pointer);
+  PRttiMetaTypeCopyFunc = ^TRttiMetaTypeCopyFunc;
+  TRttiMetaTypeCopyFunc = procedure(const AMetaType: PRttiMetaType; const ATarget, ASource: Pointer);
   {$A1}
   TRttiMetaType = object(TRttiTypeData)
   protected
   public
     Rules: TRttiTypeRules;
+    InitFunc: TRttiMetaTypeFunc;
+    FinalFunc: TRttiMetaTypeFunc;
+    WeakFinalFunc: TRttiMetaTypeFunc;
+    CopyFunc: TRttiMetaTypeCopyFunc;
+    WeakCopyFunc: TRttiMetaTypeCopyFunc;
+
+    procedure Init(const AValue: Pointer); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure Final(const AValue: Pointer); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure WeakFinal(const AValue: Pointer); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure Copy(const ATarget, ASource: Pointer); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure WeakCopy(const ATarget, ASource: Pointer); {$ifdef INLINESUPPORT}inline;{$endif}
   end;
   {$A4}
 
@@ -2302,8 +2420,10 @@ type
   including pointer depth and additional information }
 
   PRttiExType = ^TRttiExType;
+  PRttiTypeFunc = ^TRttiTypeFunc;
+  TRttiTypeFunc = procedure(const AType: PRttiExType; const AValue: Pointer);
   PRttiCopyFunc = ^TRttiCopyFunc;
-  TRttiCopyFunc = procedure(AType: PRttiExType; ATarget, ASource: Pointer);
+  TRttiCopyFunc = procedure(const AType: PRttiExType; const ATarget, ASource: Pointer);
   {$A1}
   TRttiExType = object
   protected
@@ -2315,13 +2435,14 @@ type
         case Integer of
           0: (Id: Word);
           1: (CodePage: Word);
-          2: (MaxLength: Byte; Flags: Byte);
+          2: (MaxLength: Byte; OpenString: Boolean);
           3: (ExFlags: Word);
           High(Integer): (_: packed record end;));
-      1: (
+      1: (BaseOptions: Word);
+      2: (
         Options: Cardinal;
         case Integer of
-          0: (Data: Pointer);
+          0: (CustomData: Pointer);
           1: (TypeData: PTypeData);
           2: (RangeData: PRangeTypeData);
           3: (RttiTypeData: PRttiTypeData);
@@ -2330,6 +2451,11 @@ type
           High(Integer): (__: packed record end;));
     end;
 
+    {$ifdef HFASUPPORT}
+    function GetCalculatedHFA(var AValue: TRttiTypeReturn; const AHFA: TRttiHFA{hfaFloat1/hfaDouble1}; const AHFACount, ASize: Integer): Boolean;
+    function GetCalculatedRecordHFA(var AValue: TRttiTypeReturn; const ATypeData: PTypeData): Boolean;
+    function GetCalculatedArrayHFA(var AValue: TRttiTypeReturn; const ATypeData: PTypeData): Boolean;
+    {$endif}
     function GetCalculatedRules(var ABuffer: TRttiTypeRules): PRttiTypeRules;
   public
     property BaseType: TRttiType read F.BaseType write F.BaseType;
@@ -2337,14 +2463,15 @@ type
     property Id: Word read F.Id write F.Id;
     property CodePage: Word read F.CodePage write F.CodePage;
     property MaxLength: Byte read F.MaxLength write F.MaxLength;
-    property Flags: Byte read F.Flags write F.Flags;
+    property OpenString: Boolean read F.OpenString write F.OpenString;
     property ExFlags: Word read F.ExFlags write F.ExFlags;
+    property BaseOptions: Word read F.BaseOptions write F.BaseOptions;
     property Options: Cardinal read F.Options write F.Options;
 
-    function GetRules(var ABuffer: TRttiTypeRules): PRttiTypeRules; overload;
+    function GetRules(var ABuffer: TRttiTypeRules): PRttiTypeRules; overload; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetRules: PRttiTypeRules; overload;
 
-    property Data: Pointer read F.Data write F.Data;
+    property CustomData: Pointer read F.CustomData write F.CustomData;
     property TypeData: PTypeData read F.TypeData write F.TypeData;
     property RangeData: PRangeTypeData read F.RangeData write F.RangeData;
     property RttiTypeData: PRttiTypeData read F.RttiTypeData write F.RttiTypeData;
@@ -2352,6 +2479,18 @@ type
     property MetaType: PRttiMetaType read F.MetaType write F.MetaType;
   end;
   {$A4}
+
+  {$ifdef GENERICSUPPORT}
+  TRttiExType<T> = record
+  private
+    class constructor ClassCreate;
+  public
+    class var
+      Default: TRttiExType;
+      DefaultSimplified: TRttiExType;
+      DefaultRules: TRttiTypeRules;
+  end;
+  {$endif}
 
 
 { TRttiSetType object
@@ -2435,7 +2574,7 @@ type
   PRttiClassType = ^TRttiClassType;
   {$A1}
   TRttiClassType = object(TRttiHeritableMetaType)
-
+    ClassType: TClass;
   end;
   {$A4}
 
@@ -2455,38 +2594,36 @@ type
   Container that allows you to convert the internal representation of type
   information into a universal one }
 
-  TRttiContextAPI = class
+  TRttiContextVmt = class
     class procedure Init(const AContext: PRttiContext); virtual;
     class procedure Finalize(const AContext: PRttiContext); virtual;
     class function Alloc(const AContext: PRttiContext; const ASize: Integer): Pointer; virtual;
     class function AllocPacked(const AContext: PRttiContext; const ASize: Integer): Pointer; virtual;
   end;
-  TRttiContextAPIClass = class of TRttiContextAPI;
+  TRttiContextVmtClass = class of TRttiContextVmt;
 
   {$A1}
   TRttiContext = object
   protected
-    FAPI: TRttiContextAPIClass;
-    FLockerData: array[0..SizeOf(Integer) * 2 - 1 - 1] of Byte;
+    FVmt: TRttiContextVmtClass;
+    FAlignedData: array[0..SizeOf(NativeInt) * 3 - 1 - 1] of Byte;
+    FThreadSync: Boolean;
     FHeapAllocation: Boolean;
-    FSynchronization: Boolean;
     FExpandReturnFPU: Boolean;
     FReserved: array[1..2] of Byte;
-    FHeapItems: Pointer;
 
-    procedure SetSynchronization(const AValue: Boolean);
     procedure InternalEnterRead(var ALocker: Integer);
     procedure InternalWaitExclusive(var ALocker: Integer);
     procedure InternalEnterExclusive(var ALocker: Integer);
-    function GetBaseTypeInfo(const ATypeInfo: PTypeInfo; const ATypeInfoList: array of PTypeInfo): Integer;
-    function GetBooleanType(const ATypeInfo: PTypeInfo): TRttiType;
-  public
-    procedure Init(const AAPI: TRttiContextAPIClass = nil; const ASynchronization: Boolean = True);
-    procedure Finalize;
     procedure EnterRead;
     procedure EnterExclusive;
     procedure LeaveRead;
     procedure LeaveExclusive;
+    function GetBaseTypeInfo(const ATypeInfo: PTypeInfo; const ATypeInfoList: array of PTypeInfo): Integer;
+    function GetBooleanType(const ATypeInfo: PTypeInfo): TRttiType;
+  public
+    procedure Init(const AVmt: TRttiContextVmtClass = nil; const AThreadSync: Boolean = True);
+    procedure Finalize;
 
     function Alloc(const ASize: Integer): Pointer;
     function AllocPacked(const ASize: Integer): Pointer;
@@ -2501,12 +2638,240 @@ type
     function GetExType(const ATypeInfo: Pointer; var AResult: TRttiExType): Boolean; overload;
     function GetExType(const ATypeInfo: Pointer; const ATypeName: PShortStringHelper; var AResult: TRttiExType): Boolean; overload;
 
-    property API: TRttiContextAPIClass read FAPI;
+    property Vmt: TRttiContextVmtClass read FVmt;
+    property ThreadSync: Boolean read FThreadSync write FThreadSync;
     property HeapAllocation: Boolean read FHeapAllocation write FHeapAllocation;
-    property Synchronization: Boolean read FSynchronization write SetSynchronization;
     property ExpandReturnFPU: Boolean read FExpandReturnFPU write FExpandReturnFPU;
   end;
   {$A4}
+
+
+{ TValue object
+  Any type value container (lightweight Variant) }
+
+  PValue = ^TValue;
+  {$A1}
+  {$ifdef OPERATORSUPPORT}
+  TValue = record
+  private
+  {$else}
+  TValue = object
+  protected
+  {$endif}
+    FExType: TRttiExType;
+    FManagedData: IInterface;
+    FBuffer: packed record
+    case Integer of
+      0: (VPointer: Pointer);
+      1: (VBoolean: Boolean);
+      2: (VInt8: ShortInt);
+      3: (VUInt8: Byte);
+      4: (VInt16: SmallInt);
+      5: (VUInt16: Word);
+      6: (VInt32: Integer);
+      7: (VUInt32: Cardinal);
+      8: (VInt64: Int64);
+      9: (VUInt64: UInt64);
+      10: (VComp: Comp);
+      11: (VCurrency: Currency);
+      12: (VSingle: Single);
+      13: (VDouble: Double);
+      14: (VLongDouble: Extended);
+      15: (VClass: TClass);
+      16: (VMethod: TMethod);
+      17: (VBytes: array[0..15] of Byte);
+    end;
+
+    function GetExType: PRttiExType; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetBaseType: TRttiType; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetData: Pointer;
+    function GetDataSize: Integer;
+    function GetIsEmpty: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsObject: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsClass: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsOrdinal: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetIsFloat: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    {$ifdef STATICSUPPORT}class{$endif} procedure InternalReleaseInterface(AInterface: Pointer); {$ifdef STATICSUPPORT}static;{$endif}
+    procedure InternalInitData(const ARules: PRttiTypeRules; const AValue: Pointer);
+
+    procedure SetPointer(const AValue: Pointer); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetBoolean(const AValue: Boolean); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetInteger(const AValue: Integer); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetCardinal(const AValue: Cardinal); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetInt64(const AValue: Int64); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetUInt64(const AValue: UInt64); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetCurrency(const AValue: Currency); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetSingle(const AValue: Single); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetDouble(const AValue: Double); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetExtended(const AValue: Extended); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetDate(const AValue: TDate); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetTime(const AValue: TTime); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetDateTime(const AValue: TDateTime); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetTimeStamp(const AValue: TimeStamp); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetAnsiString(const AValue: AnsiString); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetUnicodeString(const AValue: UnicodeString); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetObject(const AValue: TObject); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetInterface(const AValue: IInterface); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetClass(const AValue: TClass); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetBytes(const AValue: TBytes); {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure SetMethod(const AValue: TMethod);
+    procedure SetVarData(const AValue: TVarData);
+    procedure SetVarRec(const AValue: TVarRec);
+
+    function InternalGetPointer: Pointer;
+    function InternalGetBoolean: Boolean;
+    function InternalGetInteger: Integer;
+    function InternalGetCardinal: Cardinal;
+    function InternalGetInt64: Int64;
+    function InternalGetUInt64: UInt64;
+    function InternalGetCurrency: Currency;
+    function InternalGetSingle: Single;
+    function InternalGetDouble: Double;
+    function InternalGetExtended: Extended;
+    function InternalGetDate: TDate;
+    function InternalGetTime: TTime;
+    function InternalGetDateTime: TDateTime;
+    function InternalGetTimeStamp: TimeStamp;
+    procedure InternalGetAnsiString(var Result: AnsiString);
+    procedure InternalGetUnicodeString(var Result: UnicodeString);
+    function InternalGetObject: TObject; {$ifdef WEAKINSTREF}unsafe;{$endif}
+    procedure InternalGetInterface(var Result{: unsafe IInterface});
+    function InternalGetClass: TClass;
+    procedure InternalGetBytes(var Result: TBytes);
+
+    function GetPointer: Pointer; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetBoolean: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetInteger: Integer; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetCardinal: Cardinal; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetInt64: Int64; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetUInt64: UInt64; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetCurrency: Currency; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetSingle: Single; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetDouble: Double; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetExtended: Extended; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetDate: TDate; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetTime: TTime; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetDateTime: TDateTime; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetTimeStamp: TimeStamp; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetAnsiString: AnsiString; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetUnicodeString: UnicodeString; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetObject: TObject; {$ifdef WEAKINSTREF}unsafe;{$endif} {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetInterface: IInterface; {$ifdef WEAKINTFREF}unsafe;{$endif} {Note: inline directive throws exception}
+    function GetClass: TClass; {$ifdef INLINESUPPORT}inline;{$endif}
+    function GetBytes: TBytes; {$ifdef INLINESUPPORT}inline;{$endif}
+
+    function GetMethod: TMethod;
+    function GetVarData: TVarData;
+    function GetVarRec: TVarRec;
+  public
+    {$ifdef STATICSUPPORT}class{$endif} function Empty: TValue; {$ifdef STATICSUPPORT}static;{$endif} {$ifdef INLINESUPPORT}inline;{$endif}
+    procedure Init(const AExType: TRttiExType; const AValue: Pointer); overload;
+    procedure Init(const ATypeInfo: PTypeInfo; const AValue: Pointer); overload;
+    {$ifdef GENERICMETHODSUPPORT}
+    procedure Init<T>(const AValue: T); overload; inline;
+    class function From<T>(const AValue: T): TValue; static; inline;
+    function TryGet<T>(var AValue: T): Boolean;
+    function Get<T>: T; inline;
+    {$endif}
+    procedure Clear; {$ifdef INLINESUPPORT}inline;{$endif}
+
+    property ExType: PRttiExType read GetExType;
+    property BaseType: TRttiType read GetBaseType;
+    property Data: Pointer read GetData;
+    property DataSize: Integer read GetDataSize;
+    property IsEmpty: Boolean read GetIsEmpty;
+    property IsObject: Boolean read GetIsObject;
+    property IsClass: Boolean read GetIsClass;
+    property IsOrdinal: Boolean read GetIsOrdinal;
+    property IsFloat: Boolean read GetIsFloat;
+    function IsInstanceOf(const AClass: TClass): Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
+
+    property AsPointer: Pointer read GetPointer write SetPointer;
+    property AsBoolean: Boolean read GetBoolean write SetBoolean;
+    property AsInteger: Integer read GetInteger write SetInteger;
+    property AsCardinal: Cardinal read GetCardinal write SetCardinal;
+    property AsInt64: Int64 read GetInt64 write SetInt64;
+    property AsUInt64: UInt64 read GetUInt64 write SetUInt64;
+    property AsCurrency: Currency read GetCurrency write SetCurrency;
+    property AsSingle: Single read GetSingle write SetSingle;
+    property AsDouble: Double read GetDouble write SetDouble;
+    property AsExtended: Extended read GetExtended write SetExtended;
+    property AsDate: TDate read GetDate write SetDate;
+    property AsTime: TTime read GetTime write SetTime;
+    property AsDateTime: TDateTime read GetDateTime write SetDateTime;
+    property AsTimeStamp: TimeStamp read GetTimeStamp write SetTimeStamp;
+    property AsAnsiString: AnsiString read GetAnsiString write SetAnsiString;
+    property AsUnicodeString: UnicodeString read GetUnicodeString write SetUnicodeString;
+    property AsString: string
+      {$ifdef UNICODE}
+        read GetUnicodeString write SetUnicodeString
+      {$else .ANSI}
+        read GetAnsiString write SetAnsiString
+      {$endif};
+    {$ifdef WEAKINSTREF}[Unsafe]{$endif}
+    property AsObject: TObject read GetObject write SetObject;
+    {$ifdef WEAKINTFREF}[Unsafe]{$endif}
+    property AsInterface: IInterface read GetInterface write SetInterface;
+    property AsClass: TClass read GetClass write SetClass;
+    property AsBytes: TBytes read GetBytes write SetBytes;
+
+    property AsMethod: TMethod read GetMethod write SetMethod;
+    property AsVarData: TVarData read GetVarData write SetVarData;
+    property AsVarRec: TVarRec read GetVarRec write SetVarRec;
+  public
+  {$ifdef OPERATORSUPPORT}
+    class operator Implicit(const AValue: Pointer): TValue; inline;
+    class operator Implicit(const AValue: Boolean): TValue; inline;
+    class operator Implicit(const AValue: Integer): TValue; inline;
+    class operator Implicit(const AValue: Cardinal): TValue; inline;
+    class operator Implicit(const AValue: Int64): TValue; inline;
+    class operator Implicit(const AValue: UInt64): TValue; inline;
+    class operator Implicit(const AValue: Currency): TValue; inline;
+    class operator Implicit(const AValue: Single): TValue; inline;
+    class operator Implicit(const AValue: Double): TValue; inline;
+    {$ifdef EXTENDEDSUPPORT}
+    class operator Implicit(const AValue: Extended): TValue; inline;
+    {$endif}
+    class operator Implicit(const AValue: TDate): TValue; inline;
+    class operator Implicit(const AValue: TTime): TValue; inline;
+    class operator Implicit(const AValue: TDateTime): TValue; inline;
+    class operator Implicit(const AValue: TimeStamp): TValue; inline;
+    class operator Implicit(const AValue: AnsiString): TValue; inline;
+    class operator Implicit(const AValue: UnicodeString): TValue; inline;
+    class operator Implicit(const AValue: TObject): TValue; inline;
+    class operator Implicit(const AValue: IInterface): TValue; inline;
+    class operator Implicit(const AValue: TClass): TValue; inline;
+    class operator Implicit(const AValue: TBytes): TValue; inline;
+  {$endif}
+
+  {$ifdef OPERATORSUPPORT}
+    class operator Implicit(const AValue: TValue): Pointer; inline;
+    class operator Implicit(const AValue: TValue): Boolean; inline;
+    class operator Implicit(const AValue: TValue): Integer; inline;
+    class operator Implicit(const AValue: TValue): Cardinal; inline;
+    class operator Implicit(const AValue: TValue): Int64; inline;
+    class operator Implicit(const AValue: TValue): UInt64; inline;
+    class operator Implicit(const AValue: TValue): Currency; inline;
+    class operator Implicit(const AValue: TValue): Single; inline;
+    class operator Implicit(const AValue: TValue): Double; inline;
+    {$ifdef EXTENDEDSUPPORT}
+    class operator Implicit(const AValue: TValue): Extended; inline;
+    {$endif}
+    class operator Implicit(const AValue: TValue): TDate; inline;
+    class operator Implicit(const AValue: TValue): TTime; inline;
+    class operator Implicit(const AValue: TValue): TDateTime; inline;
+    class operator Implicit(const AValue: TValue): TimeStamp; inline;
+    class operator Implicit(const AValue: TValue): AnsiString; inline;
+    class operator Implicit(const AValue: TValue): UnicodeString; inline;
+    class operator Implicit(const AValue: TValue): TObject; {$ifdef WEAKINSTREF}unsafe;{$endif} inline;
+    class operator Implicit(const AValue: TValue): IInterface; {$ifdef WEAKINTFREF}unsafe;{$endif} {Note: inline directive throws exception}
+    class operator Implicit(const AValue: TValue): TClass; inline;
+    class operator Implicit(const AValue: TValue): TBytes; inline;
+  {$endif}
+  end;
+  {$A4}
+  PValueDynArray = ^TValueDynArray;
+  TValueDynArray = {$ifdef SYSARRAYSUPPORT}TArray<TValue>{$else}array of TValue{$endif};
 
 
 var
@@ -2550,38 +2915,43 @@ var
     {029} rgString, // rtSBCSChar,
     {030} rgString, // rtUTF8Char,
     {031} rgString, // rtWideChar,
-    {032} rgString, // rtSBCSString,
-    {033} rgString, // rtUTF8String,
-    {034} rgString, // rtWideString,
-    {035} rgString, // rtUnicodeString,
-    {036} rgString, // rtUCS4String,
-    {037} rgString, // rtShortString,
+    {032} rgString, // rtUCS4Char,
+    {033} rgString, // rtPSBCSChars,
+    {034} rgString, // rtPUTF8Chars,
+    {035} rgString, // rtPWideChars,
+    {036} rgString, // rtPUCS4Chars,
+    {037} rgString, // rtSBCSString,
+    {038} rgString, // rtUTF8String,
+    {039} rgString, // rtWideString,
+    {040} rgString, // rtUnicodeString,
+    {041} rgString, // rtUCS4String,
+    {042} rgString, // rtShortString,
     // rgEnumeration
-    {038} rgEnumeration, // rtEnumeration8,
-    {039} rgEnumeration, // rtEnumeration16,
-    {040} rgEnumeration, // rtEnumeration32,
-    {041} rgEnumeration, // rtEnumeration64,
+    {043} rgEnumeration, // rtEnumeration8,
+    {044} rgEnumeration, // rtEnumeration16,
+    {045} rgEnumeration, // rtEnumeration32,
+    {046} rgEnumeration, // rtEnumeration64,
     // rgMetaType
-    {042} rgMetaType, // rtSet,
-    {043} rgMetaType, // rtStaticArray,
-    {044} rgMetaType, // rtDynamicArray,
-    {045} rgMetaType, // rtStructure,
-    {046} rgMetaType, // rtObject,
-    {047} rgMetaType, // rtInterface,
+    {047} rgMetaType, // rtSet,
+    {048} rgMetaType, // rtStaticArray,
+    {049} rgMetaType, // rtDynamicArray,
+    {050} rgMetaType, // rtStructure,
+    {051} rgMetaType, // rtObject,
+    {052} rgMetaType, // rtInterface,
     // rgMetaTypeRef
-    {048} rgMetaTypeRef, // rtClassRef,
-    // rgVariant
-    {049} rgVariant, // rtBytes,
-    {050} rgVariant, // rtVariant,
-    {051} rgVariant, // rtOleVariant,
-    {052} rgVariant, // rtVarRec,
+    {053} rgMetaTypeRef, // rtClassRef,
     // rgFunction
-    {053} rgFunction, // rtFunction,
-    {054} rgFunction, // rtMethod,
-    {055} rgFunction, // rtClosure,
+    {054} rgFunction, // rtFunction,
+    {055} rgFunction, // rtMethod,
+    {056} rgFunction, // rtClosure,
+    // rgVariant
+    {057} rgVariant, // rtBytes,
+    {058} rgVariant, // rtOleVariant,
+    {059} rgVariant, // rtVariant,
+    {060} rgVariant, // rtVarRec,
+    {061} rgVariant, // rtValue,
     // Reserved
-    {056} rgUnknown, {057} rgUnknown,
-    {058} rgUnknown, {059} rgUnknown, {060} rgUnknown, {061} rgUnknown, {062} rgUnknown, {063} rgUnknown,
+    {062} rgUnknown, {063} rgUnknown,
     {064} rgUnknown, {065} rgUnknown, {066} rgUnknown, {067} rgUnknown, {068} rgUnknown, {069} rgUnknown,
     {070} rgUnknown, {071} rgUnknown, {072} rgUnknown, {073} rgUnknown, {074} rgUnknown, {075} rgUnknown,
     {076} rgUnknown, {077} rgUnknown, {078} rgUnknown, {079} rgUnknown, {080} rgUnknown, {081} rgUnknown,
@@ -2617,49 +2987,261 @@ var
 
 
 const
-  RTTI_RULES_NONE: TRttiTypeRules = (Size: 0; StackSize: 0; CopyFunc: $ff;
-    Return: trReference; Flags: [tfRegValueArg, tfGenUseArg]);
-  RTTI_RULES_BYTE: TRttiTypeRules = (Size: SizeOf(Byte); StackSize: SizeOf(NativeUInt); CopyFunc: $ff;
-    Return: trGeneral; Flags: [tfRegValueArg, tfGenUseArg]);
-  RTTI_RULES_WORD: TRttiTypeRules = (Size: SizeOf(Word); StackSize: SizeOf(NativeUInt); CopyFunc: $ff;
-    Return: trGeneral; Flags: [tfRegValueArg, tfGenUseArg]);
-  RTTI_RULES_CARDINAL: TRttiTypeRules = (Size: SizeOf(Cardinal); StackSize: SizeOf(NativeUInt); CopyFunc: $ff;
-    Return: trGeneral; Flags: [tfRegValueArg, tfGenUseArg]);
-  RTTI_RULES_NATIVE: TRttiTypeRules = (Size: SizeOf(NativeUInt); StackSize: SizeOf(NativeUInt); CopyFunc: $ff;
-    Return: trGeneral; Flags: [tfRegValueArg, tfGenUseArg]);
-  RTTI_RULES_INT64: TRttiTypeRules = (Size: SizeOf(Int64); StackSize: SizeOf(Int64); CopyFunc: $ff;
+
+  RTTI_INITNONE_FUNC = 0;
+  RTTI_INITPOINTER_FUNC = 1;
+  RTTI_INITPOINTERPAIR_FUNC = 2;
+  RTTI_INITMETATYPE_FUNC = 3;
+  RTTI_INITVALUE_FUNC = 4;
+  RTTI_INITBYTES_LOWFUNC = 5;
+  RTTI_INITBYTES_MAXCOUNT = 32;
+  RTTI_INITBYTES_HIGHFUNC = RTTI_INITBYTES_LOWFUNC + RTTI_INITBYTES_MAXCOUNT;
+  RTTI_INITRTL_LOWFUNC = 38;
+  RTTI_INITSTATICARRAY_FUNC = RTTI_INITRTL_LOWFUNC + 0;
+  RTTI_INITSTRUCTURE_FUNC = RTTI_INITRTL_LOWFUNC + 1;
+
+  RTTI_FINALNONE_FUNC = 0;
+  RTTI_FINALMETATYPE_FUNC = 1;
+  RTTI_FINALWEAKMETATYPE_FUNC = 2;
+  RTTI_FINALINTERFACE_FUNC = 3;
+  RTTI_FINALVALUE_FUNC = 4;
+  RTTI_FINALRTL_LOWFUNC = 5;
+  RTTI_FINALSTRING_FUNC = RTTI_FINALRTL_LOWFUNC + 0;
+  RTTI_FINALWIDESTRING_FUNC = RTTI_FINALRTL_LOWFUNC + 1;
+  RTTI_FINALWEAKINTERFACE_FUNC = RTTI_FINALRTL_LOWFUNC + 2;
+  RTTI_FINALREFOBJECT_FUNC = RTTI_FINALRTL_LOWFUNC + 3;
+  RTTI_FINALWEAKREFOBJECT_FUNC = RTTI_FINALRTL_LOWFUNC + 4;
+  RTTI_FINALVARIANT_FUNC = RTTI_FINALRTL_LOWFUNC + 5;
+  RTTI_FINALWEAKMETHOD_FUNC = RTTI_FINALRTL_LOWFUNC + 6;
+  RTTI_FINALDYNARRAYSIMPLE_FUNC = RTTI_FINALRTL_LOWFUNC + 7;
+  RTTI_FINALDYNARRAY_FUNC = RTTI_FINALRTL_LOWFUNC + 8;
+  RTTI_FINALSTATICARRAY_FUNC = RTTI_FINALRTL_LOWFUNC + 9;
+  RTTI_FINALSTRUCTURE_FUNC = RTTI_FINALRTL_LOWFUNC + 10;
+
+  RTTI_COPYREFERENCE_FUNC = 0;
+  RTTI_COPYNATIVE_FUNC = 1;
+  RTTI_COPYALTERNATIVE_FUNC = 2;
+  RTTI_COPYMETATYPE_FUNC = 3;
+  RTTI_COPYWEAKMETATYPE_FUNC = 4;
+  RTTI_COPYMETATYPEBYTES_FUNC = 5;
+  RTTI_COPYINTERFACE_FUNC = 6;
+  RTTI_COPYVALUE_FUNC = 7;
+  RTTI_COPYBYTES_CARDINAL = RTTI_COPYNATIVE_FUNC {$ifdef LARGEINT} + 1{$endif};
+  RTTI_COPYBYTES_INT64 = RTTI_COPYNATIVE_FUNC {$ifdef SMALLINT} + 1{$endif};
+  RTTI_COPYBYTES_LOWFUNC = 8;
+  RTTI_COPYBYTES_MAXCOUNT = 64;
+  RTTI_COPYBYTES_HIGHFUNC = RTTI_COPYBYTES_LOWFUNC + RTTI_COPYBYTES_MAXCOUNT;
+  RTTI_COPYHFAREAD_LOWFUNC = 73;
+  RTTI_COPYHFAWRITE_LOWFUNC = 76;
+  RTTI_COPYSHORTSTRING_FUNC = 79;
+  RTTI_COPYRTL_LOWFUNC = 80;
+  RTTI_COPYSTRING_FUNC = RTTI_COPYRTL_LOWFUNC + 0;
+  RTTI_COPYWIDESTRING_FUNC = RTTI_COPYRTL_LOWFUNC + 1;
+  RTTI_COPYWEAKINTERFACE_FUNC = RTTI_COPYRTL_LOWFUNC + 2;
+  RTTI_COPYREFOBJECT_FUNC = RTTI_COPYRTL_LOWFUNC + 3;
+  RTTI_COPYWEAKREFOBJECT_FUNC = RTTI_COPYRTL_LOWFUNC + 4;
+  RTTI_COPYVARIANT_FUNC = RTTI_COPYRTL_LOWFUNC + 5;
+  RTTI_COPYWEAKMETHOD_FUNC = RTTI_COPYRTL_LOWFUNC + 6;
+  RTTI_COPYDYNARRAYSIMPLE_FUNC = RTTI_COPYRTL_LOWFUNC + 7;
+  RTTI_COPYDYNARRAY_FUNC = RTTI_COPYRTL_LOWFUNC + 8;
+  RTTI_COPYSTATICARRAYSIMPLE_FUNC = RTTI_COPYRTL_LOWFUNC + 9;
+  RTTI_COPYSTATICARRAY_FUNC = RTTI_COPYRTL_LOWFUNC + 10;
+  RTTI_COPYSTRUCTURESIMPLE_FUNC = RTTI_COPYRTL_LOWFUNC + 11;
+  RTTI_COPYSTRUCTURE_FUNC = RTTI_COPYRTL_LOWFUNC + 12;
+  RTTI_COPYVAROPENSTRINGWRITE_FUNC = RTTI_COPYRTL_LOWFUNC + 13;
+  RTTI_COPYARGARRAYREAD_FUNC = RTTI_COPYRTL_LOWFUNC + 14;
+  RTTI_COPYARGARRAYWRITE_FUNC = RTTI_COPYRTL_LOWFUNC + 15;
+
+var
+
+{ Initialization functions:
+    0: none
+    1: pointer
+    2: pointer pair
+    3: metatype function
+    4: value
+    5..37: N bytes
+    - RTL -
+    38: static array (type information)
+    39: structure (type information) }
+
+  RTTI_INIT_FUNCS: array[Byte] of TRttiTypeFunc;
+
+{ Finalization functions:
+    0: none
+    1: metatype function
+    2: metatype weak function
+    3: interface
+    4: value
+    - RTL -
+    5: string
+    6: wide string
+    7: weak interface
+    8: referenced object
+    9: weak referenced object
+    10: variant
+    11: weak method
+    12: dynamic array (simple)
+    13: dynamic array (type information)
+    14: static array (type information)
+    15: structure (type information) }
+
+  RTTI_FINAL_FUNCS: array[Byte] of TRttiTypeFunc;
+
+{ Copy functions:
+    0: reference pointer
+    1: pointer (native int)
+    2: alternative int (8/4 bytes)
+    3: metatype function
+    4: metatype weak function
+    5: metatype bytes
+    6: interface
+    7: value
+    8..72: N bytes
+    73,74,75: hfaread_f2..4
+    76,77,76: hfawrite_f2..4
+    79: short string
+    - RTL -
+    80: string
+    81: wide string
+    82: weak interface
+    83: referenced object
+    84: weak referenced object
+    85: variant
+    86: weak method
+    87: dynamic array (simple)
+    88: dynamic array (type information)
+    89: static array (simple)
+    90: static array (type information)
+    91: structure (simple)
+    92: structure (type information)
+    93: variable open(short) string write
+    94: argument array (read to dynamic array)
+    95: argument array (write from dynamic array) }
+
+  RTTI_COPY_FUNCS: array[Byte] of TRttiCopyFunc;
+
+
+const
+
+  RTTI_RULEFLAGS_STACKDATA = [];
+  RTTI_RULEFLAGS_REFERENCE = [tfGenUseArg];
+  RTTI_RULEFLAGS_REGGENERAL = [tfRegValueArg, tfGenUseArg];
+  RTTI_RULEFLAGS_REGEXTENDED = [tfRegValueArg];
+
+  RTTI_RULES_NONE: TRttiTypeRules = (Size: 0;
+    Return: Low(TRttiTypeReturn); Flags: []; Reserved: 0;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_LOWFUNC + 0; WeakCopyFunc: RTTI_COPYBYTES_LOWFUNC + 0;);
+  RTTI_RULES_BYTE: TRttiTypeRules = (Size: SizeOf(Byte);
+    Return: trGeneral; Flags: RTTI_RULEFLAGS_REGGENERAL;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_LOWFUNC + 1; WeakCopyFunc: RTTI_COPYBYTES_LOWFUNC + 1;);
+  RTTI_RULES_WORD: TRttiTypeRules = (Size: SizeOf(Word);
+    Return: trGeneral; Flags: RTTI_RULEFLAGS_REGGENERAL;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_LOWFUNC + 2; WeakCopyFunc: RTTI_COPYBYTES_LOWFUNC + 2;);
+  RTTI_RULES_CARDINAL: TRttiTypeRules = (Size: SizeOf(Cardinal);
+    Return: trGeneral; Flags: RTTI_RULEFLAGS_REGGENERAL;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_CARDINAL; WeakCopyFunc: RTTI_COPYBYTES_CARDINAL;);
+  RTTI_RULES_NATIVE: TRttiTypeRules = (Size: SizeOf(NativeUInt);
+    Return: trGeneral; Flags: RTTI_RULEFLAGS_REGGENERAL;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYNATIVE_FUNC; WeakCopyFunc: RTTI_COPYNATIVE_FUNC;);
+  RTTI_RULES_INT64: TRttiTypeRules = (Size: SizeOf(Int64);
     Return: {$ifdef LARGEINT}trGeneral{$else}trGeneralPair{$endif};
-    Flags: [{$ifNdef CPUX86}tfRegValueArg, tfGenUseArg{$endif}]);
-
-  RTTI_RULES_FLOAT: TRttiTypeRules = (Size: SizeOf(Single); StackSize: SizeOf(NativeUInt); CopyFunc: $ff;
+    Flags: {$ifdef CPUX86}RTTI_RULEFLAGS_STACKDATA{$else}RTTI_RULEFLAGS_REGGENERAL{$endif};
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_INT64; WeakCopyFunc: RTTI_COPYBYTES_INT64;);
+  RTTI_RULES_FLOAT: TRttiTypeRules = (Size: SizeOf(Single);
     {$if Defined(CPUX86)}
-      Return: trFPU; Flags: []);
+      Return: trFPU; Flags: RTTI_RULEFLAGS_STACKDATA;
     {$elseif not Defined(ARM_NO_VFP_USE)}
-      Return: trFloat1; Flags: [tfRegValueArg]);
+      Return: trFloat1; Flags: RTTI_RULEFLAGS_REGEXTENDED;
     {$else}
-      Return: trGeneral; Flags: [tfRegValueArg, tfGenUseArg]);
+      Return: trGeneral; Flags: RTTI_RULEFLAGS_REGGENERAL;
     {$ifend}
-  RTTI_RULES_DOUBLE: TRttiTypeRules = (Size: SizeOf(Double); StackSize: SizeOf(Double); CopyFunc: $ff;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_CARDINAL; WeakCopyFunc: RTTI_COPYBYTES_CARDINAL;);
+  RTTI_RULES_DOUBLE: TRttiTypeRules = (Size: SizeOf(Double);
     {$if Defined(CPUX86)}
-      Return: trFPU; Flags: []);
+      Return: trFPU; Flags: RTTI_RULEFLAGS_STACKDATA;
     {$elseif not Defined(ARM_NO_VFP_USE)}
-      Return: trDouble1; Flags: [tfRegValueArg]);
+      Return: trDouble1; Flags: RTTI_RULEFLAGS_REGEXTENDED;
     {$else}
-      Return: trGeneralPair; Flags: [tfRegValueArg, tfGenUseArg]);
+      Return: trGeneralPair; Flags: RTTI_RULEFLAGS_REGGENERAL;
     {$ifend}
-  RTTI_RULES_LONGDOUBLE80: TRttiTypeRules = (Size: 10; StackSize: (10 + SizeOf(NativeInt) - 1) and -SizeOf(NativeInt); CopyFunc: $ff;
-    Return: trGeneral; Flags: []);
-  RTTI_RULES_LONGDOUBLE96: TRttiTypeRules = (Size: 12; StackSize: (12 + SizeOf(NativeInt) - 1) and -SizeOf(NativeInt); CopyFunc: $ff;
-    Return: trGeneral; Flags: []);
-  RTTI_RULES_LONGDOUBLE128: TRttiTypeRules = (Size: 16; StackSize: (16 + SizeOf(NativeInt) - 1) and -SizeOf(NativeInt); CopyFunc: $ff;
-    Return: trGeneral; Flags: []);
-  RTTI_RULES_COMPCURRENCY: TRttiTypeRules = (Size: SizeOf(Comp); StackSize: 0; CopyFunc: $ff;
-    {$if Defined(CPUX86)}
-      Return: trFPUInt64; Flags: []);
-    {$else}
-      Return: {$ifdef LARGEINT}trGeneral{$else}trGeneralPair{$endif}; Flags: [tfRegValueArg, tfGenUseArg]);
-    {$ifend}
-
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_INT64; WeakCopyFunc: RTTI_COPYBYTES_INT64;);
+  RTTI_RULES_LONGDOUBLE80: TRttiTypeRules = (Size: 10;
+    Return: trGeneral; Flags: RTTI_RULEFLAGS_STACKDATA;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_LOWFUNC + 10; WeakCopyFunc: RTTI_COPYBYTES_LOWFUNC + 10;);
+  RTTI_RULES_LONGDOUBLE96: TRttiTypeRules = (Size: 12;
+    Return: trGeneral; Flags: RTTI_RULEFLAGS_STACKDATA;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_LOWFUNC + 12; WeakCopyFunc: RTTI_COPYBYTES_LOWFUNC + 12;);
+  RTTI_RULES_LONGDOUBLE128: TRttiTypeRules = (Size: 16;
+    Return: trGeneral; Flags: RTTI_RULEFLAGS_STACKDATA;
+     InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+     CopyFunc: RTTI_COPYBYTES_LOWFUNC + 16; WeakCopyFunc: RTTI_COPYBYTES_LOWFUNC + 16;);
+  {$ifdef CPUX86}
+  RTTI_RULES_COMPCURRENCYX86: TRttiTypeRules = (Size: SizeOf(Comp);
+    Return: trFPUInt64; Flags: RTTI_RULEFLAGS_STACKDATA;
+    InitFunc: 0; FinalFunc: 0; WeakFinalFunc: 0;
+    CopyFunc: RTTI_COPYBYTES_INT64; WeakCopyFunc: RTTI_COPYBYTES_INT64;);
+  {$endif}
+  RTTI_RULES_STRING: TRttiTypeRules = (Size: SizeOf(NativeUInt);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REGGENERAL + [tfManaged];
+    InitFunc: RTTI_INITPOINTER_FUNC; FinalFunc: RTTI_FINALSTRING_FUNC; WeakFinalFunc: RTTI_FINALSTRING_FUNC;
+    CopyFunc: RTTI_COPYSTRING_FUNC; WeakCopyFunc: RTTI_COPYSTRING_FUNC;);
+  {$ifdef MSWINDOWS}
+  RTTI_RULES_BSTR: TRttiTypeRules = (Size: SizeOf(NativeUInt);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REGGENERAL + [tfManaged];
+    InitFunc: RTTI_INITPOINTER_FUNC; FinalFunc: RTTI_FINALWIDESTRING_FUNC; WeakFinalFunc: RTTI_FINALWIDESTRING_FUNC;
+    CopyFunc: RTTI_COPYWIDESTRING_FUNC; WeakCopyFunc: RTTI_COPYWIDESTRING_FUNC;);
+  {$endif}
+  RTTI_RULES_DYNARRAYSIMPLE: TRttiTypeRules = (Size: SizeOf(NativeUInt);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REGGENERAL + [tfManaged];
+    InitFunc: RTTI_INITPOINTER_FUNC; FinalFunc: RTTI_FINALDYNARRAYSIMPLE_FUNC; WeakFinalFunc: RTTI_FINALDYNARRAYSIMPLE_FUNC;
+    CopyFunc: RTTI_COPYDYNARRAYSIMPLE_FUNC; WeakCopyFunc: RTTI_COPYDYNARRAYSIMPLE_FUNC;);
+  {$ifdef WEAKINSTREF}
+  RTTI_RULES_REFOBJECT: TRttiTypeRules = (Size: SizeOf(NativeUInt);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REGGENERAL + [tfManaged, tfUnsafable, tfWeakable, tfHasWeakRef];
+    InitFunc: RTTI_INITPOINTER_FUNC; FinalFunc: RTTI_FINALREFOBJECT_FUNC; WeakFinalFunc: RTTI_FINALWEAKREFOBJECT_FUNC;
+    CopyFunc: RTTI_COPYREFOBJECT_FUNC; WeakCopyFunc: RTTI_COPYWEAKREFOBJECT_FUNC;);
+  {$endif}
+  RTTI_RULES_INTERFACE: TRttiTypeRules = (Size: SizeOf(NativeUInt);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REGGENERAL + [tfManaged{$ifdef WEAKINTFREF}, tfUnsafable, tfWeakable, tfHasWeakRef{$endif}];
+    InitFunc: RTTI_INITPOINTER_FUNC; FinalFunc: RTTI_FINALINTERFACE_FUNC; WeakFinalFunc: {$ifdef WEAKINTFREF}RTTI_FINALWEAKINTERFACE_FUNC{$else}RTTI_FINALINTERFACE_FUNC{$endif};
+    CopyFunc: RTTI_COPYINTERFACE_FUNC; WeakCopyFunc: {$ifdef WEAKINTFREF}RTTI_COPYWEAKINTERFACE_FUNC{$else}RTTI_COPYINTERFACE_FUNC{$endif};);
+  {$if Defined(WEAKINTFREF)}
+  RTTI_RULES_METHOD_COPYFUNC = RTTI_COPYWEAKMETHOD_FUNC;
+  {$elseif Defined(SMALLINT)}
+  RTTI_RULES_METHOD_COPYFUNC = RTTI_COPYALTERNATIVE_FUNC;
+  {$else}
+  RTTI_RULES_METHOD_COPYFUNC = RTTI_COPYBYTES_LOWFUNC + SizeOf(TMethod);
+  {$ifend}
+  RTTI_RULES_METHOD: TRttiTypeRules = (Size: SizeOf(TMethod);
+    Return: trReference;
+    Flags: {$ifdef CPUX86}RTTI_RULEFLAGS_STACKDATA{$else}RTTI_RULEFLAGS_REFERENCE{$endif} {$ifdef WEAKINTFREF} + [tfManaged, tfUnsafable, tfWeakable, tfHasWeakRef]{$endif};
+    InitFunc: {$ifdef SMALLINT}RTTI_INITPOINTERPAIR_FUNC{$else}RTTI_INITBYTES_LOWFUNC + SizeOf(TMethod){$endif};
+    FinalFunc: {$ifdef WEAKINTFREF}RTTI_FINALWEAKMETHOD_FUNC{$else}RTTI_FINALNONE_FUNC{$endif};
+    WeakFinalFunc: {$ifdef WEAKINTFREF}RTTI_FINALWEAKMETHOD_FUNC{$else}RTTI_FINALNONE_FUNC{$endif};
+    CopyFunc: RTTI_RULES_METHOD_COPYFUNC; WeakCopyFunc: RTTI_RULES_METHOD_COPYFUNC;);
+  RTTI_RULES_VARIANT: TRttiTypeRules = (Size: SizeOf(TVarData);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REFERENCE + [{$ifdef CPUX86}tfOptionalRefArg,{$endif} tfManaged];
+    InitFunc: RTTI_INITPOINTER_FUNC; FinalFunc: RTTI_FINALVARIANT_FUNC; WeakFinalFunc: RTTI_FINALVARIANT_FUNC;
+    CopyFunc: RTTI_COPYVARIANT_FUNC; WeakCopyFunc: RTTI_COPYVARIANT_FUNC;);
+  RTTI_RULES_VARREC: TRttiTypeRules = (Size: SizeOf(TVarRec);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REFERENCE;
+    InitFunc: RTTI_INITNONE_FUNC; FinalFunc: RTTI_FINALNONE_FUNC; WeakFinalFunc: RTTI_FINALNONE_FUNC;
+    CopyFunc: RTTI_COPYBYTES_LOWFUNC + SizeOf(TVarRec); WeakCopyFunc: RTTI_COPYBYTES_LOWFUNC + SizeOf(TVarRec););
+  RTTI_RULES_VALUE: TRttiTypeRules = (Size: SizeOf(TValue);
+    Return: trReference; Flags: RTTI_RULEFLAGS_REFERENCE + [tfManaged];
+    InitFunc: RTTI_INITVALUE_FUNC; FinalFunc: RTTI_FINALVALUE_FUNC; WeakFinalFunc: RTTI_FINALVALUE_FUNC;
+    CopyFunc: RTTI_COPYVALUE_FUNC; WeakCopyFunc: RTTI_COPYVALUE_FUNC;);
 
 var
   RTTI_TYPE_RULES: array[TRttiType] of PRttiTypeRules = (
@@ -2686,8 +3268,8 @@ var
     {016} @RTTI_RULES_INT64, // rtInt64,
     {017} @RTTI_RULES_INT64, // rtUInt64,
     // rgFloat
-    {018} @RTTI_RULES_COMPCURRENCY, // rtComp,
-    {019} @RTTI_RULES_COMPCURRENCY, // rtCurrency,
+    {018} @{$ifdef CPUX86}RTTI_RULES_COMPCURRENCYX86{$else}RTTI_RULES_INT64{$endif}, // rtComp,
+    {019} @{$ifdef CPUX86}RTTI_RULES_COMPCURRENCYX86{$else}RTTI_RULES_INT64{$endif}, // rtCurrency,
     {020} @RTTI_RULES_FLOAT, // rtFloat,
     {021} @RTTI_RULES_DOUBLE, // rtDouble,
     {022} @RTTI_RULES_LONGDOUBLE80, // rtLongDouble80,
@@ -2702,37 +3284,50 @@ var
     {029} @RTTI_RULES_BYTE, // rtSBCSChar,
     {030} @RTTI_RULES_BYTE, // rtUTF8Char,
     {031} @RTTI_RULES_WORD, // rtWideChar,
-    {032} @RTTI_RULES_NATIVE, // rtSBCSString,
-    {033} @RTTI_RULES_NATIVE, // rtUTF8String,
-    {034} @RTTI_RULES_NATIVE, // rtWideString,
-    {035} @RTTI_RULES_NATIVE, // rtUnicodeString,
-    {036} @RTTI_RULES_NATIVE, // rtUCS4String,
-    {037} nil, // rtShortString,
+    {032} @RTTI_RULES_WORD, // rtUCS4Char,
+    {033} @RTTI_RULES_NATIVE, // rtPSBCSChars,
+    {034} @RTTI_RULES_NATIVE, // rtPUTF8Chars,
+    {035} @RTTI_RULES_NATIVE, // rtPWideChars,
+    {036} @RTTI_RULES_NATIVE, // rtPUCS4Chars,
+    {037} @RTTI_RULES_STRING, // rtSBCSString,
+    {038} @RTTI_RULES_STRING, // rtUTF8String,
+    {039} // rtWideString,
+      {$if Defined(MSWINDOWS)}
+        @RTTI_RULES_BSTR
+      {$elseif Defined(FPC)}
+        @RTTI_RULES_STRING
+      {$else}
+        @RTTI_RULES_DYNARRAYSIMPLE
+      {$ifend},
+    {040} @{$ifdef UNICODE}RTTI_RULES_STRING{$else}RTTI_RULES_BSTR{$endif}, // rtUnicodeString,
+    {041} @RTTI_RULES_DYNARRAYSIMPLE, // rtUCS4String,
+    {042} nil, // rtShortString,
     // rgEnumeration
-    {038} @RTTI_RULES_BYTE, // rtEnumeration8,
-    {039} @RTTI_RULES_WORD, // rtEnumeration16,
-    {040} @RTTI_RULES_CARDINAL, // rtEnumeration32,
-    {041} @RTTI_RULES_INT64, // rtEnumeration64,
+    {043} @RTTI_RULES_BYTE, // rtEnumeration8,
+    {044} @RTTI_RULES_WORD, // rtEnumeration16,
+    {045} @RTTI_RULES_CARDINAL, // rtEnumeration32,
+    {046} @RTTI_RULES_INT64, // rtEnumeration64,
     // rgMetaType
-    {042} nil, // rtSet,
-    {043} nil, // rtStaticArray,
-    {044} nil, // rtDynamicArray,
-    {045} nil, // rtStructure,
-    {046} nil, // rtObject,
-    {047} nil, // rtInterface,
+    {047} nil, // rtSet,
+    {048} nil, // rtStaticArray,
+    {049} nil, // rtDynamicArray,
+    {050} nil, // rtStructure,
+    {051} @{$ifdef WEAKINSTREF}RTTI_RULES_REFOBJECT{$else}RTTI_RULES_NATIVE{$endif}, // rtObject,
+    {052} @RTTI_RULES_INTERFACE, // rtInterface,
     // rgMetaTypeRef
-    {048} @RTTI_RULES_NATIVE, // rtClassRef,
-    // rgVariant
-    {049} nil, // rtBytes,
-    {050} nil, // rtVariant,
-    {051} nil, // rtOleVariant,
-    {052} nil, // rtVarRec,
+    {053} @RTTI_RULES_NATIVE, // rtClassRef,
     // rgFunction
-    {053} @RTTI_RULES_NATIVE, // rtFunction,
-    {054} nil, // rtMethod,
-    {055} nil, // rtClosure,
+    {054} @RTTI_RULES_NATIVE, // rtFunction,
+    {055} @RTTI_RULES_METHOD, // rtMethod,
+    {056} @RTTI_RULES_INTERFACE, // rtClosure,
+    // rgVariant
+    {057} @RTTI_RULES_DYNARRAYSIMPLE, // rtBytes,
+    {058} @RTTI_RULES_VARIANT, // rtOleVariant,
+    {059} @RTTI_RULES_VARIANT, // rtVariant,
+    {060} @RTTI_RULES_VARREC, // rtVarRec,
+    {061} @RTTI_RULES_VALUE, // rtValue,
     // Reserved
-    {056} nil, {057} nil, {058} nil, {059} nil, {060} nil, {061} nil, {062} nil, {063} nil,
+    {062} nil, {063} nil,
     {064} nil, {065} nil, {066} nil, {067} nil, {068} nil, {069} nil, {070} nil, {071} nil,
     {072} nil, {073} nil, {074} nil, {075} nil, {076} nil, {077} nil, {078} nil, {079} nil,
     {080} nil, {081} nil, {082} nil, {083} nil, {084} nil, {085} nil, {086} nil, {087} nil,
@@ -2757,11 +3352,6 @@ var
     {232} nil, {233} nil, {234} nil, {235} nil, {236} nil, {237} nil, {238} nil, {239} nil,
     {240} nil, {241} nil, {242} nil, {243} nil, {244} nil, {245} nil, {246} nil, {247} nil,
     {248} nil, {249} nil, {250} nil, {251} nil, {252} nil, {253} nil, {254} nil, {255} nil);
-
-
-var
-  {ToDo}
-  RTTI_COPY_FUNCS: array[Byte] of TRttiCopyFunc;
 
 
 const
@@ -2792,9 +3382,12 @@ const
   TYPEINFO_PTIMESTAMP = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtTimeStamp) shl 16 + DUMMY_TYPEINFO_PTR);
   TYPEINFO_ANSICHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSChar) shl 16);
   TYPEINFO_UTF8CHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8Char) shl 16);
-  TYPEINFO_PANSICHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSChar) shl 16 + DUMMY_TYPEINFO_PTR);
-  TYPEINFO_PUTF8CHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8Char) shl 16 + DUMMY_TYPEINFO_PTR);
-  TYPEINFO_PWIDECHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtWideChar) shl 16 + DUMMY_TYPEINFO_PTR);
+  TYPEINFO_WIDECHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtWideChar) shl 16);
+  TYPEINFO_UCS4CHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUCS4Char) shl 16);
+  TYPEINFO_PANSICHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtPSBCSChars) shl 16);
+  TYPEINFO_PUTF8CHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtPUTF8Chars) shl 16);
+  TYPEINFO_PWIDECHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtPWideChars) shl 16);
+  TYPEINFO_PUCS4CHAR = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtPUCS4Chars) shl 16);
   TYPEINFO_ANSISTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtSBCSString) shl 16);
   TYPEINFO_UTF8STRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtUTF8String) shl 16);
   TYPEINFO_SHORTSTRING = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtShortString) shl 16 + 255);
@@ -2829,27 +3422,119 @@ const
   TYPEINFO_PFUNCTION = Pointer(DUMMY_TYPEINFO_BASE + NativeUInt(rtFunction) shl 16 + DUMMY_TYPEINFO_PTR);
 
 
-{ RTTI helpers? }
+type
+
+{ TRttiDummyInterface object
+  Dummy interface instance }
+
+  PRttiDummyInterface = ^TRttiDummyInterface;
+  {$A1}
+  TRttiDummyInterface = object
+  public
+    {Vmt: ^array[0..2] of Pointer;}
+    function QueryInterface({$ifdef FPC}constref{$else}const{$endif} IID: TGUID; out Obj): {$if (not Defined(FPC)) or Defined(MSWINDOWS)}HResult; stdcall{$else}Longint; cdecl{$ifend};
+    function _AddRef: {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+    function _Release: {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+  end;
+  {$A4}
+
+const
+  RTTI_DUMMY_INTERFACE_VMT: array[0..2] of Pointer = (
+    @TRttiDummyInterface.QueryInterface,
+    @TRttiDummyInterface._AddRef,
+    @TRttiDummyInterface._Release
+  );
+  RTTI_DUMMY_INTERFACE_DATA: Pointer = @RTTI_DUMMY_INTERFACE_VMT;
+  RTTI_DUMMY_INTERFACE: Pointer{PRttiDummyInterface/IInterface} = @RTTI_DUMMY_INTERFACE_DATA;
+
+
+type
+
+{ TRttiContainerInterface object
+  Managed data containter interface }
+
+  PRttiContainerInterface = ^TRttiContainerInterface;
+  {$A1}
+  TRttiContainerInterface = object
+    Vmt: Pointer;
+    RefCount: Integer;
+    FinalFunc: TRttiTypeFunc;
+    ExType: TRttiExType;
+    Value: packed record end;
+
+    function _AddRef: {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+    function _Release: {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+  end;
+  {$A4}
+
+const
+  RTTI_CONTAINER_INTERFACE_VMT: array[0..2] of Pointer = (
+    @TRttiDummyInterface.QueryInterface,
+    @TRttiContainerInterface._AddRef,
+    @TRttiContainerInterface._Release
+  );
+
+
+{ Standard ordinal types range data }
+
+  INT8_TYPE_DATA: TRangeTypeData = (F: (OrdType: otSByte; ILow: Low(ShortInt); IHigh: High(ShortInt)));
+  UINT8_TYPE_DATA: TRangeTypeData = (F: (OrdType: otUByte; ILow: Low(Byte); IHigh: High(Byte)));
+  INT16_TYPE_DATA: TRangeTypeData= (F: (OrdType: otSWord; ILow: Low(SmallInt); IHigh: High(SmallInt)));
+  UINT16_TYPE_DATA: TRangeTypeData = (F: (OrdType: otUWord; ILow: Low(Word); IHigh: High(Word)));
+  INT32_TYPE_DATA: TRangeTypeData = (F: (OrdType: otSLong; ILow: Low(Integer); IHigh: High(Integer)));
+  UINT32_TYPE_DATA: TRangeTypeData = (F: (OrdType: otULong; ILow: 0; IHigh: -1));
+  INT64_TYPE_DATA: TRangeTypeData = (F: (I64Low: Low(Int64); I64High: High(Int64)));
+  UINT64_TYPE_DATA: TRangeTypeData = (F: (I64Low: 0; I64High: -1));
+
+
+{ Tiny.Rtti helpers }
 
 function DummyTypeInfo(const ARttiType: TRttiType;
   const APointerDepth: Byte = 0; const AId: Word = 0): Pointer;
 
-function RttiTypeGroupCurrent: TRttiTypeGroup;
-function RttiTypeGroupAdd: TRttiTypeGroup;
+function RttiTypeCurrentGroup: TRttiTypeGroup;
+function RttiTypeIncreaseGroup: TRttiTypeGroup;
 function RttiTypeCurrent: TRttiType;
-function RttiTypeAdd(const AGroup: TRttiTypeGroup): TRttiType;
+function RttiTypeIncrease(const AGroup: TRttiTypeGroup; const ARules: PRttiTypeRules): TRttiType;
 
 function RttiAlloc(const ASize: Integer): Pointer;
+function RttiAllocPacked(const ASize: Integer): Pointer;
+procedure RttiAllocatorIncrease(const ABuffer: Pointer; const ASize: Integer);
+
+
+{ Atomic operations }
+
+{$if Defined(FPC) or (CompilerVersion < 24)}
+function AtomicIncrement(var ATarget: Integer; const AValue: Integer = 1): Integer; overload; {$ifdef FPC}inline;{$endif}
+function AtomicDecrement(var ATarget: Integer; const AValue: Integer = 1): Integer; overload; {$ifdef FPC}inline;{$endif}
+function AtomicIncrement(var ATarget: Cardinal; const AValue: Cardinal = 1): Cardinal; overload; {$ifdef FPC}inline;{$endif}
+function AtomicDecrement(var ATarget: Cardinal; const AValue: Cardinal = 1): Cardinal; overload; {$ifdef FPC}inline;{$endif}
+function AtomicIncrement(var ATarget: Int64; const AValue: Int64 = 1): Int64; overload; {$ifdef FPC}inline;{$endif}
+function AtomicDecrement(var ATarget: Int64; const AValue: Int64 = 1): Int64; overload; {$ifdef FPC}inline;{$endif}
+function AtomicExchange(var ATarget: Integer; const AValue: Integer): Integer; overload; {$ifdef FPC}inline;{$endif}
+function AtomicExchange(var ATarget: Cardinal; const AValue: Cardinal): Cardinal; overload; {$ifdef FPC}inline;{$endif}
+function AtomicExchange(var ATarget: Pointer; const AValue: Pointer): Pointer; overload; {$ifdef FPC}inline;{$endif}
+function AtomicExchange(var ATarget: Int64; const AValue: Int64): Int64; overload; {$ifdef FPC}inline;{$endif}
+function AtomicCmpExchange(var ATarget: Integer; const ANewValue, AComparand: Integer): Integer; overload; {$ifdef FPC}inline;{$endif}
+function AtomicCmpExchange(var ATarget: Cardinal; const ANewValue, AComparand: Cardinal): Cardinal; overload; {$ifdef FPC}inline;{$endif}
+function AtomicCmpExchange(var ATarget: Pointer; const ANewValue, AComparand: Pointer): Pointer; overload; {$ifdef FPC}inline;{$endif}
+function AtomicCmpExchange(var ATarget: Int64; const ANewValue, AComparand: Int64): Int64; overload; {$ifdef FPC}inline;{$endif}
+{$ifend}
 
 
 { System.TypInfo/System.Rtti helpers }
 
-procedure CopyRecord(Dest, Source, TypeInfo: Pointer); {$if Defined(FPC) or (not Defined(CPUINTEL))}inline;{$ifend}
+procedure InitializeRecord(Dest, TypeInfo: Pointer); {$if Defined(FPC) or not Defined(CPUINTELASM)}inline;{$ifend}
+procedure FinalizeRecord(Dest, TypeInfo: Pointer); {$if Defined(FPC) or not Defined(CPUINTELASM)}inline;{$ifend}
+{$if Defined(FPC) or (CompilerVersion <= 30)}
+procedure CopyRecord(Dest, Source, TypeInfo: Pointer); {$if Defined(FPC)}inline;{$ifend}
+{$ifend}
 {$if Defined(FPC) or (CompilerVersion <= 20)}
-procedure CopyArray(Dest, Source, TypeInfo: Pointer; Count: NativeUInt);
 procedure InitializeArray(Source, TypeInfo: Pointer; Count: NativeUInt);
 procedure FinalizeArray(Source, TypeInfo: Pointer; Count: NativeUInt);
+procedure CopyArray(Dest, Source, TypeInfo: Pointer; Count: NativeUInt);
 {$ifend}
+procedure VarDataClear(var AValue: TVarData);
 
 function EqualNames(const AName1, AName2: PAnsiChar; const ACount: NativeUInt): Boolean; overload;
 function EqualNames(const AName1, AName2: PShortStringHelper): Boolean; overload;
@@ -2860,72 +3545,37 @@ function GetTypeName(const ATypeInfo: PTypeInfo): PShortStringHelper; {$ifdef IN
 function GetTypeData(const ATypeInfo: PTypeInfo): PTypeData; {$ifdef INLINESUPPORT}inline;{$endif}
 function GetEnumName(const ATypeInfo: PTypeInfo; const AValue: Integer): PShortStringHelper;
 function GetEnumValue(const ATypeInfo: PTypeInfo; const AName: ShortString): Integer;
-function IsClosureTypeData(const ATypeData: PTypeData): Boolean; {$if Defined(INLINESUPPORT) and not Defined(WEAKREF)}inline;{$ifend}
+function IsClosureTypeData(const ATypeData: PTypeData): Boolean; {$if Defined(INLINESUPPORT) and not Defined(EXTENDEDRTTI)}inline;{$ifend}
 function IsClosureType(const ATypeInfo: PTypeInfo): Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
 function IsManaged(const ATypeInfo: PTypeInfo): Boolean;
 function HasWeakRef(const ATypeInfo: PTypeInfo): Boolean; {$if Defined(INLINESUPPORT) and not Defined(WEAKREF)}inline;{$ifend}
 
 
+const
+  DefaultExType: TRttiExType = (F: (Options: 0; CustomData: nil));
+
 var
+  {$ifdef FPC}
+  MainThreadID: TThreadID;
+  {$endif}
+  DefaultCP: Word;
+  DefaultSBCSStringOptions: Cardinal;
   DefaultContext: TRttiContext;
 
 implementation
 
+
+{ Internal constants }
+
 const
   CP_UTF8 = 65001;
+  CP_UTF16 = 1200;
+  CP_UTF32 = 12000;
   SHORTSTR_RESULT: array[0..6] of Byte = (6, Ord('R'), Ord('e'), Ord('s'), Ord('u'), Ord('l'), Ord('t'));
   REFERENCED_TYPE_KINDS = [{$ifdef WEAKINSTREF}tkClass, tkMethod,{$endif} {$ifdef WEAKREF}tkInterface{$endif}];
 
 
-{ Atomic operations }
-
-{$if Defined(FPC) or (CompilerVersion < 24)}
-{$ifdef FPC}
-function AtomicIncrement(var ATarget: Integer; const AValue: Integer): Integer; {$if Defined(FPC) and Defined(LARGEINT)}overload;{$ifend} inline;
-begin
-  Result := InterLockedIncrement(ATarget);
-end;
-{$else .DELPHI}
-function AtomicIncrement(var ATarget: Integer; const AValue: Integer): Integer;
-asm
-  {$ifdef CPUX86}
-    mov ecx, edx
-    lock xadd [eax], edx
-    lea eax, [edx + ecx]
-  {$else .CPUX64} .NOFRAME
-    mov eax, edx
-    lock xadd [RCX], eax
-    add eax, edx
-  {$endif}
-end;
-{$endif}
-{$ifend}
-
-{$if Defined(FPC) or (CompilerVersion < 24)}
-{$ifdef FPC}
-function AtomicCmpExchange(var ATarget: Integer; ANewValue: Integer; AComparand: Integer): Integer; inline;
-begin
-  Result := InterlockedCompareExchange(ATarget, ANewValue, AComparand);
-end;
-{$else .DELPHI}
-function AtomicCmpExchange(var ATarget: Integer; ANewValue: Integer; AComparand: Integer): Integer;
-asm
-  {$ifdef CPUX86}
-    xchg eax, ecx
-    lock cmpxchg [ecx], edx
-  {$else .CPUX64} .NOFRAME
-    mov eax, r8d
-    lock cmpxchg [rcx], edx
-  {$endif}
-end;
-{$endif}
-{$ifend}
-
-
 { Default code page }
-
-var
-  DefaultCP: Word;
 
 {$if Defined(MSWINDOWS)}
 function GetACP: Cardinal; external 'kernel32.dll' name 'GetACP';
@@ -3139,17 +3789,508 @@ begin
 end;
 {$ifend}
 
-procedure InitDefaultCP;
+
+{ Library initialization }
+
+type
+
+  TErrorHandlerFunc = procedure(const ATinyErrorCode, AExtendedCode: Cardinal; const AReturnAddress: Pointer);
+
+  PRttiOptions = ^TRttiOptions;
+  TRttiOptions = packed record
+    Mode: NativeUInt;
+    ErrorHandler: TErrorHandlerFunc;
+    {$ifdef MSWINDOWS}
+    SysAllocStringLen: Pointer;
+    SysReAllocStringLen: Pointer;
+    SysFreeString: Pointer;
+    {$endif}
+    GetMem: Pointer;
+    FreeMem: Pointer;
+    ReallocMem: Pointer;
+    InitStructure: Pointer;
+    FinalStructure: Pointer;
+    CopyStructure: Pointer;
+    InitArray: Pointer;
+    FinalArray: Pointer;
+    CopyArray: Pointer;
+    VmtObjAddRef: NativeInt;
+    VmtObjRelease: NativeInt;
+    VariantClear: Pointer;
+    VariantCopy: Pointer;
+    WeakIntfClear: Pointer;
+    WeakIntfCopy: Pointer;
+    WeakObjClear: Pointer;
+    WeakObjCopy: Pointer;
+    WeakMethodClear: Pointer;
+    WeakMethodCopy: Pointer;
+    DummyInterface: Pointer;
+    Groups: Pointer;
+    Rules: Pointer;
+    InitFunct: Pointer;
+    FinalFuncs: Pointer;
+    CopyFuncs: Pointer;
+    GetCalculatedRules: Pointer;
+  end;
+
+var
+  rtti_options: TRttiOptions;
+
+{$if Defined(OBJLINKSUPPORT)}
+  {$if Defined(MSWINDOWS)}
+    {$ifdef SMALLINT}
+      {$L objs\win32\tiny.rtti.o}
+    {$else}
+      {$L objs\win64\tiny.rtti.o}
+    {$endif}
+  {$elseif Defined(ANDROID)}
+    {$ifdef SMALLINT}
+      {$L objs\android32\tiny.rtti.o}
+    {$else}
+      {$L objs\android64\tiny.rtti.o}
+    {$endif}
+  {$elseif Defined(IOS)}
+    {$ifdef SMALLINT}
+      {$L objs\ios32\tiny.rtti.o}
+    {$else}
+      {$L objs\ios64\tiny.rtti.o}
+    {$endif}
+  {$elseif Defined(MACOS)}
+    {$ifdef SMALLINT}
+      {$L objs\mac32\tiny.rtti.o}
+    {$else}
+      {$L objs\mac64\tiny.rtti.o}
+    {$endif}
+  {$else .LINUX}
+    {$ifdef SMALLINT}
+      {$L objs\linux32\tiny.rtti.o}
+    {$else}
+      {$L objs\linux64\tiny.rtti.o}
+    {$endif}
+  {$ifend}
+{$else}
+const
+  PLATFORM_NAME =
+    {$if Defined(ANDROID)}
+      'android'
+    {$elseif Defined(IOS)}
+      'ios'
+    {$elseif Defined(MACOS)}
+      'macos'
+    {$elseif Defined(LINUX)}
+      'linux'
+    {$else}
+      {$MESSAGE ERROR 'Unknown platform'}
+    {$ifend}
+     + {$ifdef SMALLINT}'32'{$else .LARGEINT}'64'{$endif};
+
+  LIB_TINYRTTI_PATH = 'objs\' + PLATFORM_NAME + '\' + 'tiny.rtti.o';
+{$ifend}
+
+procedure init_library(const AOptions: PRttiOptions);
+  external {$if not Defined(OBJLINKSUPPORT)}LIB_TINYRTTI_PATH name 'init_library'{$ifend};
+
+
+procedure InternalErrorHandler(const ATinyErrorCode, AExtendedCode: Cardinal; const AReturnAddress: Pointer);
+type
+  TDescription = record
+    Error: TRuntimeError;
+    Code: Integer;
+  end;
+const
+  ERRORCODE_ACCESSVIOLATION = 0;
+  ERRORCODE_STACKOVERFLOW = 1;
+  ERRORCODE_SAFECALLERROR = 2;
+  ERRORCODE_OUTOFMEMORY = 3;
+  ERRORCODE_RANGEERROR = 4;
+  ERRORCODE_INTOVERFLOW = 5;
+  ERRORCODE_INTFCASTERROR = 6;
+  ERRORCODE_INVALIDCAST = 7;
+  ERRORCODE_INVALIDPTR = 8;
+  ERRORCODE_INVALIDOP = 9;
+  ERRORCODE_VARINVALIDOP = 10;
+
+  MAP: array[ERRORCODE_ACCESSVIOLATION..ERRORCODE_VARINVALIDOP] of TDescription = (
+    (Error: reAccessViolation; Code: 216),
+    (Error: reStackOverflow; Code: 202),
+    (Error: reSafeCallError; Code: 229),
+    (Error: reOutOfMemory; Code: 203),
+    (Error: reRangeError; Code: 201),
+    (Error: reIntOverflow; Code: 215),
+    (Error: reIntfCastError; Code: 228),
+    (Error: reInvalidCast; Code: 219),
+    (Error: reInvalidPtr; Code: 204),
+    (Error: reInvalidOp; Code: 207),
+    (Error: reVarInvalidOp; Code: 221)
+  );
+var
+  LError: TRuntimeError;
+  LCode: Integer;
 begin
-  DefaultCP := GetACP;
-  if (DefaultCP = CP_UTF8) then
+  LError := MAP[ATinyErrorCode].Error;
+  LCode := MAP[ATinyErrorCode].Code;
+
+  if (ATinyErrorCode = ERRORCODE_SAFECALLERROR) and
+    (Assigned(System.SafeCallErrorProc)) then
   begin
-    DefaultCP := 1252;
+    System.SafeCallErrorProc(Integer(AExtendedCode), AReturnAddress);
+  end;
+
+  if (Assigned(System.ErrorProc)) then
+  begin
+    System.ErrorProc(Ord(LError), AReturnAddress {$ifdef FPC}, nil{$endif});
+  end;
+
+  System.ErrorAddr := AReturnAddress;
+  System.ExitCode := LCode;
+  System.Halt;
+end;
+
+{$if Defined(FPC) or not Defined(CPUINTELASM)}
+function GetInitStructureAddress: Pointer;
+begin
+  Result := @InitializeRecord;
+end;
+
+function GetFinalStructureAddress: Pointer;
+begin
+  Result := @FinalizeRecord;
+end;
+
+function GetCopyStructureAddress: Pointer;
+begin
+  Result := @CopyRecord;
+end;
+
+function GetInitArrayAddress: Pointer;
+begin
+  Result := @InitializeArray;
+end;
+
+function GetFinalArrayAddress: Pointer;
+begin
+  Result := @FinalizeArray;
+end;
+
+function GetCopyArrayAddress: Pointer;
+begin
+  Result := @CopyArray;
+end;
+{$else}
+function GetInitStructureAddress: Pointer;
+asm
+  {$ifdef CPUX86}
+    lea eax, System.@InitializeRecord
+  {$else .CPUX64}
+    lea rax, System.@InitializeRecord
+  {$endif}
+end;
+
+function GetFinalStructureAddress: Pointer;
+asm
+  {$ifdef CPUX86}
+    lea eax, System.@FinalizeRecord
+  {$else .CPUX64}
+    lea rax, System.@FinalizeRecord
+  {$endif}
+end;
+
+function GetCopyStructureAddress: Pointer;
+asm
+  {$ifdef CPUX86}
+    lea eax, System.@CopyRecord
+  {$else .CPUX64}
+    lea rax, System.@CopyRecord
+  {$endif}
+end;
+
+function GetInitArrayAddress: Pointer;
+asm
+  {$ifdef CPUX86}
+    lea eax, System.@InitializeArray
+  {$else .CPUX64}
+    lea rax, System.@InitializeArray
+  {$endif}
+end;
+
+function GetFinalArrayAddress: Pointer;
+asm
+  {$ifdef CPUX86}
+    lea eax, System.@FinalizeArray
+  {$else .CPUX64}
+    lea rax, System.@FinalizeArray
+  {$endif}
+end;
+
+function GetCopyArrayAddress: Pointer;
+asm
+  {$ifdef CPUX86}
+    lea eax, System.@CopyArray
+  {$else .CPUX64}
+    lea rax, System.@CopyArray
+  {$endif}
+end;
+{$ifend}
+
+procedure InternalVarDataClear(var AValue: TVarData);
+begin
+  if Assigned(System.VarClearProc) then
+  begin
+    System.VarClearProc(AValue);
+  end else
+  begin
+    System.Error(reVarInvalidOp);
+  end;
+end;
+
+procedure InternalVarDataCopy(var ATarget, ASource: TVarData);
+begin
+  if Assigned(VarCopyProc) then
+  begin
+    VarCopyProc(ATarget, ASource);
+  end else
+  begin
+    System.Error(reVarInvalidOp);
+  end;
+end;
+
+{$ifdef WEAKINTFREF}
+procedure InternalWeakIntfClear(const AValue: Pointer);
+type
+  TInstance = record
+    [Weak] Intf: IInterface;
+  end;
+  PInstance = ^TInstance;
+begin
+  PInstance(AValue).Intf := nil;
+end;
+
+procedure InternalWeakIntfCopy(const ATarget, ASource: Pointer);
+type
+  TInstance = record
+    [Weak] Intf: IInterface;
+  end;
+  PInstance = ^TInstance;
+begin
+  PInstance(ATarget).Intf := PInstance(ASource).Intf;
+end;
+{$endif}
+
+{$ifdef WEAKINSTREF}
+procedure InternalWeakObjClear(const AValue: Pointer);
+type
+  TInstance = record
+    [Weak] Obj: TObject;
+  end;
+  PInstance = ^TInstance;
+begin
+  PInstance(AValue).Obj := nil;
+end;
+
+procedure InternalWeakObjCopy(const ATarget, ASource: Pointer);
+type
+  TInstance = record
+    [Weak] Obj: TObject;
+  end;
+  PInstance = ^TInstance;
+begin
+  PInstance(ATarget).Obj := PInstance(ASource).Obj;
+end;
+
+procedure InternalWeakMethodClear(const AValue: Pointer);
+type
+  TInstance = record
+    Method: procedure of object;
+  end;
+  PInstance = ^TInstance;
+begin
+  PInstance(AValue).Method := nil;
+end;
+
+procedure InternalWeakMethodCopy(const ATarget, ASource: Pointer);
+type
+  TInstance = record
+    Method: procedure of object;
+  end;
+  PInstance = ^TInstance;
+begin
+  PInstance(ATarget).Method := PInstance(ASource).Method;
+end;
+{$endif}
+
+
+var
+  LibraryInitialized: LongBool{4 bytes aligning} = False;
+
+procedure InitLibrary;
+var
+  LOptions: TRttiOptions;
+  {$ifdef MSWINDOWS}
+  LHandle: HMODULE;
+  {$endif}
+  LMemoryManager: {$if Defined(FPC) or (CompilerVersion < 18)}TMemoryManager{$else}TMemoryManagerEx{$ifend};
+begin
+  if (not LibraryInitialized) then
+  try
+    {$ifdef FPC}
+    MainThreadID := GetCurrentThreadId;
+    {$endif}
+
+    if (DefaultCP = 0) then
+    begin
+      DefaultCP := GetACP;
+      if (DefaultCP = CP_UTF8) then
+      begin
+        DefaultCP := 1252;
+      end;
+    end;
+    DefaultSBCSStringOptions := Ord(rtSBCSString) + Cardinal(DefaultCP) shl 16;
+
+    {$WARNINGS OFF} // deprecated warning bug fix (like Delphi 2010 compiler)
+    System.GetMemoryManager(LMemoryManager);
+    {$WARNINGS ON}
+
+    rtti_options.Mode := 0; // android hint off
+
+    LOptions.Mode := {$ifdef FPC}0{$else .DELPHI}Round(CompilerVersion * 10){$endif};
+    LOptions.ErrorHandler := InternalErrorHandler;
+    {$ifdef MSWINDOWS}
+    LHandle := LoadLibrary('oleaut32.dll');
+    LOptions.SysAllocStringLen := GetProcAddress(LHandle, 'SysAllocStringLen');
+    LOptions.SysReAllocStringLen := GetProcAddress(LHandle, 'SysReAllocStringLen');
+    LOptions.SysFreeString := GetProcAddress(LHandle, 'SysFreeString');
+    FreeLibrary(LHandle);
+    {$endif}
+    LOptions.GetMem := @LMemoryManager.GetMem;
+    LOptions.FreeMem := @LMemoryManager.FreeMem;
+    LOptions.ReallocMem := @LMemoryManager.ReallocMem;
+    LOptions.InitStructure := GetInitStructureAddress;
+    LOptions.FinalStructure := GetFinalStructureAddress;
+    LOptions.CopyStructure := GetCopyStructureAddress;
+    LOptions.InitArray := GetInitArrayAddress;
+    LOptions.FinalArray := GetFinalArrayAddress;
+    LOptions.CopyArray := GetCopyArrayAddress;
+    {$WARNINGS OFF}
+    {$ifdef AUTOREFCOUNT}
+    LOptions.VmtObjAddRef := vmtObjAddRef;
+    LOptions.VmtObjRelease := vmtObjRelease;
+    {$else}
+    LOptions.VmtObjAddRef := 0;
+    LOptions.VmtObjRelease := 0;
+    {$endif}
+    {$WARNINGS ON}
+    LOptions.VariantClear := @InternalVarDataClear;
+    LOptions.VariantCopy := @InternalVarDataCopy;
+    {$ifdef WEAKINTFREF}
+    LOptions.WeakIntfClear := @InternalWeakIntfClear;
+    LOptions.WeakIntfCopy := @InternalWeakIntfCopy;
+    {$else}
+    LOptions.WeakIntfClear := nil;
+    LOptions.WeakIntfCopy := nil;
+    {$endif}
+    {$ifdef WEAKINSTREF}
+    LOptions.WeakObjClear := @InternalWeakObjClear;
+    LOptions.WeakObjCopy := @InternalWeakObjCopy;
+    LOptions.WeakMethodClear := @InternalWeakMethodClear;
+    LOptions.WeakMethodCopy := @InternalWeakMethodCopy;
+    {$else}
+    LOptions.WeakObjClear := nil;
+    LOptions.WeakObjCopy := nil;
+    LOptions.WeakMethodClear := nil;
+    LOptions.WeakMethodCopy := nil;
+    {$endif}
+    LOptions.DummyInterface := RTTI_DUMMY_INTERFACE;
+    LOptions.Groups := @RTTI_TYPE_GROUPS;
+    LOptions.Rules := @RTTI_TYPE_RULES;
+    LOptions.InitFunct := @RTTI_INIT_FUNCS;
+    LOptions.FinalFuncs := @RTTI_FINAL_FUNCS;
+    LOptions.CopyFuncs := @RTTI_COPY_FUNCS;
+    LOptions.GetCalculatedRules := @TRttiExType.GetCalculatedRules;
+
+    init_library(@LOptions);
+  finally
+    LibraryInitialized := False;
   end;
 end;
 
 
-{ Dummy type information }
+{ TRttiDummyInterface }
+
+function TRttiDummyInterface.QueryInterface(
+  {$ifdef FPC}constref{$else}const{$endif} IID: TGUID; out Obj):
+  {$if (not Defined(FPC)) or Defined(MSWINDOWS)}HResult; stdcall{$else}Longint; cdecl{$ifend};
+begin
+  Result := E_NOINTERFACE;
+end;
+
+function TRttiDummyInterface._AddRef:
+  {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+begin
+  Result := -1;
+end;
+
+function TRttiDummyInterface._Release:
+  {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+begin
+  Result := -1;
+end;
+
+
+{ TRttiContainerInterface }
+
+function TRttiContainerInterface._AddRef:
+  {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+begin
+  Result := RefCount;
+
+  if (Cardinal(Result) <= 1) then
+  begin
+    Inc(Result);
+    RefCount := Result;
+  end else
+  begin
+    Result := AtomicIncrement(RefCount);
+  end;
+end;
+
+function TRttiContainerInterface._Release:
+  {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+var
+  LSelf: Pointer;
+  LFinalFunc: TRttiTypeFunc;
+begin
+  if (RefCount <> 1) then
+  begin
+    Result := AtomicIncrement(RefCount, -1);
+    if (Result <> 0) then
+    begin
+      Exit;
+    end;
+  end else
+  begin
+    RefCount := 0;
+  end;
+
+  LSelf := @Self;
+  try
+    LFinalFunc := FinalFunc;
+    if (Assigned(LFinalFunc)) then
+    begin
+      LFinalFunc(@ExType, @Value);
+    end;
+  finally
+    FreeMem(LSelf);
+  end;
+
+  Result := 0;
+end;
+
+
+{ Tiny.Rtti helpers }
+
+var
+  InternalRttiTypeCurrentGroup: Integer{TRttiTypeGroup} = Ord(rgVariant);
+  InternalRttiTypeCurrent: Integer{TRttiType} = Ord(rtValue);
 
 function DummyTypeInfo(const ARttiType: TRttiType;
   const APointerDepth: Byte = 0; const AId: Word = 0): Pointer;
@@ -3169,126 +4310,517 @@ begin
    );
 end;
 
-
-{ Groups and types }
-
-var
-  TypeGroupCurrent: TRttiTypeGroup = rgFunction;
-  TypeCurrent: TRttiType = rtClosure;
-
-function RttiTypeGroupCurrent: TRttiTypeGroup;
+function RttiTypeCurrentGroup: TRttiTypeGroup;
 begin
-  Result := TypeGroupCurrent;
+  Result := TRttiTypeGroup(InternalRttiTypeCurrentGroup);
 end;
 
-function RttiTypeGroupAdd: TRttiTypeGroup;
+function RttiTypeIncreaseGroup: TRttiTypeGroup;
+var
+  LValue: Integer;
 begin
-  Result := TypeGroupCurrent;
+  repeat
+    LValue := InternalRttiTypeCurrentGroup;
+    if (LValue >= Ord(High(TRttiTypeGroup))) then
+    begin
+      System.Error(reIntOverflow);
+    end;
+  until (LValue = AtomicCmpExchange(InternalRttiTypeCurrentGroup, LValue + 1, LValue));
 
-  if (Result = High(TRttiTypeGroup)) then
-  begin
-    System.Error(reIntOverflow);
-  end;
-
-  Inc(Result);
-  TypeGroupCurrent := Result;
+  Result := TRttiTypeGroup(LValue + 1);
 end;
 
 function RttiTypeCurrent: TRttiType;
 begin
-  Result := TypeCurrent;
+  Result := TRttiType(InternalRttiTypeCurrent);
 end;
 
-function RttiTypeAdd(const AGroup: TRttiTypeGroup): TRttiType;
+function RttiTypeIncrease(const AGroup: TRttiTypeGroup; const ARules: PRttiTypeRules): TRttiType;
+var
+  LValue: Integer;
 begin
-  Result := TypeCurrent;
-
-  if (Result = High(TRttiType)) then
-  begin
-    System.Error(reIntOverflow);
-  end;
-
-  if (Byte(AGroup) > Byte(TypeGroupCurrent)) then
+  if (Byte(AGroup) > Byte(InternalRttiTypeCurrentGroup)) then
   begin
     System.Error(reInvalidCast);
   end;
 
-  Inc(Result);
-  TypeCurrent := Result;
+  repeat
+    LValue := InternalRttiTypeCurrent;
+    if (LValue >= Ord(High(TRttiType))) then
+    begin
+      System.Error(reIntOverflow);
+    end;
+  until (LValue = AtomicCmpExchange(InternalRttiTypeCurrent, LValue + 1, LValue));
+
+  Result := TRttiType(LValue + 1);
   RTTI_TYPE_GROUPS[Result] := AGroup;
+  RTTI_TYPE_RULES[Result] := ARules;
 end;
 
 
 { Effective 8 bytes aligned allocator }
 
-var
-  MemoryDefaultBuffer: array[0..8 * 1024 - 1] of Byte;
-  MemoryCurrent, MemoryOverflow: PByte;
-  MemoryBuffers: array of TBytes;
+type
+  PAllocatorFragment = ^TAllocatorFragment;
+  TAllocatorFragment = packed record
+    Next: PAllocatorFragment;
+    Memory: Pointer;
+    Size: NativeUInt;
+  end;
 
-function RttiMemoryReserve(const ASize: NativeUInt): PByte;
+var
+  AllocatorDefaultBuffer: array[0..8 * 1024 - 1] of Byte;
+  AllocatorFragments: PAllocatorFragment;
+  AllocatorBuffers: array of TBytes;
+  AllocatorCurrent: PByte;
+  AllocatorOverflow: PByte;
+
+procedure RttiInternalReserve(const ASize: NativeUInt);
 const
   MAX_BUFFER_SIZE = 4 * 1024 * 1024 - 128;
 var
+  LPtr: PByte;
   LBufferCount: NativeUInt;
   LBufferSize: NativeUInt;
 begin
-  LBufferCount := Length(MemoryBuffers);
-  SetLength(MemoryBuffers, LBufferCount + 1);
+  LBufferCount := Length(AllocatorBuffers);
+  SetLength(AllocatorBuffers, LBufferCount + 1);
 
   if (ASize > MAX_BUFFER_SIZE) then
   begin
     LBufferSize := ASize;
   end else
   begin
-    LBufferSize := SizeOf(MemoryDefaultBuffer);
+    LBufferSize := SizeOf(AllocatorDefaultBuffer);
     while (LBufferSize < ASize) do
     begin
       LBufferSize := LBufferSize shl 1;
     end;
   end;
 
-  SetLength(MemoryBuffers[LBufferCount], LBufferSize);
-  Result := Pointer(MemoryBuffers[LBufferCount]);
-  MemoryCurrent := Result;
-  MemoryOverflow := Pointer(NativeUInt(Result) + LBufferSize);
+  SetLength(AllocatorBuffers[LBufferCount], LBufferSize);
+  LPtr := Pointer(AllocatorBuffers[LBufferCount]);
+  AllocatorCurrent := LPtr;
+  AllocatorOverflow := Pointer(NativeUInt(LPtr) + LBufferSize);
 end;
 
-function RttiAlloc(const ASize: Integer): Pointer;
+function RttiInternalAlloc(const ASize, AAlign: NativeInt): Pointer;
 var
-  LSize: NativeUInt;
   LPtr: PByte;
+  LAlignHigh, LAlignMask: NativeInt;
+  LFragment: PAllocatorFragment;
 begin
-  if (ASize <= 0) then
+  if (ASize <= 0) or (AAlign <= 0) then
   begin
     Result := nil;
     Exit;
   end;
 
-  LSize := Cardinal(ASize);
-  LPtr := MemoryCurrent;
-  if (not Assigned(LPtr)) then
-  begin
-    LPtr := @MemoryDefaultBuffer[Low(MemoryDefaultBuffer)];
-    MemoryCurrent := LPtr;
-    MemoryOverflow := Pointer(NativeUInt(LPtr) + SizeOf(MemoryDefaultBuffer));
-  end;
+  LAlignHigh := AAlign - 1;
+  LAlignMask := -AAlign;
+  repeat
+    LPtr := Pointer((NativeInt(AllocatorCurrent) + LAlignHigh) and LAlignMask);
+    Result := LPtr;
+    Inc(LPtr, ASize);
 
-  LPtr := Pointer((NativeInt(LPtr) + 7) and -8);
-  Result := LPtr;
-  Inc(LPtr, LSize);
-  if (NativeUInt(LPtr) <= NativeUInt(MemoryOverflow)) then
+    if (NativeUInt(LPtr) <= NativeUInt(AllocatorOverflow)) then
+    begin
+      AllocatorCurrent := LPtr;
+      Exit;
+    end;
+
+    LFragment := AllocatorFragments;
+    if (not Assigned(AllocatorOverflow)) then
+    begin
+      AllocatorCurrent := Pointer(@AllocatorDefaultBuffer);
+      AllocatorOverflow := Pointer(NativeUInt(AllocatorCurrent) + SizeOf(AllocatorDefaultBuffer));
+    end else
+    if (Assigned(LFragment)) and (LFragment.Size >= NativeUInt(ASize + LAlignHigh)) then
+    begin
+      AllocatorFragments := LFragment.Next;
+      AllocatorCurrent := LFragment.Memory;
+      AllocatorOverflow := Pointer(NativeUInt(AllocatorCurrent) + LFragment.Size);
+    end else
+    begin
+      RttiInternalReserve(NativeUInt(ASize + LAlignHigh));
+    end;
+  until (False);
+end;
+
+function RttiAlloc(const ASize: Integer): Pointer;
+begin
+  if (GetCurrentThreadId <> MainThreadID) then
   begin
-    MemoryCurrent := LPtr;
+    System.Error(rePrivInstruction);
+    Result := nil;
     Exit;
   end;
 
-  LPtr := RttiMemoryReserve(LSize + 7);
-  LPtr := Pointer((NativeInt(LPtr) + 7) and -8);
-  Result := LPtr;
-  Inc(LPtr, LSize);
-  MemoryCurrent := LPtr;
+  Result := RttiInternalAlloc(ASize, 8);
 end;
+
+function RttiAllocPacked(const ASize: Integer): Pointer;
+begin
+  if (GetCurrentThreadId <> MainThreadID) then
+  begin
+    System.Error(rePrivInstruction);
+    Result := nil;
+    Exit;
+  end;
+
+  Result := RttiInternalAlloc(ASize, 1);
+end;
+
+procedure RttiAllocatorIncrease(const ABuffer: Pointer; const ASize: Integer);
+var
+  LFragment: PAllocatorFragment;
+begin
+  if (GetCurrentThreadId <> MainThreadID) then
+  begin
+    System.Error(rePrivInstruction);
+    Exit;
+  end;
+
+  if (ASize >= SizeOf(TAllocatorFragment)) then
+  begin
+    LFragment := ABuffer;
+    LFragment.Memory := ABuffer;
+    LFragment.Size := ASize;
+
+    LFragment.Next := AllocatorFragments;
+    AllocatorFragments := LFragment;
+  end;
+end;
+
+
+{ Atomic operations }
+
+{$if Defined(FPC) or (CompilerVersion < 24)}
+function AtomicIncrement(var ATarget: Integer; const AValue: Integer): Integer; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchangeAdd(ATarget, AValue) + AValue;
+end;
+{$elseif Defined(CPUX86)}
+asm
+  mov ecx, edx
+  lock xadd [eax], edx
+  lea eax, [edx + ecx]
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov eax, edx
+  lock xadd [rcx], eax
+  add eax, edx
+end;
+{$ifend}
+
+function AtomicDecrement(var ATarget: Integer; const AValue: Integer): Integer; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchangeAdd(ATarget, -AValue) - AValue;
+end;
+{$elseif Defined(CPUX86)}
+asm
+  neg edx
+  mov ecx, edx
+  lock xadd [eax], edx
+  lea eax, [edx + ecx]
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  neg edx
+  mov eax, edx
+  lock xadd [rcx], eax
+  add eax, edx
+end;
+{$ifend}
+
+function AtomicIncrement(var ATarget: Cardinal; const AValue: Cardinal): Cardinal; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchangeAdd(ATarget, AValue) + AValue;
+end;
+{$elseif Defined(CPUX86)}
+asm
+  mov ecx, edx
+  lock xadd [eax], edx
+  lea eax, [edx + ecx]
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov eax, edx
+  lock xadd [rcx], eax
+  add eax, edx
+end;
+{$ifend}
+
+function AtomicDecrement(var ATarget: Cardinal; const AValue: Cardinal): Cardinal; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchangeAdd(Integer(ATarget), -Integer(AValue)) - Integer(AValue);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  neg edx
+  mov ecx, edx
+  lock xadd [eax], edx
+  lea eax, [edx + ecx]
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  neg edx
+  mov eax, edx
+  lock xadd [rcx], eax
+  add eax, edx
+end;
+{$ifend}
+
+function AtomicIncrement(var ATarget: Int64; const AValue: Int64): Int64; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchangeAdd64(ATarget, AValue) + AValue;
+end;
+{$elseif Defined(CPUX86)}
+asm
+  push esi
+  push edi
+  push ebx
+  mov ebp, eax
+  mov esi, [esp + 20]
+  mov edi, [esp + 24]
+
+  @loop:
+    mov eax, [ebp]
+    mov edx, [ebp + 4]
+
+    mov ebx, esi
+    mov ecx, edi
+    add ebx, eax
+    adc ecx, edx
+
+    lock cmpxchg8b [ebp]
+  jnz @loop
+
+  add eax, esi
+  adc edx, edi
+
+  pop ebx
+  pop edi
+  pop esi
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov rax, rdx
+  lock xadd [rcx], rdx
+  add rax, rdx
+end;
+{$ifend}
+
+function AtomicDecrement(var ATarget: Int64; const AValue: Int64): Int64; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchangeAdd64(ATarget, -AValue) - AValue;
+end;
+{$elseif Defined(CPUX86)}
+asm
+  push esi
+  push edi
+  push ebx
+  mov ebp, eax
+  mov esi, [esp + 20]
+  mov edi, [esp + 24]
+  neg esi
+  adc edi, 0
+  neg edi
+
+  @loop:
+    mov eax, [ebp]
+    mov edx, [ebp + 4]
+
+    mov ebx, esi
+    mov ecx, edi
+    add ebx, eax
+    adc ecx, edx
+
+    lock cmpxchg8b [ebp]
+  jnz @loop
+
+  add eax, esi
+  adc edx, edi
+
+  pop ebx
+  pop edi
+  pop esi
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  neg rdx
+  mov rax, rdx
+  lock xadd [rcx], rdx
+  add rax, rdx
+end;
+{$ifend}
+
+function AtomicExchange(var ATarget: Integer; const AValue: Integer): Integer; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchange(ATarget, AValue);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  lock xchg [eax], edx
+  mov eax, edx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov eax, edx
+  lock xchg eax, [rcx]
+end;
+{$ifend}
+
+function AtomicExchange(var ATarget: Cardinal; const AValue: Cardinal): Cardinal; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchange(ATarget, AValue);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  lock xchg [eax], edx
+  mov eax, edx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov eax, edx
+  lock xchg eax, [rcx]
+end;
+{$ifend}
+
+function AtomicExchange(var ATarget: Pointer; const AValue: Pointer): Pointer; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchange(ATarget, AValue);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  lock xchg [eax], edx
+  mov eax, edx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov rax, rdx
+  lock xchg rax, [rcx]
+end;
+{$ifend}
+
+function AtomicExchange(var ATarget: Int64; const AValue: Int64): Int64; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedExchange64(ATarget, AValue);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  push ebx
+  mov ebp, eax
+  mov ebx, [esp + 12]
+  mov ecx, [esp + 16]
+
+  @loop:
+    mov eax, [ebp]
+    mov edx, [ebp + 4]
+    lock cmpxchg8b [ebp]
+  jnz @loop
+
+  pop ebx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov rax, rdx
+  lock xchg rax, [rcx]
+end;
+{$ifend}
+
+function AtomicCmpExchange(var ATarget: Integer; const ANewValue, AComparand: Integer): Integer; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedCompareExchange(ATarget, ANewValue, AComparand);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  xchg eax, ecx
+  lock cmpxchg [ecx], edx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov eax, r8d
+  lock cmpxchg [rcx], edx
+end;
+{$ifend}
+
+function AtomicCmpExchange(var ATarget: Cardinal; const ANewValue, AComparand: Cardinal): Cardinal; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedCompareExchange(ATarget, ANewValue, AComparand);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  xchg eax, ecx
+  lock cmpxchg [ecx], edx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov eax, r8d
+  lock cmpxchg [rcx], edx
+end;
+{$ifend}
+
+function AtomicCmpExchange(var ATarget: Pointer; const ANewValue, AComparand: Pointer): Pointer; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedCompareExchange(ATarget, ANewValue, AComparand);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  xchg eax, ecx
+  lock cmpxchg [ecx], edx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov rax, r8
+  lock cmpxchg [rcx], rdx
+end;
+{$ifend}
+
+function AtomicCmpExchange(var ATarget: Int64; const ANewValue, AComparand: Int64): Int64; overload;
+{$if Defined(FPC)}
+begin
+  Result := System.InterLockedCompareExchange64(ATarget, ANewValue, AComparand);
+end;
+{$elseif Defined(CPUX86)}
+asm
+  push ebx
+  mov ebp, eax
+  mov eax, [esp + 12]
+  mov edx, [esp + 16]
+  mov ebx, [esp + 20]
+  mov ecx, [esp + 24]
+
+  cmp eax, [ebp]
+  jne @done
+  cmp edx, [ebp + 4]
+  jne @done
+  lock cmpxchg8b [ebp]
+
+@done:
+  pop ebx
+end;
+{$else .CPUX64} .NOFRAME
+asm
+  mov rax, r8
+  lock cmpxchg [rcx], rdx
+end;
+{$ifend}
+{$ifend FPC.CompilerVersionm24}
 
 
 { System.TypInfo/System.Rtti helpers }
@@ -3299,6 +4831,37 @@ procedure int_initialize(Data, TypeInfo: Pointer); [external name 'FPC_INITIALIZ
 procedure int_finalize(Data, TypeInfo: Pointer); [external name 'FPC_FINALIZE'];
 {$endif}
 
+procedure InitializeRecord(Dest, TypeInfo: Pointer);
+{$if Defined(FPC)}
+begin
+  int_initialize(Dest, TypeInfo);
+end;
+{$elseif Defined(CPUINTELASM)}
+asm
+  jmp System.@InitializeRecord
+end;
+{$else}
+begin
+  System.InitializeArray(Dest, TypeInfo, 1);
+end;
+{$ifend}
+
+procedure FinalizeRecord(Dest, TypeInfo: Pointer);
+{$if Defined(FPC)}
+begin
+  int_finalize(Dest, TypeInfo);
+end;
+{$elseif Defined(CPUINTELASM)}
+asm
+  jmp System.@FinalizeRecord
+end;
+{$else}
+begin
+  System.FinalizeArray(Dest, TypeInfo, 1);
+end;
+{$ifend}
+
+{$if Defined(FPC) or (CompilerVersion <= 30)}
 procedure CopyRecord(Dest, Source, TypeInfo: Pointer);
 {$if Defined(FPC)}
 begin
@@ -3313,8 +4876,65 @@ begin
   System.CopyArray(Dest, Source, TypeInfo, 1);
 end;
 {$ifend}
+{$ifend}
 
 {$if Defined(FPC) or (CompilerVersion <= 20)}
+procedure InitializeArray(Source, TypeInfo: Pointer; Count: NativeUInt);
+{$ifdef FPC}
+var
+  i, LItemSize: NativeInt;
+  LItemPtr: Pointer;
+begin
+  LItemPtr := Source;
+
+  case PTypeInfo(TypeInfo).Kind of
+    tkVariant: LItemSize := SizeOf(TVarData);
+    tkLString, tkWString, tkInterface, tkDynArray, tkAString: LItemSize := SizeOf(Pointer);
+      tkArray, tkRecord, tkObject: LItemSize := PTypeData(NativeUInt(TypeInfo) + PByte(@PTypeInfo(TypeInfo).Name)^).RecSize;
+  else
+    Exit;
+  end;
+
+  for i := 1 to Count do
+  begin
+    int_initialize(LItemPtr, TypeInfo);
+    Inc(NativeInt(LItemPtr), LItemSize);
+  end;
+end;
+{$else}
+asm
+  jmp System.@InitializeArray
+end;
+{$endif}
+
+procedure FinalizeArray(Source, TypeInfo: Pointer; Count: NativeUInt);
+{$ifdef FPC}
+var
+  i, LItemSize: NativeInt;
+  LItemPtr: Pointer;
+begin
+  LItemPtr := Source;
+
+  case PTypeInfo(TypeInfo).Kind of
+    tkVariant: LItemSize := SizeOf(TVarData);
+    tkLString, tkWString, tkInterface, tkDynArray, tkAString: LItemSize := SizeOf(Pointer);
+      tkArray, tkRecord, tkObject: LItemSize := PTypeData(NativeUInt(TypeInfo) + PByte(@PTypeInfo(TypeInfo).Name)^).RecSize;
+  else
+    Exit;
+  end;
+
+  for i := 1 to Count do
+  begin
+    int_finalize(LItemPtr, TypeInfo);
+    Inc(NativeInt(LItemPtr), LItemSize);
+  end;
+end;
+{$else}
+asm
+  jmp System.@FinalizeArray
+end;
+{$endif}
+
 procedure CopyArray(Dest, Source, TypeInfo: Pointer; Count: NativeUInt);
 {$ifdef FPC}
 var
@@ -3325,7 +4945,7 @@ begin
   LItemSrc := Source;
 
   case PTypeInfo(TypeInfo).Kind of
-    tkVariant: LItemSize := SizeOf(Variant);
+    tkVariant: LItemSize := SizeOf(TVarData);
     tkLString, tkWString, tkInterface, tkDynArray, tkAString: LItemSize := SizeOf(Pointer);
       tkArray, tkRecord, tkObject: LItemSize := PTypeData(NativeUInt(TypeInfo) + PByte(@PTypeInfo(TypeInfo).Name)^).RecSize;
   else
@@ -3360,63 +4980,31 @@ asm
   jmp System.@CopyArray
 end;
 {$endif}
-
-procedure InitializeArray(Source, TypeInfo: Pointer; Count: NativeUInt);
-{$ifdef FPC}
-var
-  i, LItemSize: NativeInt;
-  LItemPtr: Pointer;
-begin
-  LItemPtr := Source;
-
-  case PTypeInfo(TypeInfo).Kind of
-    tkVariant: LItemSize := SizeOf(Variant);
-    tkLString, tkWString, tkInterface, tkDynArray, tkAString: LItemSize := SizeOf(Pointer);
-      tkArray, tkRecord, tkObject: LItemSize := PTypeData(NativeUInt(TypeInfo) + PByte(@PTypeInfo(TypeInfo).Name)^).RecSize;
-  else
-    Exit;
-  end;
-
-  for i := 1 to Count do
-  begin
-    int_initialize(LItemPtr, TypeInfo);
-    Inc(NativeInt(LItemPtr), LItemSize);
-  end;
-end;
-{$else}
-asm
-  jmp System.@InitializeArray
-end;
-{$endif}
-
-procedure FinalizeArray(Source, TypeInfo: Pointer; Count: NativeUInt);
-{$ifdef FPC}
-var
-  i, LItemSize: NativeInt;
-  LItemPtr: Pointer;
-begin
-  LItemPtr := Source;
-
-  case PTypeInfo(TypeInfo).Kind of
-    tkVariant: LItemSize := SizeOf(Variant);
-    tkLString, tkWString, tkInterface, tkDynArray, tkAString: LItemSize := SizeOf(Pointer);
-      tkArray, tkRecord, tkObject: LItemSize := PTypeData(NativeUInt(TypeInfo) + PByte(@PTypeInfo(TypeInfo).Name)^).RecSize;
-  else
-    Exit;
-  end;
-
-  for i := 1 to Count do
-  begin
-    int_finalize(LItemPtr, TypeInfo);
-    Inc(NativeInt(LItemPtr), LItemSize);
-  end;
-end;
-{$else}
-asm
-  jmp System.@FinalizeArray
-end;
-{$endif}
 {$ifend}
+
+const
+  varUInt64 = $15;
+  varDeepData = $BFE8;
+
+procedure VarDataClear(var AValue: TVarData);
+var
+  LType: Integer;
+begin
+  LType := AValue.VType;
+
+  if (LType and varDeepData <> 0) then
+  case LType of
+    varBoolean, varUnknown + 1..varUInt64: ;
+  else
+    if Assigned(System.VarClearProc) then
+    begin
+      System.VarClearProc(AValue);
+    end else
+    begin
+      System.Error(reVarInvalidOp);
+    end;
+  end;
+end;
 
 {$ifdef UNICODE}
 function InternalUTF8CharsCompare(const AStr1, AStr2: PAnsiChar; const ACount: NativeUInt): Boolean;
@@ -3932,7 +5520,7 @@ begin
       if (LTypeData.ArrayData.ElType.Assigned) then
         Result := IsManaged(LTypeData.ArrayData.ElType.Value);
     end;
-    tkRecord{$ifdef FPC}, tkObject{$endif}:
+    tkRecord{$ifdef FPC}, tkObject{$endif}{$ifdef MANAGEDRECORDS}, tkMRecord{$endif}:
     begin
       LTypeData := PTypeData(NativeUInt(ATypeInfo) + PByte(@ATypeInfo.Name)^);
       Result := (LTypeData.ManagedFldCount <> 0);
@@ -3963,7 +5551,7 @@ begin
       if (LTypeData.ArrayData.ElType.Assigned) then
         Result := HasWeakRef(LTypeData.ArrayData.ElType.Value);
     end;
-    tkRecord{$ifdef FPC}, tkObject{$endif}:
+    tkRecord{$ifdef FPC}, tkObject{$endif}{$ifdef MANAGEDRECORDS}, tkMRecord{$endif}:
     begin
       LTypeData := PTypeData(NativeUInt(ATypeInfo) + PByte(@ATypeInfo.Name)^);
       LField := @LTypeData.ManagedFields;
@@ -3982,6 +5570,28 @@ begin
 end;
 {$else}
 begin
+  Result := False;
+end;
+{$endif}
+
+{$ifdef WEAKREF}
+function RecordHasWeakRef(const ATypeData: PTypeData): Boolean;
+var
+  i: Integer;
+  LField: PManagedField;
+begin
+  LField := @ATypeData.ManagedFields;
+  for i := 0 to ATypeData.ManagedFldCount - 1 do
+  begin
+    if (not LField.TypeRef.Assigned) or (HasWeakRef(LField.TypeRef.Value)) then
+    begin
+      Result := True;
+      Exit;
+    end;
+
+    Inc(LField);
+  end;
+
   Result := False;
 end;
 {$endif}
@@ -4027,6 +5637,563 @@ end;
 {$endif}
 
 
+{ TCharacters }
+
+class function TCharacters.LStrLen(const S: PAnsiChar): NativeUInt;
+var
+  LPtr: PByte;
+begin
+  LPtr := Pointer(S);
+
+  if (Assigned(LPtr)) and (LPtr^ <> 0) then
+  repeat
+    Inc(LPtr);
+  until (LPtr^ = 0);
+
+  Result := (NativeUInt(LPtr) - NativeUInt(S));
+end;
+
+class function TCharacters.WStrLen(const S: PWideChar): NativeUInt;
+var
+  LPtr: PWord;
+begin
+  LPtr := Pointer(S);
+
+  if (Assigned(LPtr)) and (LPtr^ <> 0) then
+  repeat
+    Inc(LPtr);
+  until (LPtr^ = 0);
+
+  Result := (NativeUInt(LPtr) - NativeUInt(S)) shr 1;
+end;
+
+class function TCharacters.UStrLen(const S: PUCS4Char): NativeUInt;
+var
+  LPtr: PCardinal;
+begin
+  LPtr := Pointer(S);
+
+  if (Assigned(LPtr)) and (LPtr^ <> 0) then
+  repeat
+    Inc(LPtr);
+  until (LPtr^ = 0);
+
+  Result := (NativeUInt(LPtr) - NativeUInt(S)) shr 2;
+end;
+
+class function TCharacters.UCS4StringLen(const S: UCS4String): NativeUInt;
+begin
+  if (Pointer(S) <> nil) then
+  begin
+    Result := NativeUInt(PUCS4StrRec(NativeInt(Pointer(S)) - SizeOf(TUCS4StrRec)).High);
+    if (NativeInt(Result) >= 0) then
+    begin
+      Inc(Result, Byte(S[Result] <> 0));
+      Exit;
+    end;
+  end;
+
+  Result := 0;
+end;
+
+class function TCharacters.PSBCSChars(const S: AnsiString): PAnsiChar;
+begin
+  Result := Pointer(S);
+  if (not Assigned(Result)) then
+  begin
+    Result := Pointer(@RTTI_RULES_NONE);
+  end;
+end;
+
+class function TCharacters.PUTF8Chars(const S: UTF8String): PUTF8Char;
+begin
+  Result := Pointer(S);
+  if (not Assigned(Result)) then
+  begin
+    Result := Pointer(@RTTI_RULES_NONE);
+  end;
+end;
+
+class function TCharacters.PWideChars(const S: UnicodeString): PWideChar;
+begin
+  Result := Pointer(S);
+  if (not Assigned(Result)) then
+  begin
+    Result := Pointer(@RTTI_RULES_NONE);
+  end;
+end;
+
+class function TCharacters.PUCS4Chars(const S: UCS4String): PUCS4Char;
+begin
+  Result := Pointer(S);
+  if (not Assigned(Result)) then
+  begin
+    Result := Pointer(@RTTI_RULES_NONE);
+  end;
+end;
+
+{$ifNdef MSWINDOWS}
+class function TCharacters.MultiByteToWideChar(CodePage, Flags: Cardinal; LocaleStr: PAnsiChar;
+  LocaleStrLen: Integer; UnicodeStr: PWideChar; UnicodeStrLen: Integer): Integer;
+begin
+  Result := UnicodeFromLocaleChars(CodePage, Flags, Pointer(LocaleStr),
+    LocaleStrLen, UnicodeStr, UnicodeStrLen);
+end;
+
+class function TCharacters.WideCharToMultiByte(CodePage, Flags: Cardinal;
+  UnicodeStr: PWideChar; UnicodeStrLen: Integer; LocaleStr: PAnsiChar;
+  LocaleStrLen: Integer; DefaultChar: PAnsiChar; UsedDefaultChar: Pointer): Integer;
+begin
+  Result := LocaleCharsFromUnicode(CodePage, Flags, UnicodeStr, UnicodeStrLen,
+    Pointer(LocaleStr), LocaleStrLen, Pointer(DefaultChar), UsedDefaultChar);
+end;
+{$endif}
+
+class function TCharacters.UCS4CharFromUnicode(
+  const ASource: PWideChar; const ASourceCount: NativeUInt): UCS4Char;
+var
+  LValue: Cardinal;
+begin
+  Result := 0;
+
+  if (ASourceCount <> 0) then
+  begin
+    Result := PWord(ASource)^;
+
+    if (Result >= $d800) and (Result < $dc00) then
+    begin
+      if (ASourceCount > 1) then
+      begin
+        LValue := PWord(ASource + 1)^;
+
+        if (LValue >= $dc00) and (LValue < $e000) then
+        begin
+          Result := $10000 + ((Result - $d800) shl 10) + (LValue - $dc00);
+          Exit;
+        end;
+      end;
+
+      Result := Ord('?');
+    end;
+  end;
+end;
+
+class function TCharacters.UCS4CharFromAnsi(const ASourceCP: Word;
+  const ASource: PAnsiChar; const ASourceCount: NativeUInt): UCS4Char;
+begin
+  Result := 0;
+
+  if (ASourceCount <> 0) then
+  begin
+    if (PByte(ASource)^ <= $7f) then
+    begin
+      Result := PByte(ASource)^;
+    end else
+    begin
+      MultiByteToWideChar(ASourceCP, 0, ASource, 1, Pointer(@Result), 1);
+    end;
+  end;
+end;
+
+class function TCharacters.UCS4FromUnicode(const ATarget: PUCS4Char;
+  const ASource: PWideChar; const ASourceCount: NativeUInt): NativeUInt;
+var
+  LPtr: PCardinal;
+  LSource, LTopSource: PWord;
+  X, Y: NativeUInt;
+begin
+  LPtr := Pointer(ATarget);
+
+  if (ASourceCount <> 0) then
+  begin
+    LSource := Pointer(ASource);
+    LTopSource := Pointer(ASource);
+    Inc(LTopSource, ASourceCount);
+
+    if (Assigned(ATarget)) then
+    begin
+      repeat
+        X := LSource^;
+        Inc(LSource);
+
+        if (X >= $d800) and (X < $dc00) then
+        begin
+          if (LSource <> LTopSource) then
+          begin
+            Y := LSource^;
+            if (Y >= $dc00) and (Y < $e000) then
+            begin
+              Inc(LSource);
+              X := $10000 + ((X - $d800) shl 10) + (Y - $dc00);
+            end else
+            begin
+              X := Ord('?');
+            end;
+          end else
+          begin
+            X := Ord('?');
+          end;
+        end;
+
+        LPtr^ := X;
+        Inc(LPtr);
+      until (LSource = LTopSource);
+    end else
+    begin
+      repeat
+        X := LSource^;
+        Inc(LSource);
+
+        if (X >= $d800) and (X < $dc00) then
+        begin
+          if (LSource <> LTopSource) then
+          begin
+            Y := LSource^;
+            if (Y >= $dc00) and (Y < $e000) then
+            begin
+              Inc(LSource);
+            end;
+          end;
+        end;
+
+        Inc(LPtr);
+      until (LSource = LTopSource);
+    end;
+  end;
+
+  Result := (NativeUInt(LPtr) - NativeUInt(ATarget)) shr 2;
+end;
+
+class procedure TCharacters.UCS4FromUnicode(var ATarget: UCS4String;
+  const ASource: PWideChar; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := nil;
+  end else
+  begin
+    LCount := UCS4FromUnicode(nil, ASource, ASourceCount);
+    SetLength(ATarget, LCount + 1);
+    ATarget[LCount] := 0;
+    UCS4FromUnicode(Pointer(ATarget), ASource, ASourceCount);
+  end;
+end;
+
+class procedure TCharacters.UCS4FromAnsi(var ATarget: UCS4String; const ASourceCP: Word;
+  const ASource: PAnsiChar; const ASourceCount: NativeUInt);
+var
+  LCount, LUnicodeCount: Integer;
+  LBuffer: array of WideChar;
+  LUnicodeBuffer: array[0..255] of WideChar;
+  LUnicodeChars: PWideChar;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := nil;
+  end else
+  begin
+    LUnicodeCount := MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, nil, 0);
+    if (LUnicodeCount <= SizeOf(LUnicodeBuffer) div SizeOf(WideChar)) then
+    begin
+      LUnicodeChars := @LUnicodeBuffer[0];
+    end else
+    begin
+      SetLength(LBuffer, LUnicodeCount);
+      LUnicodeChars := Pointer(LBuffer);
+    end;
+    MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, LUnicodeChars, LUnicodeCount);
+
+    LCount := UCS4FromUnicode(nil, LUnicodeChars, LUnicodeCount);
+    SetLength(ATarget, LCount + 1);
+    ATarget[LCount] := 0;
+    UCS4FromUnicode(Pointer(ATarget), LUnicodeChars, LUnicodeCount);
+  end;
+end;
+
+class function TCharacters.UnicodeFromUCS4(const ATarget: PWideChar;
+  const ASource: PUCS4Char; const ASourceCount: NativeUInt): NativeUInt;
+var
+  LPtr: PWord;
+  LSource, LTopSource: PCardinal;
+  X: NativeUInt;
+begin
+  LPtr := Pointer(ATarget);
+
+  if (ASourceCount <> 0) then
+  begin
+    LSource := Pointer(ASource);
+    LTopSource := Pointer(ASource);
+    Inc(LTopSource, ASourceCount);
+
+    if (Assigned(ATarget)) then
+    begin
+      repeat
+        X := LSource^;
+        Inc(LSource);
+
+        if (X >= $10000) then
+        begin
+          LPtr^ := (((X - $00010000) shr 10) and $000003ff) or $d800;
+          Inc(LPtr);
+          LPtr^ := ((X - $00010000) and $000003ff) or $dc00;
+        end else
+        begin
+          LPtr^ := X;
+        end;
+        Inc(LPtr);
+      until (LSource = LTopSource);
+    end else
+    begin
+      repeat
+        X := LSource^;
+        Inc(LSource);
+
+        if (X >= $10000) then
+        begin
+          Inc(LPtr, 2);
+        end else
+        begin
+          Inc(LPtr);
+        end;
+      until (LSource = LTopSource);
+    end;
+  end;
+
+  Result := (NativeUInt(LPtr) - NativeUInt(ATarget)) shr 1;
+end;
+
+class procedure TCharacters.UnicodeFromUCS4(var ATarget: WideString;
+  const ASource: PUCS4Char; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := {$ifdef WIDESTRSUPPORT}''{$else}nil{$endif};
+  end else
+  begin
+    LCount := UnicodeFromUCS4(nil, ASource, ASourceCount);
+    SetLength(ATarget, LCount);
+    UnicodeFromUCS4(Pointer(ATarget), ASource, ASourceCount);
+  end;
+end;
+
+{$ifdef UNICODE}
+class procedure TCharacters.UnicodeFromUCS4(var ATarget: UnicodeString;
+  const ASource: PUCS4Char; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := '';
+  end else
+  begin
+    LCount := UnicodeFromUCS4(nil, ASource, ASourceCount);
+    SetLength(ATarget, LCount);
+    UnicodeFromUCS4(Pointer(ATarget), ASource, ASourceCount);
+  end;
+end;
+{$endif}
+
+class procedure TCharacters.UnicodeFromAnsi(var ATarget: WideString;
+  const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := {$ifdef WIDESTRSUPPORT}''{$else}nil{$endif};
+  end else
+  begin
+    LCount := MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, nil, 0);
+    SetLength(ATarget, LCount);
+    MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, Pointer(ATarget), LCount);
+  end;
+end;
+
+{$ifdef UNICODE}
+class procedure TCharacters.UnicodeFromAnsi(var ATarget: UnicodeString;
+  const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := '';
+  end else
+  begin
+    LCount := MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, nil, 0);
+    SetLength(ATarget, LCount);
+    MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, Pointer(ATarget), LCount);
+  end;
+end;
+{$endif}
+
+class procedure TCharacters.AnsiFromUnicode(const ATargetCP: Word; var ATarget: AnsiString;
+  const ASource: PWideChar; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := {$ifdef ANSISTRSUPPORT}''{$else}nil{$endif};
+  end else
+  begin
+    LCount := WideCharToMultiByte(ATargetCP, 0, ASource, ASourceCount, nil, 0, nil, nil);
+    SetLength(ATarget, LCount);
+    {$ifdef INTERNALCODEPAGE}
+    PAnsiStrRec(NativeInt(Pointer(ATarget)) - SizeOf(TAnsiStrRec)).CodePage := ATargetCP;
+    {$endif}
+    WideCharToMultiByte(ATargetCP, 0, ASource, ASourceCount,
+      Pointer(ATarget), LCount, nil, nil);
+  end;
+end;
+
+class procedure TCharacters.AnsiFromAnsi(const ATargetCP: Word; var ATarget: AnsiString;
+  const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt);
+var
+  LCount: Integer;
+  LBuffer: array of WideChar;
+  LUnicodeBuffer: array[0..255] of WideChar;
+  LUnicodeChars: PWideChar;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := {$ifdef ANSISTRSUPPORT}''{$else}nil{$endif};
+  end else
+  if (ATargetCP = ASourceCP) then
+  begin
+    SetLength(ATarget, ASourceCount);
+    {$ifdef INTERNALCODEPAGE}
+    PAnsiStrRec(NativeInt(Pointer(ATarget)) - SizeOf(TAnsiStrRec)).CodePage := ATargetCP;
+    {$endif}
+    Move(ASource^, Pointer(ATarget)^, ASourceCount);
+  end else
+  begin
+    LCount := MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, nil, 0);
+    if (LCount <= SizeOf(LUnicodeBuffer) div SizeOf(WideChar)) then
+    begin
+      LUnicodeChars := @LUnicodeBuffer[0];
+    end else
+    begin
+      SetLength(LBuffer, LCount);
+      LUnicodeChars := Pointer(LBuffer);
+    end;
+    MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount, LUnicodeChars, LCount);
+
+    AnsiFromUnicode(ATargetCP, ATarget, LUnicodeChars, LCount);
+  end;
+end;
+
+class procedure TCharacters.AnsiFromUCS4(const ATargetCP: Word; var ATarget: AnsiString;
+  const ASource: PUCS4Char; const ASourceCount: NativeUInt);
+var
+  LCount: Integer;
+  LBuffer: array of WideChar;
+  LUnicodeBuffer: array[0..255] of WideChar;
+  LUnicodeChars: PWideChar;
+begin
+  if (ASourceCount = 0) then
+  begin
+    ATarget := {$ifdef ANSISTRSUPPORT}''{$else}nil{$endif};
+  end else
+  begin
+    LCount := UnicodeFromUCS4(nil, ASource, ASourceCount);
+    if (LCount <= SizeOf(LUnicodeBuffer) div SizeOf(WideChar)) then
+    begin
+      LUnicodeChars := @LUnicodeBuffer[0];
+    end else
+    begin
+      SetLength(LBuffer, LCount);
+      LUnicodeChars := Pointer(LBuffer);
+    end;
+    UnicodeFromUCS4(LUnicodeChars, ASource, ASourceCount);
+
+    AnsiFromUnicode(ATargetCP, ATarget, LUnicodeChars, LCount);
+  end;
+end;
+
+class procedure TCharacters.ShortStringFromUnicode(var ATarget: ShortString; const AMaxLength: Byte;
+  const ASource: PWideChar; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+begin
+  if (ASourceCount = 0) then
+  begin
+    PByte(@ATarget)^ := 0;
+  end else
+  begin
+    LCount := WideCharToMultiByte(CP_UTF8, 0, ASource, ASourceCount,
+      Pointer(@ATarget[1]), AMaxLength, nil, nil);
+    PByte(@ATarget)^ := LCount;
+  end;
+end;
+
+class procedure TCharacters.ShortStringFromAnsi(var ATarget: ShortString; const AMaxLength: Byte;
+  const ASourceCP: Word; const ASource: PAnsiChar; const ASourceCount: NativeUInt);
+var
+  LCount: NativeUInt;
+  LUnicodeBuffer: array[0..255] of WideChar;
+begin
+  if (ASourceCount = 0) then
+  begin
+    PByte(@ATarget)^ := 0;
+    Exit;
+  end else
+  if (ASourceCP <> CP_UTF8) then
+  begin
+    LCount := MultiByteToWideChar(ASourceCP, 0, ASource, ASourceCount,
+      @LUnicodeBuffer[0], SizeOf(LUnicodeBuffer) div SizeOf(WideChar));
+
+    LCount := WideCharToMultiByte(CP_UTF8, 0, @LUnicodeBuffer[0], LCount,
+      Pointer(@ATarget[1]), AMaxLength, nil, nil);
+    PByte(@ATarget)^ := LCount;
+    Exit;
+  end else
+  begin
+    LCount := ASourceCount;
+  end;
+
+  if (LCount > AMaxLength) then
+  begin
+    LCount := AMaxLength;
+  end;
+  PByte(@ATarget)^ := LCount;
+  System.Move(ASource^, PByte(@ATarget[1])^, LCount);
+end;
+
+class procedure TCharacters.ShortStringFromUCS4(var ATarget: ShortString; const AMaxLength: Byte;
+  const ASource: PUCS4Char; const ASourceCount: NativeUInt);
+var
+  LCount: Integer;
+  LBuffer: array of WideChar;
+  LUnicodeBuffer: array[0..255] of WideChar;
+  LUnicodeChars: PWideChar;
+begin
+  if (ASourceCount = 0) then
+  begin
+    PByte(@ATarget)^ := 0;
+  end else
+  begin
+    LCount := UnicodeFromUCS4(nil, ASource, ASourceCount);
+    if (LCount <= SizeOf(LUnicodeBuffer) div SizeOf(WideChar)) then
+    begin
+      LUnicodeChars := @LUnicodeBuffer[0];
+    end else
+    begin
+      SetLength(LBuffer, LCount);
+      LUnicodeChars := Pointer(LBuffer);
+    end;
+    UnicodeFromUCS4(LUnicodeChars, ASource, ASourceCount);
+
+    ShortStringFromUnicode(ATarget, AMaxLength, LUnicodeChars, LCount);
+  end;
+end;
+
+
 { ShortStringHelper }
 
 function ShortStringHelper.GetValue: Integer;
@@ -4039,7 +6206,25 @@ begin
   Byte(Pointer(@Value)^) := AValue;
 end;
 
-function ShortStringHelper.GetAnsiValue: AnsiString;
+procedure ShortStringHelper.InternalGetAnsiString(var Result: AnsiString);
+var
+  LCount: Integer;
+  LUnicodeBuffer: array[0..255] of WideChar;
+begin
+  LCount := Byte(Pointer(@Value)^);
+
+  if (LCount = 0) then
+  begin
+    Result := {$ifdef ANSISTRSUPPORT}''{$else}nil{$endif};
+  end else
+  begin
+    LCount := {$ifNdef MSWINDOWS}TCharacters.{$endif}MultiByteToWideChar(CP_UTF8, 0, Pointer(@Value[1]),
+      LCount, @LUnicodeBuffer[0], SizeOf(LUnicodeBuffer) div SizeOf(WideChar));
+    TCharacters.AnsiFromUnicode(DefaultCP, Result, @LUnicodeBuffer[0], LCount);
+  end;
+end;
+
+procedure ShortStringHelper.InternalGetUTF8String(var Result: UTF8String);
 var
   LCount: Integer;
 begin
@@ -4048,17 +6233,7 @@ begin
   System.Move(Value[1], Pointer(Result)^, LCount);
 end;
 
-function ShortStringHelper.GetUTF8Value: UTF8String;
-var
-  LCount: Integer;
-begin
-  LCount := Byte(Pointer(@Value)^);
-  SetLength(Result, LCount);
-  System.Move(Value[1], Pointer(Result)^, LCount);
-end;
-
-function ShortStringHelper.GetUnicodeValue: UnicodeString;
-{$ifdef UNICODE}
+procedure ShortStringHelper.InternalGetUnicodeString(var Result: UnicodeString);
 var
   LCount: Integer;
 begin
@@ -4067,31 +6242,42 @@ begin
     Result := '';
   end else
   begin
-    LCount := {$ifdef MSWINDOWS}MultiByteToWideChar{$else}UnicodeFromLocaleChars{$endif}(CP_UTF8,
-      0, Pointer(@Value[1]), Byte(Pointer(@Value)^), nil, 0);
-
+    LCount := {$ifNdef MSWINDOWS}TCharacters.{$endif}MultiByteToWideChar(CP_UTF8, 0, Pointer(@Value[1]), Byte(Pointer(@Value)^), nil, 0);
     SetLength(Result, LCount);
-    {$ifdef MSWINDOWS}MultiByteToWideChar{$else}UnicodeFromLocaleChars{$endif}(CP_UTF8, 0,
-      Pointer(@Value[1]), Byte(Pointer(@Value)^), Pointer(Result), LCount);
+    {$ifNdef MSWINDOWS}TCharacters.{$endif}MultiByteToWideChar(CP_UTF8, 0, Pointer(@Value[1]), Byte(Pointer(@Value)^), Pointer(Result), LCount);
   end;
 end;
-{$else .ANSI}
-var
-  i: Integer;
-  LCount: Integer;
-  LSource: PByte;
-  LTarget: PWord;
+
+function ShortStringHelper.GetAnsiString: AnsiString;
+{$ifdef CPUINTELASM} {$ifdef FPC}assembler; nostackframe;{$endif}
+asm
+  jmp InternalGetAnsiString
+end;
+{$else}
 begin
-  LCount := Byte(Pointer(@Value)^);
-  SetLength(Result, LCount);
-  LSource := Pointer(@Value[1]);
-  LTarget := Pointer(Result);
-  for i := 1 to LCount do
-  begin
-    LTarget^ := LSource^;
-    Inc(LSource);
-    Inc(LTarget);
-  end;
+  InternalGetAnsiString(Result);
+end;
+{$endif}
+
+function ShortStringHelper.GetUTF8String: UTF8String;
+{$ifdef CPUINTELASM} {$ifdef FPC}assembler; nostackframe;{$endif}
+asm
+  jmp InternalGetUTF8String
+end;
+{$else}
+begin
+  InternalGetUTF8String(Result);
+end;
+{$endif}
+
+function ShortStringHelper.GetUnicodeString: UnicodeString;
+{$ifdef CPUINTELASM} {$ifdef FPC}assembler; nostackframe;{$endif}
+asm
+  jmp InternalGetUnicodeString
+end;
+{$else}
+begin
+  InternalGetUnicodeString(Result);
 end;
 {$endif}
 
@@ -4333,12 +6519,9 @@ begin
     Exit;
   end;
 
-  LTargetCount := {$ifdef MSWINDOWS}MultiByteToWideChar{$else}UnicodeFromLocaleChars{$endif}(CP_UTF8,
-    0, Pointer(LPtr), LCount, nil, 0);
-
+  LTargetCount := {$ifNdef MSWINDOWS}TCharacters.{$endif}MultiByteToWideChar(CP_UTF8, 0, Pointer(LPtr), LCount, nil, 0);
   SetLength(Result, LTargetCount);
-  {$ifdef MSWINDOWS}MultiByteToWideChar{$else}UnicodeFromLocaleChars{$endif}(CP_UTF8, 0,
-    Pointer(LPtr), LCount, Pointer(Result), LTargetCount);
+  {$ifNdef MSWINDOWS}TCharacters.{$endif}MultiByteToWideChar(CP_UTF8, 0, Pointer(LPtr), LCount, Pointer(Result), LTargetCount);
 end;
 
 
@@ -4568,7 +6751,7 @@ begin
     tkInterface: Result := LTypeData.InterfaceData.GetAttrDataRec;
     tkDynArray: Result := LTypeData.DynArrayData.GetAttrDataRec;
     tkArray: Result := LTypeData.ArrayData.GetAttrDataRec;
-    tkRecord: Result := LTypeData.RecordData.GetAttrDataRec;
+    tkRecord{$ifdef MANAGEDRECORDS}, tkMRecord{$endif}: Result := LTypeData.RecordData.GetAttrDataRec;
   else
     Result := nil;
   end;
@@ -4586,7 +6769,7 @@ end;
 
 { PTypeInfoRef }
 
-{$ifNdef INLINESUPPORT}
+{$ifNdef SMALLOBJECTSUPPORT}
 function PTypeInfoRef.GetAddress: Pointer;
 begin
   Result := Self;
@@ -4595,13 +6778,13 @@ end;
 
 function PTypeInfoRef.GetAssigned: Boolean;
 begin
-  Result := System.Assigned({$ifdef INLINESUPPORT}F.Address{$else}Self{$endif});
+  Result := System.Assigned({$ifdef SMALLOBJECTSUPPORT}F.Address{$else}Self{$endif});
 end;
 
 {$ifNdef FPC}
 function PTypeInfoRef.GetValue: PTypeInfo;
 begin
-  Result := Pointer({$ifdef INLINESUPPORT}F.Value{$else}Self{$endif});
+  Result := Pointer({$ifdef SMALLOBJECTSUPPORT}F.Value{$else}Self{$endif});
   if (System.Assigned(Result)) then
   begin
     Result := PPointer(Result)^;
@@ -5718,14 +7901,23 @@ begin
   end;
 end;
 
-function TRecordTypeMethod.GetSignature: PProcedureSignature;
+function TRecordTypeMethod.GetSignatureData: PProcedureSignature;
 begin
   Result := Name.Tail;
 end;
 
+function TRecordTypeMethod.GetSignature: PProcedureSignature;
+begin
+  Result := GetSignatureData;
+  if (not Result.IsValid) then
+  begin
+    Result := nil;
+  end;
+end;
+
 function TRecordTypeMethod.GetAttrDataRec: PAttrData;
 begin
-  Result := Signature.Tail;
+  Result := GetSignatureData.Tail;
 end;
 
 function TRecordTypeMethod.GetAttrData: PAttrData;
@@ -6388,22 +8580,22 @@ end;
 
 function TRttiTypeRules.GetIsRefArg: Boolean;
 begin
-  Result := (Flags * [tfRegValueArg, tfGenUseArg] = [tfGenUseArg]);
+  Result := (Flags * [tfRegValueArg, tfGenUseArg] = RTTI_RULEFLAGS_REFERENCE);
 end;
 
 function TRttiTypeRules.GetIsStackArg: Boolean;
 begin
-  Result := (Flags * [tfRegValueArg, tfGenUseArg] = []);
+  Result := (Flags * [tfRegValueArg, tfGenUseArg] = RTTI_RULEFLAGS_STACKDATA);
 end;
 
 function TRttiTypeRules.GetIsGeneralArg: Boolean;
 begin
-  Result := (Flags * [tfRegValueArg, tfGenUseArg] = [tfRegValueArg, tfGenUseArg]);
+  Result := (Flags * [tfRegValueArg, tfGenUseArg] = RTTI_RULEFLAGS_REGGENERAL);
 end;
 
 function TRttiTypeRules.GetIsExtendedArg: Boolean;
 begin
-  Result := (Flags * [tfRegValueArg, tfGenUseArg] = [tfRegValueArg]);
+  Result := (Flags * [tfRegValueArg, tfGenUseArg] = RTTI_RULEFLAGS_REGEXTENDED);
 end;
 
 function TRttiTypeRules.GetHFA: TRttiHFA;
@@ -6536,11 +8728,485 @@ begin
 end;
 
 
+{ TRttiMetaType }
+
+procedure TRttiMetaType.Init(const AValue: Pointer);
+begin
+  InitFunc(@Self, AValue);
+end;
+
+procedure TRttiMetaType.Final(const AValue: Pointer);
+begin
+  FinalFunc(@Self, AValue);
+end;
+
+procedure TRttiMetaType.WeakFinal(const AValue: Pointer);
+begin
+  WeakFinalFunc(@Self, AValue);
+end;
+
+procedure TRttiMetaType.Copy(const ATarget, ASource: Pointer);
+begin
+  CopyFunc(@Self, ATarget, ASource);
+end;
+
+procedure TRttiMetaType.WeakCopy(const ATarget, ASource: Pointer);
+begin
+  WeakCopyFunc(@Self, ATarget, ASource);
+end;
+
+
 { TRttiExType }
 
-function TRttiExType.GetCalculatedRules(var ABuffer: TRttiTypeRules): PRttiTypeRules;
+{$ifdef HFASUPPORT}
+function TRttiExType.GetCalculatedHFA(var AValue: TRttiTypeReturn;
+  const AHFA: TRttiHFA{hfaFloat1/hfaDouble1}; const AHFACount, ASize: Integer): Boolean;
 begin
+  Result := False;
+
+  if (AHFACount >= 1) and (Ord(AHFA){1/2} * SizeOf(Single) * AHFACount = ASize) then
+  case AHFA of
+    hfaFloat1:
+    begin
+      Result := (AHFACount <= 4);
+    end;
+    hfaDouble1:
+    begin
+      Result := (AHFACount <= {$ifdef CPUARM64}4{$else}2{$endif});
+    end;
+  end;
+
+  if (Result) then
+  begin
+    AValue := TRttiTypeReturn(Ord(trFloat1) + (Ord(AHFA) - Ord(hfaFloat1)) + (AHFACount - 1) * 2);
+  end;
+end;
+
+function TRttiExType.GetCalculatedRecordHFA(var AValue: TRttiTypeReturn;
+  const ATypeData: PTypeData): Boolean;
+{$ifdef EXTENDEDRTTI}
+var
+  i: Integer;
+  LHFA, LItemHFA: TRttiHFA;
+  LHFACount: Integer;
+  LAttrData: PAttrData;
+  LAttrEntry, LAttrTail: PAttrEntry;
+  LAttrSignature: PVmtMethodSignature;
+  LAttrFound: Boolean;
+  LAttrParam: PVmtMethodParam;
+  LAttrReader: TAttrEntryReader;
+  LAttrTypeInfo: PTypeInfo;
+  LField: PRecordTypeField;
+  LRecordFields: PRecordTypeFields;
+  LExType: TRttiExType;
+  LRulesBuffer: TRttiTypeRules;
+{$endif}
+begin
+  Result := False;
+
+  // attributes
+  {$ifdef EXTENDEDRTTI}
+  LAttrData := ATypeData.RecordData.GetAttrDataRec;
+  LAttrEntry := @LAttrData.Entries;
+  LAttrTail := LAttrData.Tail;
+  while (LAttrEntry <> LAttrTail) do
+  begin
+    if (LAttrEntry.ClassType.InheritsFrom(HFAAttribute)) then
+    begin
+      LAttrSignature := LAttrEntry.ConstructorSignature;
+      if (not Assigned(LAttrSignature)) then
+      begin
+        LAttrFound := True;
+      end else
+      if (LAttrSignature.ParamCount <> 3) then
+      begin
+        LAttrFound := False;
+      end else
+      begin
+        LAttrParam := LAttrSignature.Params.Tail;
+        LAttrFound := (LAttrParam.ParamType.Value = TypeInfo(Pointer)) and
+          (PVmtMethodParam(LAttrParam.Tail).ParamType.Value = TypeInfo(Integer));
+      end;
+
+      if (LAttrFound) then
+      begin
+        LAttrReader := LAttrEntry.Reader;
+        LAttrTypeInfo := LAttrReader.ReadPointer;
+        if (Assigned(LAttrTypeInfo)) then
+        begin
+          LAttrTypeInfo := PPointer(LAttrTypeInfo)^;
+        end;
+        LHFACount := LAttrReader.ReadInteger;
+        if (Assigned(LAttrTypeInfo)) and (LAttrTypeInfo.Kind = tkFloat) then
+        begin
+          case LAttrTypeInfo.TypeData.FloatType of
+            ftSingle:
+            begin
+              Result := GetCalculatedHFA(AValue, hfaFloat1, LHFACount, ATypeData.RecordData.Size);
+            end;
+            ftDouble:
+            begin
+              Result := GetCalculatedHFA(AValue, hfaDouble1, LHFACount, ATypeData.RecordData.Size);
+            end;
+          end;
+
+          if (Result) then
+          begin
+            Exit;
+          end;
+        end;
+      end;
+    end;
+
+    LAttrEntry := LAttrEntry.Tail;
+  end;
+
+  // fields
+  LRecordFields := ATypeData.RecordData.Fields;
+  if (LRecordFields.Count >= 1) and (LRecordFields.Count <= 4) then
+  begin
+    LField := @LRecordFields.Fields;
+    if (not DefaultContext.GetExType(LField.Field.TypeRef.Value, LExType)) then
+    begin
+      Exit;
+    end;
+    LHFA := LExType.GetRules(LRulesBuffer).HFA;
+    if (LHFA = hfaNone) then
+    begin
+      Exit;
+    end;
+    LHFACount := (Ord(LHFA) - Ord(hfaFloat1)) shr 1 + 1;
+    LHFA := TRttiHFA(((Ord(LHFA) - Ord(hfaFloat1)) and 1) + 1);
+
+    LField := LField.Tail;
+    for i := 0 + 1 to LRecordFields.Count - 1 do
+    begin
+      if (not DefaultContext.GetExType(LField.Field.TypeRef.Value, LExType)) then
+      begin
+        Exit;
+      end;
+      LItemHFA := LExType.GetRules(LRulesBuffer).HFA;
+      if (LItemHFA = hfaNone) or (Ord(LItemHFA) and 1 <> Ord(LHFA) and 1) then
+      begin
+        Exit;
+      end;
+
+      Inc(LHFACount, (Ord(LItemHFA) - Ord(hfaFloat1)) shr 1 + 1);
+      LField := LField.Tail;
+    end;
+
+    Result := GetCalculatedHFA(AValue, LHFA, LHFACount, ATypeData.RecordData.Size);
+  end;
+  {$endif}
+end;
+
+function TRttiExType.GetCalculatedArrayHFA(var AValue: TRttiTypeReturn;
+  const ATypeData: PTypeData): Boolean;
+var
+  LTypeInfo: PTypeInfo;
+  LExType: TRttiExType;
+  LRulesBuffer: TRttiTypeRules;
+  LHFA: TRttiHFA;
+  LHFACount: Integer;
+begin
+  LTypeInfo := ATypeData.ArrayData.ElType.Value;
+
+  if (Assigned(LTypeInfo)) and (DefaultContext.GetExType(LTypeInfo, LExType)) then
+  begin
+    LHFA := LExType.GetRules(LRulesBuffer).HFA;
+    if (LHFA <> hfaNone) then
+    begin
+      LHFACount := ((Ord(LHFA) - Ord(hfaFloat1)) shr 1 + 1) * ATypeData.ArrayData.ElCount;
+      LHFA := TRttiHFA(((Ord(LHFA) - Ord(hfaFloat1)) and 1) + 1);
+      Result := GetCalculatedHFA(AValue, LHFA, LHFACount, ATypeData.ArrayData.Size);
+      Exit;
+    end;
+  end;
+
+  Result := False;
+end;
+{$endif}
+
+function TRttiExType.GetCalculatedRules(var ABuffer: TRttiTypeRules): PRttiTypeRules;
+label
+  argument_flags;
+var
+  LTypeData: PTypeData;
+  LTypeInfo: PTypeInfo;
+  LNullValue: NativeInt;
+  LSize: Integer;
+begin
+  // initialization
   Result := @ABuffer;
+  LNullValue := 0;
+  PNativeInt(Result)^ := LNullValue;
+  {$ifdef SMALLINT}
+  PInteger(@Result.Return)^ := LNullValue;
+  {$endif}
+  PInteger(@Result.FinalFunc)^ := LNullValue;
+
+  // size and flags
+  LTypeData := F.TypeData;
+  case Self.BaseType of
+    rtShortString:
+    begin
+      LSize := Integer(F.MaxLength) + 1;
+      if (F.OpenString) then
+      begin
+        Result.Flags := RTTI_RULEFLAGS_REFERENCE + [tfVarHigh];
+      end else
+      begin
+        Result.Flags := RTTI_RULEFLAGS_REFERENCE;
+      end;
+      Result.Size := LSize;
+      Result.CopyFunc := RTTI_COPYSHORTSTRING_FUNC;
+      Result.WeakCopyFunc := RTTI_COPYSHORTSTRING_FUNC;
+      Exit;
+    end;
+    rtSet:
+    begin
+      LSize := LTypeData.SetData.Size;
+      if (LSize <> INVALID_COUNT) then
+      begin
+        if (LSize <= SizeOf(NativeInt)) then
+        begin
+          Result.Return := trGeneral;
+        end;
+
+        {$if Defined(MSWINDOWS) and Defined(CPUX64)}
+        if (LSize > 4) and (LSize <= 8) then
+        begin
+          Result.Flags := RTTI_RULEFLAGS_REGGENERAL + [tfOptionalRefArg];
+        end else
+        {$ifend}
+        if (LSize > {$ifdef EXTERNALLINKER}4{$else}SizeOf(NativeInt){$endif}) then
+        begin
+          Result.Flags := RTTI_RULEFLAGS_REFERENCE;
+        end else
+        begin
+          Result.Flags := RTTI_RULEFLAGS_REGGENERAL;
+        end;
+      end else
+      begin
+        LSize := 0;
+      end;
+    end;
+    rtStaticArray:
+    begin
+      LSize := LTypeData.ArrayData.Size;
+
+      LTypeInfo := LTypeData.ArrayData.ElType.Value;
+      if (Assigned(LTypeInfo)) and (IsManaged(LTypeInfo)) then
+      begin
+        {$ifdef WEAKREF}
+        if (HasWeakRef(LTypeInfo)) then
+        begin
+          Result.Flags := RTTI_RULEFLAGS_REFERENCE + [tfManaged, tfHasWeakRef];
+        end else
+        {$endif}
+        begin
+          Result.Flags := RTTI_RULEFLAGS_REFERENCE + [tfManaged];
+        end;
+      end else
+      {$ifdef HFASUPPORT}
+      if (GetCalculatedArrayHFA(Result.Return, LTypeData)) then
+      begin
+        Result.Flags := RTTI_RULEFLAGS_REGEXTENDED {$ifNdef CPUARM64}+ [tfOptionalRefArg]{$endif};
+      end else
+      {$endif}
+      begin
+        // return
+        case LSize of
+          {$if Defined(CPUX86) or Defined(CPUARM32)}
+          1, 2, 4
+          {$elseif Defined(CPUX64) and Defined(MSWINDOWS)}
+          1, 2, 4, 8
+          {$else}
+          1..8
+          {$ifend}
+          :
+          begin
+            Result.Return := trGeneral;
+          end;
+          {$if Defined(POSIX) and Defined(LARGEINT)}
+          9..16:
+          begin
+            Result.Return := trGeneralPair;
+          end;
+          {$ifend}
+        end;
+
+        goto argument_flags;
+      end;
+    end;
+    rtDynamicArray:
+    begin
+      LSize := SizeOf(Pointer);
+      Result.Flags := RTTI_RULEFLAGS_REGGENERAL + [tfManaged];
+    end;
+    rtStructure:
+    begin
+      LSize := LTypeData.RecordData.Size;
+
+      if (LTypeData.RecordData.ManagedFieldCount <> 0) then
+      begin
+        {$ifdef WEAKREF}
+        if (RecordHasWeakRef(LTypeData)) then
+        begin
+          Result.Flags := RTTI_RULEFLAGS_REFERENCE + [tfManaged, tfHasWeakRef];
+        end else
+        {$endif}
+        begin
+          Result.Flags := RTTI_RULEFLAGS_REFERENCE + [tfManaged];
+        end;
+      end else
+      {$ifdef HFASUPPORT}
+      if (GetCalculatedRecordHFA(Result.Return, LTypeData)) then
+      begin
+        Result.Flags := RTTI_RULEFLAGS_REGEXTENDED {$ifNdef CPUARM64}+ [tfOptionalRefArg]{$endif};
+      end else
+      {$endif}
+      begin
+        // return
+        case LSize of
+          {$if Defined(CPUX86)}
+          1, 2, 4
+          {$elseif Defined(CPUX64) and Defined(MSWINDOWS)}
+          1, 2, 4, 8
+          {$elseif Defined(ANDROID32)}
+          1..4
+          {$elseif Defined(IOS32)}
+          1
+          {$else}
+          1..8
+          {$ifend}
+          :
+          begin
+            Result.Return := trGeneral;
+          end;
+          {$if Defined(POSIX) and Defined(LARGEINT)}
+          9..16:
+          begin
+            Result.Return := trGeneralPair;
+          end;
+          {$ifend}
+        end;
+
+      argument_flags:
+        // flags
+        {$ifdef CPUARM32}
+        Result.Flags := RTTI_RULEFLAGS_REGGENERAL + [tfOptionalRefArg];
+        {$else}
+        case LSize of
+          0: {empty stack value};
+          {$if Defined(CPUX86)}
+          1..SizeOf(Pointer)
+          {$elseif Defined(CPUX64) and Defined(MSWINDOWS)}
+          1, 2, 4, 8
+          {$else}
+          1..16
+          {$ifend}
+          :
+          begin
+            {$ifdef CPUX64}
+            if (LSize > 4) then
+            begin
+              Result.Flags := RTTI_RULEFLAGS_REGGENERAL + [tfOptionalRefArg];
+            end else
+            {$endif}
+            begin
+              Result.Flags := RTTI_RULEFLAGS_REGGENERAL;
+            end;
+          end;
+        else
+          Result.Flags := RTTI_RULEFLAGS_REFERENCE;
+        end;
+        {$endif}
+      end;
+    end;
+  else
+    System.Error(reAccessViolation);
+    Exit;
+  end;
+
+  // options
+  Result.Size := LSize;
+  if (tfManaged in Result.Flags) then
+  begin
+    // initialization
+    if (LSize > RTTI_INITBYTES_MAXCOUNT) then
+    begin
+      if (Self.BaseType = rtStaticArray) then
+      begin
+        Result.InitFunc := RTTI_INITSTATICARRAY_FUNC;
+      end else
+      begin
+        Result.InitFunc := RTTI_INITSTRUCTURE_FUNC;
+      end;
+    end else
+    case LSize of
+      SizeOf(NativeInt):
+      begin
+        Result.InitFunc := RTTI_INITPOINTER_FUNC;
+      end;
+      SizeOf(NativeInt) * 2:
+      begin
+        Result.InitFunc := RTTI_INITPOINTERPAIR_FUNC
+      end;
+    else
+      Result.InitFunc := RTTI_INITBYTES_LOWFUNC + LSize;
+    end;
+
+    // finalization/coping
+    case Self.BaseType of
+      rtStaticArray:
+      begin
+        Result.FinalFunc := RTTI_FINALSTATICARRAY_FUNC;
+        Result.CopyFunc := RTTI_COPYSTATICARRAY_FUNC;
+      end;
+      rtDynamicArray:
+      begin
+        if (LTypeData.DynArrayData.elType.Assigned) then
+        begin
+          Result.FinalFunc := RTTI_FINALDYNARRAY_FUNC;
+          Result.CopyFunc := RTTI_COPYDYNARRAY_FUNC;
+        end else
+        begin
+          Result.FinalFunc := RTTI_FINALDYNARRAYSIMPLE_FUNC;
+          Result.CopyFunc := RTTI_COPYDYNARRAYSIMPLE_FUNC;
+        end;
+      end;
+    else
+      // rtStructure
+      Result.FinalFunc := RTTI_FINALSTRUCTURE_FUNC;
+      Result.CopyFunc := RTTI_COPYSTRUCTURE_FUNC;
+    end;
+    Result.WeakFinalFunc := Result.FinalFunc;
+    Result.WeakCopyFunc := Result.CopyFunc;
+  end else
+  case LSize of
+    0..3, 5..7, 9..RTTI_COPYBYTES_MAXCOUNT:
+    begin
+      Result.CopyFunc := RTTI_COPYBYTES_LOWFUNC + LSize;
+    end;
+    4:
+    begin
+      Result.CopyFunc := RTTI_COPYBYTES_CARDINAL;
+    end;
+    8:
+    begin
+      Result.CopyFunc := RTTI_COPYBYTES_INT64;
+    end;
+  else
+    if (Self.BaseType = rtStaticArray) then
+    begin
+      Result.CopyFunc := RTTI_COPYSTATICARRAYSIMPLE_FUNC;
+    end else
+    begin
+      Result.CopyFunc := RTTI_COPYSTRUCTURESIMPLE_FUNC;
+    end;
+  end;
+  Result.WeakCopyFunc := Result.CopyFunc;
 end;
 
 function TRttiExType.GetRules(var ABuffer: TRttiTypeRules): PRttiTypeRules;
@@ -6553,7 +9219,7 @@ begin
     Result := RTTI_TYPE_RULES[TRttiType(LOptions)];
     if (not Assigned(Result)) then
     begin
-      Result := F.Data;
+      Result := F.CustomData;
       if (Assigned(Result)) and
         (PCardinal(Result)^ and RTTI_TYPEDATA_MASK = RTTI_TYPEDATA_MARKER) then
       begin
@@ -6581,7 +9247,7 @@ begin
     Result := RTTI_TYPE_RULES[TRttiType(LOptions)];
     if (not Assigned(Result)) then
     begin
-      Result := F.Data;
+      Result := F.CustomData;
       if (Assigned(Result)) and
         (PCardinal(Result)^ and RTTI_TYPEDATA_MASK = RTTI_TYPEDATA_MARKER) then
       begin
@@ -6600,40 +9266,67 @@ begin
 end;
 
 
-{ TRttiContextAPI }
+{ TRttiExType<T> }
 
-class procedure TRttiContextAPI.Init(const AContext: PRttiContext);
+{$ifdef GENERICSUPPORT}
+class constructor TRttiExType<T>.ClassCreate;
+begin
+  if (not Assigned(DefaultContext.Vmt)) then
+  begin
+    DefaultContext.Init;
+  end;
+
+  if Assigned(TypeInfo(T)) and (DefaultContext.GetExType(TypeInfo(T), Default)) then
+  begin
+    if (Default.PointerDepth = 0) then
+    begin
+      DefaultSimplified := Default;
+    end else
+    begin
+      DefaultSimplified.Options := Ord(rtPointer);
+      DefaultSimplified.CustomData := nil;
+    end;
+
+    DefaultRules := Default.GetRules(DefaultRules)^;
+  end;
+end;
+{$endif}
+
+
+{ TRttiContextVmt }
+
+class procedure TRttiContextVmt.Init(const AContext: PRttiContext);
 begin
 end;
 
-class procedure  TRttiContextAPI.Finalize(const AContext: PRttiContext);
+class procedure  TRttiContextVmt.Finalize(const AContext: PRttiContext);
 begin
 end;
 
-class function TRttiContextAPI.Alloc(const AContext: PRttiContext; const ASize: Integer): Pointer;
+class function TRttiContextVmt.Alloc(const AContext: PRttiContext; const ASize: Integer): Pointer;
 begin
-  Result := RttiAlloc(ASize);
+  if (GetCurrentThreadId = MainThreadID) then
+  begin
+    Result := RttiInternalAlloc(ASize, 8);
+  end else
+  begin
+    Result := AContext.HeapAlloc(ASize);
+  end;
 end;
 
-class function TRttiContextAPI.AllocPacked(const AContext: PRttiContext; const ASize: Integer): Pointer;
+class function TRttiContextVmt.AllocPacked(const AContext: PRttiContext; const ASize: Integer): Pointer;
 begin
-  Result := RttiAlloc(ASize);
+  if (GetCurrentThreadId = MainThreadID) then
+  begin
+    Result := RttiInternalAlloc(ASize, 1);
+  end else
+  begin
+    Result := AContext.HeapAlloc(ASize);
+  end;
 end;
 
 
 { TRttiContext }
-
-procedure TRttiContext.SetSynchronization(const AValue: Boolean);
-begin
-  if (FSynchronization <> AValue) then
-  begin
-    FSynchronization := AValue;
-    if (AValue) then
-    begin
-      HeapAllocation := True;
-    end;
-  end;
-end;
 
 procedure InternalThreadYield;
 {$ifdef CPUINTELASM}
@@ -6733,48 +9426,13 @@ begin
   until (False);
 end;
 
-procedure TRttiContext.Init(const AAPI: TRttiContextAPIClass; const ASynchronization: Boolean);
-begin
-  FillChar(Self, SizeOf(Self), #0);
-
-  FAPI := AAPI;
-  if (not Assigned(AAPI)) then
-  begin
-    FAPI := TRttiContextAPI;
-  end;
-
-  Self.Synchronization := ASynchronization;
-
-  FAPI.Init(@Self);
-end;
-
-procedure TRttiContext.Finalize;
-var
-  LItem, LNext: Pointer;
-begin
-  try
-    FAPI.Finalize(@Self);
-  finally
-    LItem := FHeapItems;
-    FHeapItems := nil;
-
-    while (Assigned(LItem)) do
-    begin
-      LNext := PPointer(LItem);
-      FreeMem(LItem);
-
-      LItem := LNext;
-    end;
-  end;
-end;
-
 procedure TRttiContext.EnterRead;
 var
   LPtr: PInteger;
 begin
-  if (FSynchronization) then
+  if (FThreadSync) then
   begin
-    LPtr := Pointer(NativeInt(@FLockerData[SizeOf(Integer) - 1]) and -SizeOf(Integer));
+    LPtr := Pointer(NativeInt(@FAlignedData[SizeOf(NativeInt) * 2 - 1]) and -SizeOf(NativeInt));
     if (LPtr^ and 1 = 0) then
     begin
       if (AtomicIncrement(LPtr^, 2) and 1 <> 0) then
@@ -6795,9 +9453,9 @@ var
   LPtr: PInteger;
   LValue: Integer;
 begin
-  if (FSynchronization) then
+  if (FThreadSync) then
   begin
-    LPtr := Pointer(NativeInt(@FLockerData[SizeOf(Integer) - 1]) and -SizeOf(Integer));
+    LPtr := Pointer(NativeInt(@FAlignedData[SizeOf(NativeInt) * 2 - 1]) and -SizeOf(NativeInt));
     repeat
       LValue := LPtr^;
       if (LValue and 1 <> 0) then
@@ -6822,9 +9480,9 @@ procedure TRttiContext.LeaveRead;
 var
   LPtr: PInteger;
 begin
-  if (FSynchronization) then
+  if (FThreadSync) then
   begin
-    LPtr := Pointer(NativeInt(@FLockerData[SizeOf(Integer) - 1]) and -SizeOf(Integer));
+    LPtr := Pointer(NativeInt(@FAlignedData[SizeOf(NativeInt) * 2 - 1]) and -SizeOf(NativeInt));
     AtomicIncrement(LPtr^, -2);
   end;
 end;
@@ -6833,10 +9491,53 @@ procedure TRttiContext.LeaveExclusive;
 var
   LPtr: PInteger;
 begin
-  if (FSynchronization) then
+  if (FThreadSync) then
   begin
-    LPtr := Pointer(NativeInt(@FLockerData[SizeOf(Integer) - 1]) and -SizeOf(Integer));
+    LPtr := Pointer(NativeInt(@FAlignedData[SizeOf(NativeInt) * 2 - 1]) and -SizeOf(NativeInt));
     AtomicIncrement(LPtr^, -1);
+  end;
+end;
+
+procedure TRttiContext.Init(const AVmt: TRttiContextVmtClass; const AThreadSync: Boolean);
+begin
+  // class constructor usage case
+  if (not LibraryInitialized) then
+  begin
+    InitLibrary;
+  end;
+
+  // clearing
+  FillChar(Self, SizeOf(Self), #0);
+  Self.ThreadSync := AThreadSync;
+
+  // Vmt
+  FVmt := AVmt;
+  if (not Assigned(AVmt)) then
+  begin
+    FVmt := TRttiContextVmt;
+  end;
+  FVmt.Init(@Self);
+end;
+
+procedure TRttiContext.Finalize;
+var
+  LHeapItemsPtr: PPointer;
+  LItem, LNext: Pointer;
+begin
+  try
+    FVmt.Finalize(@Self);
+  finally
+    LHeapItemsPtr := Pointer(NativeInt(@FAlignedData[SizeOf(NativeInt) - 1]) and -SizeOf(NativeInt));
+    LItem := LHeapItemsPtr^;
+    LHeapItemsPtr^ := nil;
+
+    while (Assigned(LItem)) do
+    begin
+      LNext := PPointer(LItem)^;
+      FreeMem(LItem);
+
+      LItem := LNext;
+    end;
   end;
 end;
 
@@ -6847,7 +9548,7 @@ begin
     Result := HeapAlloc(ASize);
   end else
   begin
-    Result := FAPI.Alloc(@Self, ASize);
+    Result := FVmt.Alloc(@Self, ASize);
   end;
 end;
 
@@ -6858,15 +9559,19 @@ begin
     Result := HeapAlloc(ASize);
   end else
   begin
-    Result := FAPI.AllocPacked(@Self, ASize);
+    Result := FVmt.AllocPacked(@Self, ASize);
   end;
 end;
 
 function TRttiContext.HeapAlloc(const ASize: Integer): Pointer;
+const
+  OVERHEAD_SIZE = 8;
 var
   LHeapSize: Integer;
+  LHeapItemsPtr: PPointer;
+  LHeapItems: Pointer;
 begin
-  LHeapSize := ASize + 8;
+  LHeapSize := ASize + OVERHEAD_SIZE;
   if (ASize <= 0) or (LHeapSize <= 0) then
   begin
     Result := nil;
@@ -6874,10 +9579,20 @@ begin
   end;
 
   GetMem(Result, LHeapSize);
-  PPointer(Result)^ := FHeapItems;
-  FHeapItems := Result;
+  LHeapItemsPtr := Pointer(NativeInt(@FAlignedData[SizeOf(NativeInt) - 1]) and -SizeOf(NativeInt));
+  if (FThreadSync) then
+  begin
+    repeat
+      LHeapItems := LHeapItemsPtr^;
+      PPointer(Result)^ := LHeapItems;
+    until (AtomicCmpExchange(LHeapItemsPtr^, Result, LHeapItems) = LHeapItems);
+  end else
+  begin
+    PPointer(Result)^ := LHeapItemsPtr^;
+    LHeapItemsPtr^ := Result;
+  end;
 
-  Inc(NativeUInt(Result), 8);
+  Inc(NativeUInt(Result), OVERHEAD_SIZE);
 end;
 
 function TRttiContext.AllocCustomTypeData(const ASize: Integer; const ABacketCount: Integer): PRttiCustomTypeData;
@@ -6988,6 +9703,8 @@ begin
 end;
 
 function TRttiContext.GetBooleanType(const ATypeInfo: PTypeInfo): TRttiType;
+const
+  _bool = Cardinal(Ord('b') + Ord('o') shl 8 + Ord('o') shl 16 + Ord('l') shl 24);
 var
   LTypeInfo: PTypeInfo;
   LTypeData: PTypeData;
@@ -7059,13 +9776,7 @@ begin
       LPtr := Pointer(@LTypeInfo.Name);
       if (LPtr^ <> 4) then Exit;
       Inc(LPtr);
-      if (LPtr^ <> Ord('b')) then Exit;
-      Inc(LPtr);
-      if (LPtr^ <> Ord('o')) then Exit;
-      Inc(LPtr);
-      if (LPtr^ <> Ord('o')) then Exit;
-      Inc(LPtr);
-      if (LPtr^ <> Ord('l')) then Exit;
+      if (PCardinal(LPtr)^ <> _bool) then Exit;
 
       Result := rtBoolean8;
     end;
@@ -7091,37 +9802,25 @@ end;
 
 function TRttiContext.GetExType(const ATypeInfo: Pointer; var AResult: TRttiExType): Boolean;
 label
-  detect_base_type, copy_type_data, string_post_processing, post_processing;
-type
-  TDummyRange = packed record
-    T: TOrdType;
-    L: Integer;
-    H: Integer;
-  end;
-  TDummyRange64 = packed record
-    L: Int64;
-    H: Int64;
-  end;
+  detect_base_type, fix_pchars, fix_ansi_codepage, fix_chars_range,
+  copy_type_data, post_processing;
 const
-  DUMMY_RANGE_INT8: TDummyRange = (T: otSByte; L: Low(ShortInt); H: High(ShortInt));
-  DUMMY_RANGE_UINT8: TDummyRange = (T: otUByte; L: Low(Byte); H: High(Byte));
-  DUMMY_RANGE_INT16: TDummyRange = (T: otSWord; L: Low(SmallInt); H: High(SmallInt));
-  DUMMY_RANGE_UINT16: TDummyRange = (T: otUWord; L: Low(Word); H: High(Word));
-  DUMMY_RANGE_INT32: TDummyRange = (T: otSLong; L: Low(Integer); H: High(Integer));
-  DUMMY_RANGE_UINT32: TDummyRange = (T: otULong; L: 0; H: -1);
-  DUMMY_RANGE_INT64: TDummyRange64 = (L: Low(Int64); H: High(Int64));
-  DUMMY_RANGE_UINT64: TDummyRange64 = (L: 0; H: -1);
+  _OleV = Cardinal(Ord('O') + Ord('l') shl 8 + Ord('e') shl 16 + Ord('V') shl 24);
+  _aria = Cardinal(Ord('a') + Ord('r') shl 8 + Ord('i') shl 16 + Ord('a') shl 24);
+  _nt = Word(Ord('n') + Ord('t') shl 8);
+  _stri = Cardinal(Ord('s') + Ord('t') shl 8 + Ord('r') shl 16 + Ord('i') shl 24);
+  _ng = Word(Ord('n') + Ord('g') shl 8);
 var
   LTypeInfo: PTypeInfo;
   LTypeData: PTypeData;
   LRttiTypeData: PRttiTypeData;
+  LPtr: PByte;
   {$ifNdef SHORTSTRSUPPORT}
   LCount: NativeUInt;
-  LPtr: PByte;
   {$endif}
 begin
   AResult.Options := 0;
-  AResult.Data := nil;
+  AResult.CustomData := nil;
 
   if (NativeUInt(ATypeInfo) <= High(Word)) then
   begin
@@ -7137,14 +9836,31 @@ begin
     AResult.Id := Word(NativeUInt(ATypeInfo));
 
     case AResult.BaseType of
-      rtInt8: AResult.RangeData := Pointer(@DUMMY_RANGE_INT8);
-      rtUInt8: AResult.RangeData := Pointer(@DUMMY_RANGE_UINT8);
-      rtInt16: AResult.RangeData := Pointer(@DUMMY_RANGE_INT16);
-      rtUInt16: AResult.RangeData := Pointer(@DUMMY_RANGE_UINT16);
-      rtInt32: AResult.RangeData := Pointer(@DUMMY_RANGE_INT32);
-      rtUInt32: AResult.RangeData := Pointer(@DUMMY_RANGE_UINT32);
-      rtInt64: AResult.RangeData := Pointer(@DUMMY_RANGE_INT64);
-      rtUInt64: AResult.RangeData := Pointer(@DUMMY_RANGE_UINT64);
+      rtInt8: AResult.RangeData := @INT8_TYPE_DATA;
+      rtUInt8: AResult.RangeData := @UINT8_TYPE_DATA;
+      rtInt16: AResult.RangeData := @INT16_TYPE_DATA;
+      rtUInt16: AResult.RangeData := @UINT16_TYPE_DATA;
+      rtInt32: AResult.RangeData := @INT32_TYPE_DATA;
+      rtUInt32: AResult.RangeData := @UINT32_TYPE_DATA;
+      rtInt64: AResult.RangeData := @INT64_TYPE_DATA;
+      rtUInt64: AResult.RangeData := @UINT64_TYPE_DATA;
+      rtSBCSChar,
+      rtUTF8Char,
+      rtPSBCSChars,
+      rtPUTF8Chars,
+      rtSBCSString,
+      rtUTF8String,
+      rtWideChar,
+      rtPWideChars,
+      rtWideString,
+      rtUnicodeString,
+      rtUCS4Char,
+      rtPUCS4Chars,
+      rtUCS4String:
+      begin
+        LTypeData := nil;
+        goto fix_ansi_codepage;
+      end;
     end;
   end else
   if (PCardinal(ATypeInfo)^ and RTTI_TYPEDATA_MASK = RTTI_TYPEDATA_MARKER) then
@@ -7167,7 +9883,10 @@ begin
   begin
     LTypeInfo := ATypeInfo;
   detect_base_type:
-    AResult.BaseType := GetBooleanType(LTypeInfo);
+    if (LTypeInfo.Kind in [{$ifdef FPC}tkInteger, tkBool{$else}tkEnumeration{$endif}]) then
+    begin
+      AResult.BaseType := GetBooleanType(LTypeInfo);
+    end;
     if (AResult.BaseType = rtUnknown) then
     begin
       LTypeData := LTypeInfo.GetTypeData;
@@ -7180,7 +9899,17 @@ begin
             otSWord: AResult.BaseType := rtInt16;
             otUWord: AResult.BaseType := rtUInt16;
             otSLong: AResult.BaseType := rtInt32;
-            otULong: AResult.BaseType := rtUInt32;
+            otULong:
+            begin
+              if (GetBaseTypeInfo(LTypeInfo, [TypeInfo(UCS4Char)]) = 0) then
+              begin
+                AResult.BaseType := rtUCS4Char;
+                goto fix_pchars;
+              end else
+              begin
+                AResult.BaseType := rtUInt32;
+              end;
+            end;
           else
             // otUByte
             AResult.BaseType := rtUInt8;
@@ -7189,12 +9918,12 @@ begin
               0:
               begin
                 AResult.BaseType := rtSBCSChar;
-                goto string_post_processing;
+                goto fix_pchars;
               end;
               1:
               begin
                 AResult.BaseType := rtUTF8Char;
-                goto string_post_processing;
+                goto fix_pchars;
               end;
             end;
             {$endif}
@@ -7264,15 +9993,20 @@ begin
         tkChar:
         begin
           AResult.BaseType := rtSBCSChar;
+          goto fix_pchars;
         end;
         tkWChar:
         begin
           AResult.BaseType := rtWideChar;
+          goto fix_pchars;
         end;
         tkString:
         begin
           AResult.BaseType := rtShortString;
           AResult.MaxLength := LTypeData.MaxLength;
+          {$ifdef SHORTSTRSUPPORT}
+          AResult.OpenString := (LTypeInfo = TypeInfo(ShortString));
+          {$endif}
         end;
         {$ifdef FPC}tkAString,{$endif}
         tkLString:
@@ -7293,16 +10027,22 @@ begin
               end;
             end;
           {$endif}
+          LTypeData := nil;
+          goto fix_ansi_codepage;
         end;
         {$ifdef UNICODE}
         tkUString:
         begin
           AResult.BaseType := rtUnicodeString;
+          LTypeData := nil;
+          goto fix_chars_range;
         end;
         {$endif}
         tkWString:
         begin
           AResult.BaseType := rtWideString;
+          LTypeData := nil;
+          goto fix_chars_range;
         end;
         tkClass:
         begin
@@ -7311,13 +10051,19 @@ begin
         end;
         tkVariant:
         begin
-          if (LTypeInfo = TypeInfo(OleVariant)) then
-          begin
-            AResult.BaseType := rtOleVariant;
-          end else
-          begin
-            AResult.BaseType := rtVariant;
-          end;
+          AResult.BaseType := rtVariant;
+
+          LPtr := Pointer(@LTypeInfo.Name);
+          if (LPtr^ <> 10) then goto post_processing;
+          Inc(LPtr);
+          if (PCardinal(LPtr)^ <> _OleV) then goto post_processing;
+          Inc(LPtr, SizeOf(Cardinal));
+          if (PCardinal(LPtr)^ <> _aria) then goto post_processing;
+          Inc(LPtr, SizeOf(Cardinal));
+          if (PWord(LPtr)^ <> _nt) then goto post_processing;
+
+          AResult.BaseType := rtOleVariant;
+          goto post_processing;
         end;
         {$if Defined(FPC) or Defined(EXTENDEDRTTI)}
         tkPointer:
@@ -7363,8 +10109,14 @@ begin
           {$ifend}
           goto copy_type_data;
         end;
-        tkRecord{$ifdef FPC}, tkObject{$endif}:
+        tkRecord{$ifdef FPC}, tkObject{$endif}{$ifdef MANAGEDRECORDS}, tkMRecord{$endif}:
         begin
+          if (LTypeInfo = TypeInfo(TValue)) then
+          begin
+            AResult.BaseType := rtValue;
+            goto post_processing;
+          end;
+
           AResult.BaseType := rtStructure;
           goto copy_type_data;
         end;
@@ -7400,18 +10152,10 @@ begin
                   end;
 
                   Inc(LPtr);
-                  if (LPtr^ or $20 <> Ord('s')) then goto copy_type_data;
-                  Inc(LPtr);
-                  if (LPtr^ or $20 <> Ord('t')) then goto copy_type_data;
-                  Inc(LPtr);
-                  if (LPtr^ or $20 <> Ord('r')) then goto copy_type_data;
-                  Inc(LPtr);
-                  if (LPtr^ or $20 <> Ord('i')) then goto copy_type_data;
-                  Inc(LPtr);
-                  if (LPtr^ or $20 <> Ord('n')) then goto copy_type_data;
-                  Inc(LPtr);
-                  if (LPtr^ or $20 <> Ord('g')) then goto copy_type_data;
-                  Inc(LPtr);
+                  if (PCardinal(LPtr)^ or $20202020 <> _stri) then goto copy_type_data;
+                  Inc(LPtr, SizeOf(Cardinal));
+                  if (PWord(LPtr)^ or $2020 <> _ng) then goto copy_type_data;
+                  Inc(LPtr, SizeOf(Word));
 
                   if (LCount > 9) then
                   begin
@@ -7431,7 +10175,7 @@ begin
                 // ShortString
                 AResult.BaseType := rtShortString;
                 AResult.MaxLength := LCount;
-                goto string_post_processing;
+                LTypeData := nil;
               end;
             end;
           end;
@@ -7450,26 +10194,39 @@ begin
             {$endif}
             ]) of
             0: AResult.BaseType := rtBytes;
-            1: AResult.BaseType := rtUCS4String;
+            1:
+            begin
+              AResult.BaseType := rtUCS4String;
+              LTypeData := nil;
+              goto fix_chars_range;
+            end;
             {$ifNdef WIDESTRSUPPORT}
             2:
             begin
               AResult.BaseType := rtWideString;
+              LTypeData := nil;
+              goto fix_chars_range;
             end;
             {$endif !WIDESTRSUPPORT}
             {$ifNdef ANSISTRSUPPORT}
             {$ifNdef WIDESTRSUPPORT}2{$else}1{$endif} + 1:
             begin
               AResult.BaseType := rtSBCSString;
+              LTypeData := nil;
+              goto fix_ansi_codepage;
             end;
             {$ifNdef WIDESTRSUPPORT}2{$else}1{$endif} + 2:
             begin
               AResult.BaseType := rtUTF8String;
+              LTypeData := nil;
+              goto fix_ansi_codepage;
             end;
             {$ifNdef WIDESTRSUPPORT}2{$else}1{$endif} + 3:
             begin
               AResult.BaseType := rtSBCSString;
               AResult.CodePage := $ffff;
+              LTypeData := nil;
+              goto fix_ansi_codepage;
             end;
             {$endif !ANSISTRSUPPORT}
           else
@@ -7493,42 +10250,74 @@ begin
         tkMethod:
         begin
           AResult.BaseType := rtMethod;
-        copy_type_data:
-          AResult.Data := LTypeData;
+          goto copy_type_data;
         end;
       else
         Result := False;
         Exit;
+
+      fix_pchars:
+        if (AResult.BaseType in [rtSBCSChar..rtUCS4Char]) and (AResult.PointerDepth <> 0) then
+        begin
+          Inc(Byte(AResult.F.BaseType), Ord(rtPSBCSChars) - Ord(rtSBCSChar));
+          AResult.PointerDepth := AResult.PointerDepth - 1;
+        end;
+
+      fix_ansi_codepage:
+        case AResult.BaseType of
+          rtSBCSChar, rtPSBCSChars, rtSBCSString:
+          begin
+            case AResult.CodePage of
+              0:
+              begin
+                AResult.CodePage := DefaultCP;
+              end;
+              CP_UTF8:
+              begin
+                AResult.BaseType := Succ(AResult.BaseType);
+                AResult.CodePage := 0;
+              end;
+            end;
+          end;
+          rtUTF8Char, rtPUTF8Chars, rtUTF8String:
+          begin
+            AResult.CodePage := 0;
+          end;
+        end;
+
+      fix_chars_range:
+        if (not Assigned(LTypeData)) then
+        case AResult.BaseType of
+          rtSBCSChar,
+          rtUTF8Char,
+          rtPSBCSChars,
+          rtPUTF8Chars,
+          rtSBCSString,
+          rtUTF8String:
+          begin
+            LTypeData := Pointer(@UINT8_TYPE_DATA);
+          end;
+          rtWideChar,
+          rtPWideChars,
+          rtWideString,
+          rtUnicodeString:
+          begin
+            LTypeData := Pointer(@UINT16_TYPE_DATA);
+          end;
+          rtUCS4Char,
+          rtPUCS4Chars,
+          rtUCS4String:
+          begin
+            LTypeData := Pointer(@UINT32_TYPE_DATA);
+          end;
+        end;
+
+      copy_type_data:
+        AResult.TypeData := LTypeData;
       end;
     end;
   end;
 
-string_post_processing:
-  // ANSI/UTF8 routine
-  case AResult.BaseType of
-    rtSBCSChar,
-    rtSBCSString:
-    begin
-      case AResult.CodePage of
-        0:
-        begin
-          AResult.CodePage := DefaultCP;
-        end;
-        CP_UTF8:
-        begin
-          AResult.BaseType := Succ(AResult.BaseType);
-        end;
-      end;
-    end;
-    rtUTF8Char,
-    rtUTF8String:
-    begin
-      if (AResult.CodePage = 0) then
-      begin
-        AResult.CodePage := CP_UTF8;
-      end;
-    end;
-  end;
 
 post_processing:
   // post processing
@@ -7548,12 +10337,3272 @@ begin
   end;
 end;
 
+
+{ TValue }
+
+function TValue.GetExType: PRttiExType;
+begin
+  Result := @FExType;
+  if (not Assigned(FManagedData)) then
+  begin
+    Result := nil;
+  end;
+end;
+
+function TValue.GetBaseType: TRttiType;
+begin
+  Result := FExType.BaseType;
+  if (not Assigned(FManagedData)) then
+  begin
+    Result := rtUnknown;
+  end;
+end;
+
+function TValue.GetData: Pointer;
+var
+  LManagedData: Pointer;
+begin
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    if (Assigned(LManagedData)) then
+    begin
+      if (not (FExType.BaseType in [rtInterface, rtClosure])) then
+      begin
+        Result := @PRttiContainerInterface(LManagedData).Value;
+      end else
+      begin
+        Result := @FManagedData;
+      end;
+    end else
+    begin
+      System.Error(reInvalidCast);
+      Result := nil;
+    end;
+  end else
+  begin
+    Result := @FBuffer;
+  end;
+end;
+
+function TValue.GetDataSize: Integer;
+var
+  LRulesBuffer: TRttiTypeRules;
+begin
+  if (Assigned(FManagedData)) then
+  begin
+    Result := FExType.GetRules(LRulesBuffer).Size;
+  end else
+  begin
+    Result := 0;
+  end;
+end;
+
+function TValue.GetIsEmpty: Boolean;
+begin
+  Result := not Assigned(FManagedData);
+end;
+
+function TValue.GetIsObject: Boolean;
+begin
+  Result := Assigned(FManagedData) and (FExType.BaseType = rtObject);
+end;
+
+function TValue.GetIsClass: Boolean;
+begin
+  Result := Assigned(FManagedData) and (FExType.BaseType = rtClassRef);
+end;
+
+function TValue.GetIsOrdinal: Boolean;
+begin
+  Result := Assigned(FManagedData) and
+    (FExType.BaseType in [rtInt8, rtUInt8,
+    rtInt16, rtUInt16, rtInt32, rtUInt32, rtInt64, rtUInt64,
+    rtBoolean8, rtBoolean16, rtBoolean32, rtBoolean64, rtBool8, rtBool16, rtBool32, rtBool64,
+    rtEnumeration8, rtEnumeration16, rtEnumeration32, rtEnumeration64, rtSBCSChar,
+    rtUTF8Char, rtWideChar,
+    rtTimeStamp]);
+end;
+
+function TValue.GetIsFloat: Boolean;
+begin
+  Result := Assigned(FManagedData) and
+    (FExType.BaseType in [rtComp, rtCurrency,
+    rtFloat, rtDouble, rtLongDouble80, rtLongDouble96, rtLongDouble128,
+    rtDate, rtTime, rtDateTime]);
+end;
+
+function TValue.IsInstanceOf(const AClass: TClass): Boolean;
+begin
+  if (Pointer(FManagedData) = @RTTI_DUMMY_INTERFACE_DATA) then
+  case FExType.BaseType of
+    rtObject:
+    begin
+      Result := TObject(FBuffer.VPointer).InheritsFrom(AClass);
+      Exit;
+    end;
+    rtClassRef:
+    begin
+      Result := FBuffer.VClass.InheritsFrom(AClass);
+      Exit;
+    end;
+  end;
+
+  Result := False;
+end;
+
+{$ifdef STATICSUPPORT}class{$endif} procedure TValue.InternalReleaseInterface(AInterface: Pointer);
+type
+  TInterfaceVmt = packed record
+    QueryInterface: Pointer;
+    _AddRef: Pointer;
+    _Release: function(const AInterface: Pointer): {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
+  end;
+  TInterfaceData = packed record
+    Vmt: ^TInterfaceVmt;
+  end;
+begin
+  TInterfaceData(AInterface^).Vmt._Release(AInterface);
+end;
+
+procedure TValue.InternalInitData(const ARules: PRttiTypeRules; const AValue: Pointer);
+label
+  buffered_target, copy_value;
+var
+  LManagedData: PRttiContainerInterface;
+  LTarget, LSource: Pointer;
+  LFuncIndex: NativeUInt;
+begin
+  LManagedData := Pointer(FManagedData);
+
+  if (ARules.Size > SizeOf(FBuffer)) or (tfManaged in ARules.Flags) then
+  begin
+    case FExType.BaseType of
+      rtInterface, rtClosure:
+      begin
+        LTarget := AValue;
+        if (not Assigned(LTarget{AValue})) then
+        begin
+          LTarget{AValue} := @RTTI_RULES_NONE{nil};
+        end;
+        // SetInterface(IInterface(LTarget{AValue}^));
+        if (LManagedData <> PPointer(LTarget{AValue})^) then
+        begin
+          Pointer(FManagedData) := PPointer(LTarget{AValue})^;
+          if (Assigned(FManagedData)) then
+          begin
+            FManagedData._AddRef;
+          end;
+          if (Assigned(LManagedData)) and (Pointer(LManagedData) <> @RTTI_DUMMY_INTERFACE_DATA) then
+          begin
+            InternalReleaseInterface(LManagedData);
+          end;
+        end;
+        Exit;
+      end;
+      rtValue:
+      begin
+        LTarget := AValue;
+        if (not Assigned(LTarget{AValue})) then
+        begin
+          // Clear;
+          FExType.Options := 0;
+          FExType.CustomData := nil;
+          if (Assigned(LManagedData)) then
+          begin
+            Pointer(FManagedData) := nil;
+            if (Pointer(LManagedData) <> @RTTI_DUMMY_INTERFACE_DATA) then
+            begin
+              InternalReleaseInterface(LManagedData);
+            end;
+          end;
+        end else
+        begin
+          FManagedData := PValue(LTarget{AValue}).FManagedData;
+          FExType := PValue(LTarget{AValue}).FExType;
+          FBuffer := PValue(LTarget{AValue}).FBuffer;
+        end;
+        Exit;
+      end;
+      {$ifdef WEAKINSTREF}
+      rtObject,
+      rtMethod:
+      begin
+        goto buffered_target;
+      end;
+      {$endif}
+    else
+      // optional clear current data
+      if (Assigned(LManagedData)) and (Pointer(LManagedData) <> @RTTI_DUMMY_INTERFACE_DATA) then
+      begin
+        if (PPointer(LManagedData.Vmt)^ = @TRttiDummyInterface.QueryInterface) and
+          (LManagedData.RefCount = 1) and (LManagedData.ExType.Options = FExType.Options) and
+          (LManagedData.ExType.CustomData = FExType.CustomData) then
+        begin
+          LTarget := @LManagedData.Value;
+          goto copy_value;
+        end;
+
+        FManagedData := nil;
+      end;
+
+      // value data initializaion
+      GetMem(LManagedData, SizeOf(TRttiContainerInterface) + ARules.Size);
+      LManagedData.Vmt := @RTTI_CONTAINER_INTERFACE_VMT;
+      LManagedData.RefCount := 1;
+      LManagedData.ExType := FExType;
+      LManagedData.FinalFunc := nil;
+      LFuncIndex := ARules.FinalFunc;
+      if (LFuncIndex <> RTTI_FINALNONE_FUNC) then
+      begin
+        LManagedData.FinalFunc := RTTI_FINAL_FUNCS[LFuncIndex];
+      end;
+      LFuncIndex := ARules.InitFunc;
+      case LFuncIndex of
+        RTTI_INITNONE_FUNC: ;
+        RTTI_INITPOINTER_FUNC: PPointer(@LManagedData.Value)^ := nil;
+        RTTI_INITPOINTERPAIR_FUNC:
+        begin
+          PMethod(@LManagedData.Value).Code := nil;
+          PMethod(@LManagedData.Value).Data := nil;
+        end;
+      else
+        RTTI_INIT_FUNCS[LFuncIndex](@FExType, @LManagedData.Value);
+      end;
+
+      // target
+      Pointer(FManagedData) := LManagedData;
+      LTarget := @LManagedData.Value;
+    end;
+  end else
+  begin
+  buffered_target:
+    // internal storage
+    if (Pointer(LManagedData) <> @RTTI_DUMMY_INTERFACE_DATA) then
+    begin
+      if (Assigned(LManagedData)) then
+      begin
+        FManagedData := nil;
+      end;
+      Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    end;
+    LTarget := @FBuffer;
+  end;
+
+copy_value:
+  // copying
+  LSource := AValue;
+  if (Assigned(LSource)) then
+  begin
+    case NativeUInt(ARules.CopyFunc) of
+      RTTI_COPYNATIVE_FUNC: PPointer(LTarget)^ := PPointer(LSource)^;
+      RTTI_COPYALTERNATIVE_FUNC: PAlterNativeInt(LTarget)^ := PAlterNativeInt(LSource)^;
+      {$ifdef LARGEINT}
+      RTTI_COPYBYTES_LOWFUNC + SizeOf(TMethod): PMethod(LTarget)^ := PMethod(LSource)^;
+      {$endif}
+    else
+      RTTI_COPY_FUNCS[NativeUInt(ARules.CopyFunc)](@FExType, LTarget, LSource);
+    end;
+  end;
+end;
+
+{$ifdef STATICSUPPORT}class{$endif} function TValue.Empty: TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FExType.Options := 0;
+  Result.FExType.CustomData := nil;
+  LManagedData := Pointer(Result.FManagedData);
+  if (Assigned(LManagedData)) then
+  begin
+    Pointer(Result.FManagedData) := nil;
+    if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+    begin
+      Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+      if (Assigned(LManagedData)) then
+      begin
+        Result.InternalReleaseInterface(LManagedData);
+      end;
+    end;
+  end;
+end;
+
+procedure TValue.Init(const AExType: TRttiExType; const AValue: Pointer);
+var
+  LRulesBuffer: TRttiTypeRules;
+begin
+  if (AExType.PointerDepth <> 0) then
+  begin
+    FExType.Options := Ord(rtPointer);
+    FExType.CustomData := nil;
+  end else
+  begin
+    FExType := AExType;
+  end;
+
+  InternalInitData(FExType.GetRules(LRulesBuffer), AValue);
+end;
+
+procedure TValue.Init(const ATypeInfo: PTypeInfo; const AValue: Pointer);
+var
+  LRulesBuffer: TRttiTypeRules;
+begin
+  if (not DefaultContext.GetExType(ATypeInfo, FExType)) or (FExType.PointerDepth <> 0) then
+  begin
+    FExType.Options := Ord(rtPointer);
+    FExType.CustomData := nil;
+  end;
+
+  InternalInitData(FExType.GetRules(LRulesBuffer), AValue);
+end;
+
+{$ifdef GENERICMETHODSUPPORT}
+procedure TValue.Init<T>(const AValue: T);
+begin
+  FExType := TRttiExType<T>.DefaultSimplified;
+  InternalInitData(@TRttiExType<T>.DefaultRules, @AValue);
+end;
+
+class function TValue.From<T>(const AValue: T): TValue;
+begin
+  Result.FExType := TRttiExType<T>.DefaultSimplified;
+  Result.InternalInitData(@TRttiExType<T>.DefaultRules, @AValue);
+end;
+
+function TValue.TryGet<T>(var AValue: T): Boolean;
+var
+  LManagedData: Pointer;
+  LData: Pointer;
+begin
+  LManagedData := Pointer(FManagedData);
+  if (Assigned(LManagedData)) and
+    (TRttiExType<T>.DefaultSimplified.Options = FExType.Options) and
+    (TRttiExType<T>.DefaultSimplified.CustomData = FExType.CustomData) then
+  begin
+    if (LManagedData = @RTTI_DUMMY_INTERFACE_DATA) then
+    begin
+      LData := @FBuffer;
+    end else
+    begin
+      LData := GetData;
+    end;
+
+    AValue := T(LData^);
+    Result := True;
+  end else
+  begin
+    Result := False;
+  end;
+end;
+
+function TValue.Get<T>: T;
+begin
+  if (not TryGet<T>(Result)) then
+  begin
+    System.Error(reInvalidCast);
+  end;
+end;
+{$endif}
+
+procedure TValue.Clear;
+var
+  LManagedData: Pointer;
+begin
+  FExType.Options := 0;
+  FExType.CustomData := nil;
+  LManagedData := Pointer(FManagedData);
+  if (Assigned(LManagedData)) then
+  begin
+    Pointer(FManagedData) := nil;
+    if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetPointer(const AValue: Pointer);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VPointer := AValue;
+  FExType.Options := Ord(rtPointer);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetBoolean(const AValue: Boolean);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VBoolean := AValue;
+  FExType.Options := Ord(rtBoolean8);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetInteger(const AValue: Integer);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VInt32 := AValue;
+  FExType.Options := Ord(rtInt32);
+  FExType.RangeData := @INT32_TYPE_DATA;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetCardinal(const AValue: Cardinal);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VUInt32 := AValue;
+  FExType.Options := Ord(rtUInt32);
+  FExType.RangeData := @UINT32_TYPE_DATA;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetInt64(const AValue: Int64);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VInt64 := AValue;
+  FExType.Options := Ord(rtInt64);
+  FExType.RangeData := @INT64_TYPE_DATA;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetUInt64(const AValue: UInt64);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VUInt64 := AValue;
+  FExType.Options := Ord(rtUInt64);
+  FExType.RangeData := @UINT64_TYPE_DATA;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetCurrency(const AValue: Currency);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VCurrency := AValue;
+  FExType.Options := Ord(rtCurrency);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetSingle(const AValue: Single);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VSingle := AValue;
+  FExType.Options := Ord(rtFloat);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetDouble(const AValue: Double);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VDouble := AValue;
+  FExType.Options := Ord(rtDouble);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetExtended(const AValue: Extended);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VLongDouble := AValue;
+  FExType.Options := Ord(rtLongDouble80);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetDate(const AValue: TDate);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VDouble := AValue;
+  FExType.Options := Ord(rtDate);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetTime(const AValue: TTime);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VDouble := AValue;
+  FExType.Options := Ord(rtTime);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetDateTime(const AValue: TDateTime);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VDouble := AValue;
+  FExType.Options := Ord(rtDateTime);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetTimeStamp(const AValue: TimeStamp);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VInt64 := AValue;
+  FExType.Options := Ord(rtTimeStamp);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetAnsiString(const AValue: AnsiString);
+var
+  LManagedData: Pointer;
+  LTarget: Pointer;
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  LStored.Source := NativeUInt(Pointer(AValue));
+
+  if (FExType.Options = DefaultSBCSStringOptions) then
+  begin
+    LManagedData := Pointer(FManagedData);
+    if (Assigned(LManagedData)) then
+    begin
+      LTarget := @PRttiContainerInterface(LManagedData).Value;
+      if (PPointer(LTarget)^ <> Pointer(AValue)) then
+      begin
+        RTTI_COPY_FUNCS[RTTI_COPYSTRING_FUNC](nil, LTarget, @LStored.Source);
+      end;
+      Exit;
+    end;
+  end else
+  begin
+    FExType.Options := DefaultSBCSStringOptions;
+  end;
+
+  FExType.CustomData := nil;
+  InternalInitData(RTTI_TYPE_RULES[rtSBCSString], @LStored.Source);
+end;
+
+procedure TValue.SetUnicodeString(const AValue: UnicodeString);
+var
+  LManagedData: Pointer;
+  LTarget: Pointer;
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  LStored.Source := NativeUInt(Pointer(AValue));
+
+  if (FExType.Options = Ord(rtUnicodeString)) then
+  begin
+    LManagedData := Pointer(FManagedData);
+    if (Assigned(LManagedData)) then
+    begin
+      LTarget := @PRttiContainerInterface(LManagedData).Value;
+      if (PPointer(LTarget)^ <> Pointer(AValue)) then
+      begin
+        RTTI_COPY_FUNCS[{$ifdef UNICODE}RTTI_COPYSTRING_FUNC{$else}RTTI_COPYWIDESTRING_FUNC{$endif}](nil, LTarget, @LStored.Source);
+      end;
+      Exit;
+    end;
+  end else
+  begin
+    FExType.Options := Ord(rtUnicodeString);
+  end;
+
+  FExType.CustomData := nil;
+  InternalInitData(RTTI_TYPE_RULES[rtUnicodeString], @LStored.Source);
+end;
+
+procedure TValue.SetObject(const AValue: TObject);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VPointer := AValue;
+  FExType.Options := Ord(rtObject);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetInterface(const AValue: IInterface);
+var
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  FExType.Options := Ord(rtInterface);
+  FExType.CustomData := nil;
+  if (Pointer(FManagedData) <> Pointer(AValue)) then
+  begin
+    LStored.Source := NativeUInt(Pointer(AValue));
+    RTTI_COPY_FUNCS[RTTI_COPYINTERFACE_FUNC](nil, @FManagedData, @LStored.Source);
+  end;
+end;
+
+procedure TValue.SetClass(const AValue: TClass);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VClass := AValue;
+  FExType.Options := Ord(rtClassRef);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetBytes(const AValue: TBytes);
+var
+  LManagedData: Pointer;
+  LTarget: Pointer;
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  LStored.Source := NativeUInt(Pointer(AValue));
+
+  if (FExType.Options = Ord(rtBytes)) then
+  begin
+    LManagedData := Pointer(FManagedData);
+    if (Assigned(LManagedData)) then
+    begin
+      LTarget := @PRttiContainerInterface(LManagedData).Value;
+      if (PPointer(LTarget)^ <> Pointer(AValue)) then
+      begin
+        RTTI_COPY_FUNCS[RTTI_COPYDYNARRAYSIMPLE_FUNC](nil, LTarget, @LStored.Source);
+      end;
+      Exit;
+    end;
+  end else
+  begin
+    FExType.Options := Ord(rtBytes);
+  end;
+
+  FExType.CustomData := nil;
+  InternalInitData(RTTI_TYPE_RULES[rtBytes], @LStored.Source);
+end;
+
+procedure TValue.SetMethod(const AValue: TMethod);
+var
+  LManagedData: Pointer;
+begin
+  FBuffer.VMethod := AValue;
+  FExType.Options := Ord(rtMethod);
+  FExType.CustomData := nil;
+
+  LManagedData := Pointer(FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+procedure TValue.SetVarData(const AValue: TVarData);
+label
+  type_string, invalid, type_8, type_16, type_32, type_64, no_type_data;
+var
+  LType: Integer;
+  LSource, LManagedData: Pointer;
+begin
+  // variant type
+  LType := AValue.VType;
+  LSource := @AValue.VWords[3];
+  if (LType and varByRef <> 0) then
+  begin
+    LType := LType and (not varByRef);
+    LSource := PPointer(LSource)^;
+  end;
+
+  // initialization
+  case LType of
+    varBoolean:
+    begin
+      FExType.Options := Ord(rtBoolean8);
+      goto type_8;
+    end;
+    varShortInt:
+    begin
+      FExType.Options := Ord(rtInt8);
+      FExType.RangeData := @INT8_TYPE_DATA;
+      goto type_8;
+    end;
+    varByte:
+    begin
+      FExType.Options := Ord(rtUInt8);
+      FExType.RangeData := @UINT8_TYPE_DATA;
+      goto type_8;
+    end;
+    varSmallInt:
+    begin
+      FExType.Options := Ord(rtInt16);
+      FExType.RangeData := @INT16_TYPE_DATA;
+      goto type_16;
+    end;
+    varWord:
+    begin
+      FExType.Options := Ord(rtUInt16);
+      FExType.RangeData := @UINT16_TYPE_DATA;
+      goto type_16;
+    end;
+    varInteger:
+    begin
+      FExType.Options := Ord(rtInt32);
+      FExType.RangeData := @INT32_TYPE_DATA;
+      goto type_32;
+    end;
+    varLongWord:
+    begin
+      FExType.Options := Ord(rtUInt32);
+      FExType.RangeData := @UINT32_TYPE_DATA;
+      goto type_32;
+    end;
+    varInt64:
+    begin
+      FExType.Options := Ord(rtInt64);
+      FExType.RangeData := @INT64_TYPE_DATA;
+      goto type_64;
+    end;
+    varUInt64:
+    begin
+      FExType.Options := Ord(rtUInt64);
+      FExType.RangeData := @UINT64_TYPE_DATA;
+      goto type_64;
+    end;
+    varSingle:
+    begin
+      FExType.Options := Ord(rtFloat);
+      goto type_32;
+    end;
+    varDouble:
+    begin
+      FExType.Options := Ord(rtDouble);
+      goto type_64;
+    end;
+    varCurrency:
+    begin
+      FExType.Options := Ord(rtCurrency);
+      goto type_64;
+    end;
+    varDate:
+    begin
+      FExType.Options := Ord(rtDateTime);
+      goto type_64;
+    end;
+    varString:
+    begin
+      FExType.Options := DefaultSBCSStringOptions;
+      goto type_string;
+    end;
+    {$ifdef UNICODE}
+    varUString:
+    begin
+      FExType.Options := Ord(rtUnicodeString);
+      goto type_string;
+    end;
+    {$endif}
+    varOleStr:
+    begin
+      FExType.Options := Ord(rtWideString);
+    type_string:
+      FExType.CustomData := nil;
+      InternalInitData(RTTI_TYPE_RULES[FExType.BaseType], LSource);
+      Exit;
+    end;
+    varDispatch:
+    begin
+      SetInterface(IInterface(LSource^));
+      Exit;
+    end;
+  else
+  invalid:
+    System.Error(reVarTypeCast);
+  type_8:
+    FBuffer.VUInt8 := PByte(LSource)^;
+    goto no_type_data;
+  type_16:
+    FBuffer.VUInt16 := PWord(LSource)^;
+    goto no_type_data;
+  type_32:
+    FBuffer.VUInt32 := PCardinal(LSource)^;
+    goto no_type_data;
+  type_64:
+    FBuffer.VUInt64 := PUInt64(LSource)^;
+  no_type_data:
+    FExType.CustomData := nil;
+  end;
+
+  // interface initialization
+  LManagedData := Pointer(FManagedData);
+  if (Pointer(LManagedData) <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    if (Assigned(LManagedData)) then
+    begin
+      FManagedData := nil;
+    end;
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+  end;
+end;
+
+procedure TValue.SetVarRec(const AValue: TVarRec);
+label
+  type_string;
+var
+  LRulesBuffer: TRttiTypeRules;
+  LSource, LManagedData: Pointer;
+begin
+  case Cardinal(AValue.VType) of
+    vtBoolean:
+    begin
+      FExType.Options := Ord(rtBoolean8);
+      FBuffer.VBoolean := AValue.VBoolean;
+    end;
+    vtInteger:
+    begin
+      FExType.Options := Ord(rtInt32);
+      FExType.RangeData := @INT32_TYPE_DATA;
+      FBuffer.VInt32 := AValue.VInteger;
+    end;
+    vtInt64:
+    begin
+      FExType.Options := Ord(rtInt64);
+      FExType.RangeData := @INT64_TYPE_DATA;
+      FBuffer.VInt64 := AValue.VInt64^;
+    end;
+    vtExtended:
+    begin
+      case SizeOf(Extended) of
+        10: FExType.Options := Ord(rtLongDouble80);
+        12: FExType.Options := Ord(rtLongDouble96);
+        16: FExType.Options := Ord(rtLongDouble128);
+      else
+        FExType.Options := Ord(rtDouble);
+      end;
+      FExType.RangeData := nil;
+      FBuffer.VLongDouble := AValue.VExtended^;
+    end;
+    vtCurrency:
+    begin
+      FExType.Options := Ord(rtCurrency);
+      FExType.RangeData := nil;
+      FBuffer.VCurrency := AValue.VCurrency^;
+    end;
+    vtPointer:
+    begin
+      FExType.Options := Ord(rtPointer);
+      FExType.CustomData := nil;
+      FBuffer.VPointer := AValue.VPointer;
+    end;
+    vtObject:
+    begin
+      FExType.Options := Ord(rtObject);
+      FExType.CustomData := nil;
+      FBuffer.VPointer := Pointer(AValue.VObject);
+    end;
+    vtClass:
+    begin
+      FExType.Options := Ord(rtClassRef);
+      FExType.CustomData := nil;
+      FBuffer.VPointer := Pointer(AValue.VClass);
+    end;
+    vtInterface:
+    begin
+      SetInterface(IInterface(AValue.VInterface));
+      Exit;
+    end;
+    vtVariant:
+    begin
+      SetVarData(PVarData(AValue.VPointer)^);
+      Exit;
+    end;
+    vtString:
+    begin
+      LSource := AValue.VPointer;
+      FExType.Options := Ord(rtShortString) + (255 shl 16) {$ifdef SHORTSTRSUPPORT}+ (Ord(True) shl 24){$endif};
+      FExType.CustomData := nil;
+      LRulesBuffer.Size := PByte(LSource)^ + 1;
+      PNativeInt(@LRulesBuffer.Return)^ := 0;
+      {$ifdef SMALLINT}
+      PInteger(@LRulesBuffer.FinalFunc)^ := 0;
+      {$endif}
+      {$ifdef SHORTSTRSUPPORT}
+      LRulesBuffer.Flags := RTTI_RULEFLAGS_REFERENCE + [tfVarHigh];
+      {$endif}
+      LRulesBuffer.CopyFunc := RTTI_COPYSHORTSTRING_FUNC;
+      LRulesBuffer.WeakCopyFunc := RTTI_COPYSHORTSTRING_FUNC;
+      InternalInitData(@LRulesBuffer, LSource);
+      Exit;
+    end;
+    vtAnsiString:
+    begin
+      FExType.Options := DefaultSBCSStringOptions;
+      goto type_string;
+    end;
+    {$ifdef UNICODE}
+    vtUnicodeString:
+    begin
+      FExType.Options := Ord(rtUnicodeString);
+      goto type_string;
+    end;
+    {$endif}
+    vtWideString:
+    begin
+      FExType.Options := Ord(rtWideString);
+    type_string:
+      FExType.CustomData := nil;
+      InternalInitData(RTTI_TYPE_RULES[FExType.BaseType], @AValue.VPointer);
+      Exit;
+    end;
+    vtChar:
+    begin
+      FExType.Options := Ord(rtSBCSChar);
+      FExType.RangeData := nil;
+      FBuffer.VUInt8 := Byte(AValue.VInteger{VChar});
+    end;
+    vtWideChar:
+    begin
+      FExType.Options := Ord(rtWideChar);
+      FExType.RangeData := nil;
+      FBuffer.VUInt16 := Word(AValue.VWideChar);
+    end;
+    vtPChar:
+    begin
+      FExType.Options := Ord(rtPointer);
+      FExType.RangeData := nil;
+      FBuffer.VPointer := AValue.VPointer{VPChar};
+    end;
+    vtPWideChar:
+    begin
+      FExType.Options := Ord(rtPointer);
+      FExType.RangeData := nil;
+      FBuffer.VPointer := AValue.VPWideChar;
+    end;
+  end;
+
+  // interface initialization
+  LManagedData := Pointer(FManagedData);
+  if (Pointer(LManagedData) <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    if (Assigned(LManagedData)) then
+    begin
+      FManagedData := nil;
+    end;
+    Pointer(FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+  end;
+end;
+
+function TValue.InternalGetPointer: Pointer;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtPointer,
+    rtPSBCSChars,
+    rtPUTF8Chars,
+    rtPWideChars,
+    rtPUCS4Chars,
+    rtClassRef,
+    rtObject,
+    rtFunction: Result := FBuffer.VPointer;
+    rtClosure,
+    rtInterface: Result := Pointer(FManagedData);
+    rtMethod: Result := FBuffer.VMethod.Code;
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := nil;
+  end;
+end;
+
+function TValue.InternalGetBoolean: Boolean;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtBoolean8: Result := FBuffer.VBoolean;
+    rtBool8: Result := (FBuffer.VUInt8 <> 0);
+    rtBoolean16,
+    rtBool16: Result := (FBuffer.VUInt16 <> 0);
+    rtBoolean32,
+    rtBool32: Result := (FBuffer.VUInt32 <> 0);
+    rtBoolean64,
+    rtBool64: Result := (FBuffer.VUInt64 <> 0);
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := False;
+  end;
+end;
+
+function TValue.InternalGetInteger: Integer;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtBoolean8,
+    rtBool8,
+    rtUInt8: Result := FBuffer.VUInt8;
+    rtBoolean16,
+    rtBool16,
+    rtUInt16: Result := FBuffer.VUInt16;
+    rtInt8,
+    rtEnumeration8: Result := FBuffer.VInt8;
+    rtInt16,
+    rtEnumeration16: Result := FBuffer.VInt16;
+    rtBoolean32,
+    rtBoolean64,
+    rtBool32,
+    rtBool64,
+    rtInt32,
+    rtUInt32,
+    rtInt64,
+    rtUInt64,
+    rtEnumeration32,
+    rtEnumeration64,
+    rtComp,
+    rtTimeStamp: Result := FBuffer.VInt32;
+    rtCurrency: Result := Round(FBuffer.VInt64 * (1 / 10000));
+    rtFloat: Result := Round(FBuffer.VSingle);
+    rtDouble: Result := Round(FBuffer.VDouble);
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := Round(FBuffer.VLongDouble);
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetCardinal: Cardinal;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtBoolean8,
+    rtBool8,
+    rtUInt8: Result := FBuffer.VUInt8;
+    rtBoolean16,
+    rtBool16,
+    rtUInt16: Result := FBuffer.VUInt16;
+    rtInt8,
+    rtEnumeration8: Result := Cardinal(Integer(FBuffer.VInt8));
+    rtInt16,
+    rtEnumeration16: Result := Cardinal(Integer(FBuffer.VInt16));
+    rtBoolean32,
+    rtBoolean64,
+    rtBool32,
+    rtBool64,
+    rtInt32,
+    rtUInt32,
+    rtInt64,
+    rtUInt64,
+    rtEnumeration32,
+    rtEnumeration64,
+    rtComp,
+    rtTimeStamp: Result := FBuffer.VUInt32;
+    rtCurrency: Result := Round(FBuffer.VInt64 * (1 / 10000));
+    rtFloat: Result := Round(FBuffer.VSingle);
+    rtDouble: Result := Round(FBuffer.VDouble);
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := Round(FBuffer.VLongDouble);
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetInt64: Int64;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtBoolean8,
+    rtBool8,
+    rtUInt8: Result := FBuffer.VUInt8;
+    rtBoolean16,
+    rtBool16,
+    rtUInt16: Result := FBuffer.VUInt16;
+    rtInt8,
+    rtEnumeration8: Result := FBuffer.VInt8;
+    rtInt16,
+    rtEnumeration16: Result := FBuffer.VInt16;
+    rtBoolean32,
+    rtBool32,
+    rtUInt32: Result := FBuffer.VUInt32;
+    rtInt32,
+    rtEnumeration32:  Result := FBuffer.VInt32;
+    rtBoolean64,
+    rtBool64,
+    rtInt64,
+    rtUInt64,
+    rtEnumeration64,
+    rtComp,
+    rtTimeStamp: Result := FBuffer.VInt64;
+    rtCurrency: Result := Round(FBuffer.VInt64 * (1 / 10000));
+    rtFloat: Result := Round(FBuffer.VSingle);
+    rtDouble: Result := Round(FBuffer.VDouble);
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := Round(FBuffer.VLongDouble);
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetUInt64: UInt64;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtBoolean8,
+    rtBool8,
+    rtUInt8: Result := FBuffer.VUInt8;
+    rtBoolean16,
+    rtBool16,
+    rtUInt16: Result := FBuffer.VUInt16;
+    rtInt8,
+    rtEnumeration8: Result := UInt64(Int64(FBuffer.VInt8));
+    rtInt16,
+    rtEnumeration16: Result := UInt64(Int64(FBuffer.VInt16));
+    rtBoolean32,
+    rtBool32,
+    rtUInt32: Result := FBuffer.VUInt32;
+    rtInt32,
+    rtEnumeration32:  Result := UInt64(Int64(FBuffer.VInt32));
+    rtBoolean64,
+    rtBool64,
+    rtInt64,
+    rtUInt64,
+    rtEnumeration64,
+    rtComp,
+    rtTimeStamp: Result := FBuffer.VUInt64;
+    rtCurrency: Result := Round(FBuffer.VInt64 * (1 / 10000));
+    rtFloat: Result := Round(FBuffer.VSingle);
+    rtDouble: Result := Round(FBuffer.VDouble);
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := Round(FBuffer.VLongDouble);
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetCurrency: Currency;
+label
+  from_int64, failure;
+var
+  LInt64Value: Int64;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtUInt8:
+    begin
+      LInt64Value := FBuffer.VUInt8;
+      goto from_int64;
+    end;
+    rtInt8,
+    rtEnumeration8:
+    begin
+      LInt64Value := FBuffer.VInt8;
+      goto from_int64;
+    end;
+    rtUInt16:
+    begin
+      LInt64Value := FBuffer.VUInt16;
+      goto from_int64;
+    end;
+    rtInt16,
+    rtEnumeration16:
+    begin
+      LInt64Value := FBuffer.VInt16;
+      goto from_int64;
+    end;
+    rtUInt32:
+    begin
+      LInt64Value := FBuffer.VUInt32;
+      goto from_int64;
+    end;
+    rtInt32,
+    rtEnumeration32:
+    begin
+      LInt64Value := FBuffer.VInt32;
+      goto from_int64;
+    end;
+    rtInt64,
+    rtUInt64,
+    rtEnumeration64,
+    rtComp:
+    begin
+      LInt64Value := FBuffer.VInt64;
+    from_int64:
+      Result := LInt64Value;
+    end;
+    rtCurrency: Result := FBuffer.VCurrency;
+    rtFloat: Result := FBuffer.VSingle;
+    rtDouble: Result := FBuffer.VDouble;
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := FBuffer.VLongDouble;
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetSingle: Single;
+label
+  from_int32, failure;
+var
+  LInt32Value: Integer;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtUInt8:
+    begin
+      LInt32Value := FBuffer.VUInt8;
+      goto from_int32;
+    end;
+    rtInt8,
+    rtEnumeration8:
+    begin
+      LInt32Value := FBuffer.VInt8;
+      goto from_int32;
+    end;
+    rtUInt16:
+    begin
+      LInt32Value := FBuffer.VUInt16;
+      goto from_int32;
+    end;
+    rtInt16,
+    rtEnumeration16:
+    begin
+      LInt32Value := FBuffer.VInt16;
+    from_int32:
+      Result := LInt32Value;
+    end;
+    rtUInt32: Result := Int64(FBuffer.VUInt32);
+    rtInt32,
+    rtEnumeration32: Result := FBuffer.VInt32;
+    rtInt64,
+    rtUInt64,
+    rtEnumeration64,
+    rtComp,
+    rtTimeStamp: Result := FBuffer.VInt64;
+    rtCurrency: Result := FBuffer.VInt64 * (1 / 10000);
+    rtFloat: Result := FBuffer.VSingle;
+    rtDouble,
+    rtDate,
+    rtTime,
+    rtDateTime: Result := FBuffer.VDouble;
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := FBuffer.VLongDouble;
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetDouble: Double;
+label
+  from_int32, failure;
+var
+  LInt32Value: Integer;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtUInt8:
+    begin
+      LInt32Value := FBuffer.VUInt8;
+      goto from_int32;
+    end;
+    rtInt8,
+    rtEnumeration8:
+    begin
+      LInt32Value := FBuffer.VInt8;
+      goto from_int32;
+    end;
+    rtUInt16:
+    begin
+      LInt32Value := FBuffer.VUInt16;
+      goto from_int32;
+    end;
+    rtInt16,
+    rtEnumeration16:
+    begin
+      LInt32Value := FBuffer.VInt16;
+    from_int32:
+      Result := LInt32Value;
+    end;
+    rtUInt32: Result := Int64(FBuffer.VUInt32);
+    rtInt32,
+    rtEnumeration32: Result := FBuffer.VInt32;
+    rtInt64,
+    rtUInt64,
+    rtEnumeration64,
+    rtComp,
+    rtTimeStamp: Result := FBuffer.VInt64;
+    rtCurrency: Result := FBuffer.VInt64 * (1 / 10000);
+    rtFloat: Result := FBuffer.VSingle;
+    rtDouble,
+    rtDate,
+    rtTime,
+    rtDateTime: Result := FBuffer.VDouble;
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := FBuffer.VLongDouble;
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetExtended: Extended;
+label
+  from_int32, failure;
+var
+  LInt32Value: Integer;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtUInt8:
+    begin
+      LInt32Value := FBuffer.VUInt8;
+      goto from_int32;
+    end;
+    rtInt8,
+    rtEnumeration8:
+    begin
+      LInt32Value := FBuffer.VInt8;
+      goto from_int32;
+    end;
+    rtUInt16:
+    begin
+      LInt32Value := FBuffer.VUInt16;
+      goto from_int32;
+    end;
+    rtInt16,
+    rtEnumeration16:
+    begin
+      LInt32Value := FBuffer.VInt16;
+    from_int32:
+      Result := LInt32Value;
+    end;
+    rtUInt32: Result := Int64(FBuffer.VUInt32);
+    rtInt32,
+    rtEnumeration32: Result := FBuffer.VInt32;
+    rtInt64,
+    rtUInt64,
+    rtEnumeration64,
+    rtComp,
+    rtTimeStamp: Result := FBuffer.VInt64;
+    rtCurrency: Result := FBuffer.VInt64 * (1 / 10000);
+    rtFloat: Result := FBuffer.VSingle;
+    rtDouble,
+    rtDate,
+    rtTime,
+    rtDateTime: Result := FBuffer.VDouble;
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128: Result := FBuffer.VLongDouble;
+    {$endif}
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetDate: TDate;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtDate: Result := FBuffer.VDouble;
+    rtDateTime: Result := Trunc(FBuffer.VDouble);
+    rtTimeStamp: Result := Trunc((FBuffer.VInt64 - TIMESTAMP_DELTA) * TIMESTAMP_UNDAY);
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetTime: TTime;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtTime: Result := FBuffer.VDouble;
+    rtDateTime: Result := Frac(FBuffer.VDouble);
+    rtTimeStamp: Result := Frac((FBuffer.VInt64 - TIMESTAMP_DELTA) * TIMESTAMP_UNDAY);
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetDateTime: TDateTime;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtDate,
+    rtTime,
+    rtDateTime: Result := FBuffer.VDouble;
+    rtTimeStamp: Result := (FBuffer.VInt64 - TIMESTAMP_DELTA) * TIMESTAMP_UNDAY;
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+function TValue.InternalGetTimeStamp: TimeStamp;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtTimeStamp: Result := FBuffer.VInt64;
+    rtDate,
+    rtTime,
+    rtDateTime: Result := Round(FBuffer.VDouble * TIMESTAMP_DAY + TIMESTAMP_DELTA);
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := 0;
+  end;
+end;
+
+procedure TValue.InternalGetAnsiString(var Result: AnsiString);
+label
+  failure;
+var
+  LValue: Pointer;
+  LCodePage: Word;
+  LCount: Integer;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  LValue := GetData;
+  case (FExType.BaseType) of
+    rtSBCSChar:
+    begin
+      LCount := 1;
+      LCodePage := FExType.CodePage;
+    end;
+    rtUTF8Char:
+    begin
+      LCount := 1;
+      LCodePage := CP_UTF8;
+    end;
+    rtWideChar:
+    begin
+      LCount := 1;
+      LCodePage := CP_UTF16;
+    end;
+    rtUCS4Char:
+    begin
+      LCount := 1;
+      LCodePage := CP_UTF32;
+    end;
+    rtPSBCSChars:
+    begin
+      LCount := TCharacters.LStrLen(PPointer(LValue)^);
+      LCodePage := FExType.CodePage;
+    end;
+    rtPUTF8Chars:
+    begin
+      LCount := TCharacters.LStrLen(PPointer(LValue)^);;
+      LCodePage := CP_UTF8;
+    end;
+    rtPWideChars:
+    begin
+      LCount := TCharacters.WStrLen(PPointer(LValue)^);;
+      LCodePage := CP_UTF16;
+    end;
+    rtPUCS4Chars:
+    begin
+      LCount := TCharacters.UStrLen(PPointer(LValue)^);;
+      LCodePage := CP_UTF32;
+    end;
+    rtSBCSString, rtUTF8String:
+    begin
+      if (FExType.BaseType = rtUTF8String) then
+      begin
+        LCodePage := CP_UTF8;
+      end else
+      begin
+        LCodePage := FExType.CodePage;
+      end;
+
+      if (LCodePage = DefaultCP) then
+      begin
+        Result := PAnsiString(LValue)^;
+        Exit;
+      end;
+
+      LCount := Length(PAnsiString(LValue)^);
+      LValue := PPointer(LValue)^;
+    end;
+    rtWideString:
+    begin
+      LCount := Length(PWideString(LValue)^);
+      LValue := PPointer(LValue)^;
+      LCodePage := CP_UTF16;
+    end;
+    rtUnicodeString:
+    begin
+      LCount := Length(PUnicodeString(LValue)^);
+      LValue := PPointer(LValue)^;
+      LCodePage := CP_UTF16;
+    end;
+    rtUCS4String:
+    begin
+      LCount := TCharacters.UCS4StringLen(PUCS4String(LValue)^);
+      LValue := PPointer(LValue)^;
+      LCodePage := CP_UTF32;
+    end;
+    rtShortString:
+    begin
+      LCount := PByte(LValue)^;
+      Inc(NativeInt(LValue));
+      LCodePage := CP_UTF8;
+    end;
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Exit;
+  end;
+
+  if (LCount <= 0) then
+  begin
+    Result := {$ifdef ANSISTRSUPPORT}''{$else}nil{$endif};
+  end else
+  case LCodePage of
+    CP_UTF16:
+    begin
+      TCharacters.AnsiFromUnicode(DefaultCP, Result, LValue, LCount);
+    end;
+    CP_UTF32:
+    begin
+      TCharacters.AnsiFromUCS4(DefaultCP, Result, LValue, LCount);
+    end;
+  else
+    if (LCodePage = DefaultCP) then
+    begin
+      SetLength(Result, LCount);
+      Move(LValue^, Pointer(Result)^, LCount);
+    end else
+    begin
+      TCharacters.AnsiFromAnsi(DefaultCP, Result, LCodePage, LValue, LCount);
+    end;
+  end;
+end;
+
+procedure TValue.InternalGetUnicodeString(var Result: UnicodeString);
+label
+  failure;
+var
+  LValue: Pointer;
+  LCodePage: Word;
+  LCount: Integer;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  LValue := GetData;
+  case (FExType.BaseType) of
+    rtSBCSChar:
+    begin
+      LCount := 1;
+      LCodePage := FExType.CodePage;
+    end;
+    rtUTF8Char:
+    begin
+      LCount := 1;
+      LCodePage := CP_UTF8;
+    end;
+    rtWideChar:
+    begin
+      LCount := 1;
+      LCodePage := CP_UTF16;
+    end;
+    rtUCS4Char:
+    begin
+      LCount := 1;
+      LCodePage := CP_UTF32;
+    end;
+    rtPSBCSChars:
+    begin
+      LCount := TCharacters.LStrLen(PPointer(LValue)^);
+      LCodePage := FExType.CodePage;
+    end;
+    rtPUTF8Chars:
+    begin
+      LCount := TCharacters.LStrLen(PPointer(LValue)^);;
+      LCodePage := CP_UTF8;
+    end;
+    rtPWideChars:
+    begin
+      LCount := TCharacters.WStrLen(PPointer(LValue)^);;
+      LCodePage := CP_UTF16;
+    end;
+    rtPUCS4Chars:
+    begin
+      LCount := TCharacters.UStrLen(PPointer(LValue)^);;
+      LCodePage := CP_UTF32;
+    end;
+    rtSBCSString, rtUTF8String:
+    begin
+      if (FExType.BaseType = rtUTF8String) then
+      begin
+        LCodePage := CP_UTF8;
+      end else
+      begin
+        LCodePage := FExType.CodePage;
+      end;
+      LCount := Length(PAnsiString(LValue)^);
+      LValue := PPointer(LValue)^;
+    end;
+    rtWideString:
+    begin
+      LCount := Length(PWideString(LValue)^);
+      LValue := PPointer(LValue)^;
+      LCodePage := CP_UTF16;
+    end;
+    rtUnicodeString:
+    begin
+      Result := PUnicodeString(LValue)^;
+      Exit;
+    end;
+    rtUCS4String:
+    begin
+      LCount := Length(PUCS4String(LValue)^);
+      LValue := PPointer(LValue)^;
+      LCodePage := CP_UTF32;
+    end;
+    rtShortString:
+    begin
+      LCount := PByte(LValue)^;
+      Inc(NativeInt(LValue));
+      LCodePage := CP_UTF8;
+    end;
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Exit;
+  end;
+
+  if (LCount <= 0) then
+  begin
+    Result := '';
+  end else
+  case LCodePage of
+    CP_UTF16:
+    begin
+      SetLength(Result, LCount);
+      Move(LValue^, Pointer(Result)^, LCount * SizeOf(WideChar));
+    end;
+    CP_UTF32:
+    begin
+      TCharacters.UnicodeFromUCS4(Result, LValue, LCount);
+    end;
+  else
+    TCharacters.UnicodeFromAnsi(Result, LCodePage, LValue, LCount);
+  end;
+end;
+
+function TValue.InternalGetObject: TObject;
+label
+  failure;
+const
+  ObjCastGUID: TGUID = '{CEDF24DE-80A4-447D-8C75-EB871DC121FD}';
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtObject: Result := TObject(FBuffer.VPointer);
+    rtInterface:
+    begin
+      if (FManagedData.QueryInterface(ObjCastGUID, Pointer(Result)) <> S_OK) then
+      begin
+        Result := nil;
+      end;
+    end
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := nil;
+  end;
+end;
+
+procedure TValue.InternalGetInterface(var Result{: unsafe IInterface});
+label
+  failure;
+var
+  LObject: Pointer;
+  LClass: TClass;
+  LInterfaceTable: PInterfaceTable;
+begin
+  if (not Assigned(FManagedData)) then
+  begin
+    {$ifdef WEAKINTFREF}
+      Pointer(Result) := nil;
+    {$else}
+      IInterface(Result) := nil;
+    {$endif}
+    Exit;
+  end;
+
+  case (FExType.BaseType) of
+    rtObject:
+    begin
+      LObject := FBuffer.VPointer;
+
+      if (Assigned(LObject)) then
+      begin
+        LClass := TClass(PPointer(LObject)^);
+
+        repeat
+          LInterfaceTable := PPointer(NativeInt(LClass) + vmtIntfTable)^;
+          if (Assigned(LInterfaceTable)) then
+          begin
+            {$ifdef WEAKINTFREF}
+              Pointer(Result) := Pointer(NativeInt(LObject) + LInterfaceTable.Entries[0].IOffset);
+            {$else}
+              IInterface(Result) := IInterface(Pointer(NativeInt(LObject) + LInterfaceTable.Entries[0].IOffset));
+            {$endif}
+            Exit;
+          end;
+
+          LClass := LClass.ClassParent;
+        until (not Assigned(LClass));
+      end;
+
+      goto failure;
+    end;
+    rtInterface,
+    rtClosure:
+    begin
+      {$ifdef WEAKINTFREF}
+        Pointer(Result) := Pointer(FManagedData);
+      {$else}
+        IInterface(Result) := FManagedData;
+      {$endif}
+    end
+  else
+  failure:
+    System.Error(reInvalidCast);
+  end;
+end;
+
+function TValue.InternalGetClass: TClass;
+label
+  failure;
+var
+  LObject: Pointer;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtClassRef: Result := TClass(FBuffer.VPointer);
+    rtObject:
+    begin
+      LObject := FBuffer.VPointer;
+      if (Assigned(LObject)) then
+      begin
+        Result := PPointer(LObject)^;
+      end else
+      begin
+        Result := nil;
+      end;
+    end;
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := nil;
+  end;
+end;
+
+procedure TValue.InternalGetBytes(var Result: TBytes);
+label
+  failure;
+var
+  LValue: Pointer;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  LValue := GetData;
+  case (FExType.BaseType) of
+    rtBytes: Result := PBytes(LValue)^;
+  else
+  failure:
+    System.Error(reInvalidCast);
+    Result := nil;
+  end;
+end;
+
+function TValue.GetPointer: Pointer;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtPointer) then
+  begin
+    Result := FBuffer.VPointer;
+  end else
+  begin
+    Result := InternalGetPointer;
+  end;
+end;
+
+function TValue.GetBoolean: Boolean;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtBoolean8) then
+  begin
+    Result := FBuffer.VBoolean;
+  end else
+  begin
+    Result := InternalGetBoolean;
+  end;
+end;
+
+function TValue.GetInteger: Integer;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtInt32) then
+  begin
+    Result := FBuffer.VInt32;
+  end else
+  begin
+    Result := InternalGetInteger;
+  end;
+end;
+
+function TValue.GetCardinal: Cardinal;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtUInt32) then
+  begin
+    Result := FBuffer.VUInt32;
+  end else
+  begin
+    Result := InternalGetCardinal;
+  end;
+end;
+
+function TValue.GetInt64: Int64;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtInt64) then
+  begin
+    Result := FBuffer.VInt64;
+  end else
+  begin
+    Result := InternalGetInt64;
+  end;
+end;
+
+function TValue.GetUInt64: UInt64;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtUInt64) then
+  begin
+    Result := FBuffer.VUInt64;
+  end else
+  begin
+    Result := InternalGetUInt64;
+  end;
+end;
+
+function TValue.GetCurrency: Currency;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtCurrency) then
+  begin
+    Result := FBuffer.VCurrency;
+  end else
+  begin
+    Result := InternalGetCurrency;
+  end;
+end;
+
+function TValue.GetSingle: Single;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtFloat) then
+  begin
+    Result := FBuffer.VSingle;
+  end else
+  begin
+    Result := InternalGetSingle;
+  end;
+end;
+
+function TValue.GetDouble: Double;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtDouble) then
+  begin
+    Result := FBuffer.VDouble;
+  end else
+  begin
+    Result := InternalGetDouble;
+  end;
+end;
+
+function TValue.GetExtended: Extended;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType in [rtLongDouble80, rtLongDouble96, rtLongDouble128]) then
+  begin
+    Result := FBuffer.VLongDouble;
+  end else
+  begin
+    Result := InternalGetExtended;
+  end;
+end;
+
+function TValue.GetDate: TDate;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtDate) then
+  begin
+    Result := FBuffer.VDouble;
+  end else
+  begin
+    Result := InternalGetDate;
+  end;
+end;
+
+function TValue.GetTime: TTime;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtTime) then
+  begin
+    Result := FBuffer.VDouble;
+  end else
+  begin
+    Result := InternalGetTime;
+  end;
+end;
+
+function TValue.GetDateTime: TDateTime;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtDateTime) then
+  begin
+    Result := FBuffer.VDouble;
+  end else
+  begin
+    Result := InternalGetDateTime;
+  end;
+end;
+
+function TValue.GetTimeStamp: TimeStamp;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtTimeStamp) then
+  begin
+    Result := FBuffer.VInt64;
+  end else
+  begin
+    Result := InternalGetTimeStamp;
+  end;
+end;
+
+function TValue.GetAnsiString: AnsiString;
+var
+  LManagedData: Pointer;
+  LSource: Pointer;
+begin
+  LManagedData := Pointer(FManagedData);
+  if (Assigned(LManagedData)) and (FExType.BaseType = rtSBCSString) then
+  begin
+    LSource := @PRttiContainerInterface(LManagedData).Value;
+    if (PPointer(LSource)^ <> Pointer(Result)) then
+    begin
+      RTTI_COPY_FUNCS[RTTI_COPYSTRING_FUNC](nil, @Result, LSource);
+    end;
+  end else
+  begin
+    InternalGetAnsiString(Result);
+  end;
+end;
+
+function TValue.GetUnicodeString: UnicodeString;
+var
+  LManagedData: Pointer;
+  LSource: Pointer;
+begin
+  LManagedData := Pointer(FManagedData);
+  if (Assigned(LManagedData)) and (FExType.BaseType = rtUnicodeString) then
+  begin
+    LSource := @PRttiContainerInterface(LManagedData).Value;
+    if (PPointer(LSource)^ <> Pointer(Result)) then
+    begin
+      RTTI_COPY_FUNCS[{$ifdef UNICODE}RTTI_COPYSTRING_FUNC{$else}RTTI_COPYWIDESTRING_FUNC{$endif}](nil, @Result, LSource);
+    end;
+  end else
+  begin
+    InternalGetUnicodeString(Result);
+  end;
+end;
+
+function TValue.GetObject: TObject;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtObject) then
+  begin
+    Result := FBuffer.VPointer;
+  end else
+  begin
+    Result := InternalGetObject;
+  end;
+end;
+
+function TValue.GetInterface: IInterface;
+var
+  LManagedData: Pointer;
+begin
+  LManagedData := Pointer(FManagedData);
+  if (not Assigned(LManagedData)) or (FExType.BaseType in [rtInterface, rtClosure]) then
+  begin
+    {$ifdef WEAKINTFREF}
+      Pointer(Result) := LManagedData;
+    {$else}
+      if (LManagedData <> Pointer(Result)) then
+      begin
+        RTTI_COPY_FUNCS[RTTI_COPYINTERFACE_FUNC](nil, @Result, @FManagedData);
+      end;
+    {$endif}
+  end else
+  begin
+    InternalGetInterface(Result);
+  end;
+end;
+
+function TValue.GetClass: TClass;
+begin
+  if (Assigned(FManagedData)) and (FExType.BaseType = rtClassRef) then
+  begin
+    Result := FBuffer.VClass;
+  end else
+  begin
+    Result := InternalGetClass;
+  end;
+end;
+
+function TValue.GetBytes: TBytes;
+var
+  LManagedData: Pointer;
+  LSource: Pointer;
+begin
+  LManagedData := Pointer(FManagedData);
+  if (Assigned(LManagedData)) and (FExType.BaseType = rtBytes) then
+  begin
+    LSource := @PRttiContainerInterface(LManagedData).Value;
+    if (PPointer(LSource)^ <> Pointer(Result)) then
+    begin
+      RTTI_COPY_FUNCS[RTTI_COPYDYNARRAYSIMPLE_FUNC](nil, @Result, LSource);
+    end;
+  end else
+  begin
+    InternalGetBytes(Result);
+  end;
+end;
+
+function TValue.GetMethod: TMethod;
+label
+  failure;
+begin
+  if (not Assigned(FManagedData)) then goto failure;
+
+  case (FExType.BaseType) of
+    rtMethod: Result := FBuffer.VMethod;
+  else
+  failure:
+    System.Error(reInvalidCast);
+  end;
+end;
+
+function TValue.GetVarData: TVarData;
+label
+  get_pointer_value, failure;
+begin
+  Result.VType := varEmpty;
+  if (not Assigned(FManagedData)) then goto failure;
+
+  with Result do
+  case (FExType.BaseType) of
+    rtBoolean8,
+    rtBool8:
+    begin
+      VType := varBoolean;
+      VBoolean := (FBuffer.VUInt8 <> 0);
+    end;
+    rtBoolean16,
+    rtBool16:
+    begin
+      VType := varBoolean;
+      VBoolean := (FBuffer.VUInt16 <> 0);
+    end;
+    rtBoolean32,
+    rtBool32:
+    begin
+      VType := varBoolean;
+      VBoolean := (FBuffer.VUInt32 <> 0);
+    end;
+    rtBoolean64,
+    rtBool64:
+    begin
+      VType := varBoolean;
+      VBoolean := (FBuffer.VUInt64 <> 0);
+    end;
+    rtInt8,
+    rtEnumeration8:
+    begin
+      VType := varShortInt;
+      VShortInt := FBuffer.VInt8;
+    end;
+    rtUInt8:
+    begin
+      VType := varByte;
+      VByte := FBuffer.VUInt8;
+    end;
+    rtInt16,
+    rtEnumeration16:
+    begin
+      VType := varSmallInt;
+      VSmallInt := FBuffer.VInt16;
+    end;
+    rtUInt16:
+    begin
+      VType := varWord;
+      VWord := FBuffer.VUInt16;
+    end;
+    rtInt32,
+    rtEnumeration32:
+    begin
+      VType := varInteger;
+      VInteger := FBuffer.VInt32;
+    end;
+    rtUInt32:
+    begin
+      VType := varLongWord;
+      VLongWord := FBuffer.VUInt32;
+    end;
+    rtInt64,
+    rtComp,
+    rtEnumeration64:
+    begin
+      VType := varInt64;
+      VInt64 := FBuffer.VInt64;
+    end;
+    rtUInt64:
+    begin
+      VType := varUInt64;
+      VInt64 := FBuffer.VInt64;
+    end;
+    rtCurrency:
+    begin
+      VType := varCurrency;
+      VCurrency := FBuffer.VCurrency;
+    end;
+    rtFloat:
+    begin
+      VType := varSingle;
+      VSingle := FBuffer.VSingle;
+    end;
+    rtDouble:
+    begin
+      VType := varDouble;
+      VDouble := FBuffer.VDouble;
+    end;
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128:
+    begin
+      VType := varDouble;
+      VDouble := FBuffer.VLongDouble;
+    end;
+    {$endif}
+    rtDate,
+    rtTime,
+    rtDateTime:
+    begin
+      VType := varDate;
+      VDate := FBuffer.VDouble;
+    end;
+    rtTimeStamp:
+    begin
+      VType := varDate;
+      VDate := (FBuffer.VInt64 - TIMESTAMP_DELTA) * TIMESTAMP_UNDAY;
+    end;
+    {$ifdef SHORTSTRSUPPORT}
+    rtSBCSString:
+    begin
+      VType := varString;
+      goto get_pointer_value;
+    end;
+    {$endif}
+    {$ifdef UNICODE}
+    rtUnicodeString:
+    begin
+      VType := varUString;
+      goto get_pointer_value;
+    end;
+    {$endif}
+    rtWideString:
+    begin
+      VType := varOleStr;
+    get_pointer_value:
+      VPointer := PPointer(GetData)^;
+    end;
+    rtInterface:
+    begin
+      VType := varDispatch;
+      VDispatch := Pointer(FManagedData);
+    end;
+  else
+  failure:
+    System.Error(reInvalidCast);
+  end;
+end;
+
+function TValue.GetVarRec: TVarRec;
+label
+  get_pointer_value, get_pointer, failure;
+var
+  LInt64Value: PInt64;
+begin
+  Result.VType := 0;
+  if (not Assigned(FManagedData)) then goto failure;
+
+  with Result do
+  case (FExType.BaseType) of
+    rtPointer:
+    begin
+      VType := vtPointer;
+      VPointer := FBuffer.VPointer;
+    end;
+    rtBoolean8,
+    rtBool8:
+    begin
+      VType := vtBoolean;
+      VBoolean := (FBuffer.VUInt8 <> 0);
+    end;
+    rtBoolean16,
+    rtBool16:
+    begin
+      VType := vtBoolean;
+      VBoolean := (FBuffer.VUInt16 <> 0);
+    end;
+    rtBoolean32,
+    rtBool32:
+    begin
+      VType := vtBoolean;
+      VBoolean := (FBuffer.VUInt32 <> 0);
+    end;
+    rtBoolean64,
+    rtBool64:
+    begin
+      VType := vtBoolean;
+      VBoolean := (FBuffer.VUInt64 <> 0);
+    end;
+    rtInt8:
+    begin
+      VType := vtInteger;
+      VInteger := FBuffer.VInt8;
+    end;
+    rtUInt8:
+    begin
+      VType := vtInteger;
+      VInteger := FBuffer.VUInt8;
+    end;
+    rtInt16:
+    begin
+      VType := vtInteger;
+      VInteger := FBuffer.VInt16;
+    end;
+    rtUInt16:
+    begin
+      VType := vtInteger;
+      VInteger := FBuffer.VUInt16;
+    end;
+    rtInt32:
+    begin
+      VType := vtInteger;
+      VInteger := FBuffer.VInt32;
+    end;
+    rtUInt32:
+    begin
+      if (FBuffer.VInt32 >= 0) then
+      begin
+        VType := vtInteger;
+        VInteger := FBuffer.VInt32;
+      end else
+      begin
+        LInt64Value := Pointer(@FBuffer.VBytes[SizeOf(Integer)]);
+        LInt64Value^ := FBuffer.VInt32;
+        VType := vtInt64;
+        VInt64 := LInt64Value;
+      end;
+    end;
+    rtInt64, rtUInt64:
+    begin
+      VType := vtInt64;
+      VInt64 := @FBuffer.VInt64;
+    end;
+    {$ifdef EXTENDEDSUPPORT}
+    rtLongDouble80,
+    rtLongDouble96,
+    rtLongDouble128:
+    begin
+      VType := vtExtended;
+      VExtended := @FBuffer.VLongDouble;
+    end;
+    {$endif}
+    rtCurrency:
+    begin
+      VType := vtCurrency;
+      VCurrency := @FBuffer.VCurrency;
+    end;
+    rtSBCSChar,
+    rtUTF8Char:
+    begin
+      VType := vtChar;
+      VChar := AnsiChar(FBuffer.VUInt8);
+    end;
+    rtWideChar:
+    begin
+      VType := vtWideChar;
+      VWideChar := WideChar(FBuffer.VUInt16);
+    end;
+    rtShortString:
+    begin
+      VType := vtString;
+      goto get_pointer;
+    end;
+    rtSBCSString:
+    begin
+      VType := vtAnsiString;
+      goto get_pointer_value;
+    end;
+    rtWideString:
+    begin
+      VType := vtWideString;
+      goto get_pointer_value;
+    end;
+    {$ifdef UNICODE}
+    rtUnicodeString:
+    begin
+      VType := vtUnicodeString;
+      goto get_pointer_value;
+    end;
+    {$endif}
+    rtObject:
+    begin
+      VType := vtObject;
+      VPointer := FBuffer.VPointer;
+    end;
+    rtInterface:
+    begin
+      VType := vtInterface;
+    get_pointer_value:
+      VInterface := PPointer(GetData)^;
+    end;
+    rtClassRef:
+    begin
+      VType := vtClass;
+      VClass := FBuffer.VClass;
+    end;
+    rtOleVariant, rtVariant:
+    begin
+      VType := vtVariant;
+    get_pointer:
+      VPointer := GetData;
+    end;
+  else
+  failure:
+    System.Error(reInvalidCast);
+  end;
+end;
+
+{$ifdef OPERATORSUPPORT}
+class operator TValue.Implicit(const AValue: Pointer): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VPointer := AValue;
+  Result.FExType.Options := Ord(rtPointer);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: Boolean): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VBoolean := AValue;
+  Result.FExType.Options := Ord(rtBoolean8);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: Integer): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VInt32 := AValue;
+  Result.FExType.Options := Ord(rtInt32);
+  Result.FExType.RangeData := @INT32_TYPE_DATA;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: Cardinal): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VUInt32 := AValue;
+  Result.FExType.Options := Ord(rtUInt32);
+  Result.FExType.RangeData := @UINT32_TYPE_DATA;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: Int64): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VInt64 := AValue;
+  Result.FExType.Options := Ord(rtInt64);
+  Result.FExType.RangeData := @INT64_TYPE_DATA;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: UInt64): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VUInt64 := AValue;
+  Result.FExType.Options := Ord(rtUInt64);
+  Result.FExType.RangeData := @UINT64_TYPE_DATA;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: Currency): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VCurrency := AValue;
+  Result.FExType.Options := Ord(rtCurrency);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: Single): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VSingle := AValue;
+  Result.FExType.Options := Ord(rtFloat);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: Double): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VDouble := AValue;
+  Result.FExType.Options := Ord(rtDouble);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+{$ifdef EXTENDEDSUPPORT}
+class operator TValue.Implicit(const AValue: Extended): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VLongDouble := AValue;
+  Result.FExType.Options := Ord(rtLongDouble80);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+{$endif}
+
+class operator TValue.Implicit(const AValue: TDate): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VDouble := AValue;
+  Result.FExType.Options := Ord(rtDate);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TTime): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VDouble := AValue;
+  Result.FExType.Options := Ord(rtTime);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TDateTime): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VDouble := AValue;
+  Result.FExType.Options := Ord(rtDateTime);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TimeStamp): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VInt64 := AValue;
+  Result.FExType.Options := Ord(rtTimeStamp);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: AnsiString): TValue;
+var
+  LManagedData: Pointer;
+  LTarget: Pointer;
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  LStored.Source := NativeUInt(Pointer(AValue));
+
+  if (Result.FExType.Options = DefaultSBCSStringOptions) then
+  begin
+    LManagedData := Pointer(Result.FManagedData);
+    if (Assigned(LManagedData)) then
+    begin
+      LTarget := @PRttiContainerInterface(LManagedData).Value;
+      if (PPointer(LTarget)^ <> Pointer(AValue)) then
+      begin
+        RTTI_COPY_FUNCS[RTTI_COPYSTRING_FUNC](nil, LTarget, @LStored.Source);
+      end;
+      Exit;
+    end;
+  end else
+  begin
+    Result.FExType.Options := DefaultSBCSStringOptions;
+  end;
+
+  Result.FExType.CustomData := nil;
+  Result.InternalInitData(RTTI_TYPE_RULES[rtSBCSString], @LStored.Source);
+end;
+
+class operator TValue.Implicit(const AValue: UnicodeString): TValue;
+var
+  LManagedData: Pointer;
+  LTarget: Pointer;
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  LStored.Source := NativeUInt(Pointer(AValue));
+
+  if (Result.FExType.Options = Ord(rtUnicodeString)) then
+  begin
+    LManagedData := Pointer(Result.FManagedData);
+    if (Assigned(LManagedData)) then
+    begin
+      LTarget := @PRttiContainerInterface(LManagedData).Value;
+      if (PPointer(LTarget)^ <> Pointer(AValue)) then
+      begin
+        RTTI_COPY_FUNCS[{$ifdef UNICODE}RTTI_COPYSTRING_FUNC{$else}RTTI_COPYWIDESTRING_FUNC{$endif}](nil, LTarget, @LStored.Source);
+      end;
+      Exit;
+    end;
+  end else
+  begin
+    Result.FExType.Options := Ord(rtUnicodeString);
+  end;
+
+  Result.FExType.CustomData := nil;
+  Result.InternalInitData(RTTI_TYPE_RULES[rtUnicodeString], @LStored.Source);
+end;
+
+class operator TValue.Implicit(const AValue: TObject): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VPointer := AValue;
+  Result.FExType.Options := Ord(rtObject);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: IInterface): TValue;
+var
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  Result.FExType.Options := Ord(rtInterface);
+  Result.FExType.CustomData := nil;
+  if (Pointer(Result.FManagedData) <> Pointer(AValue)) then
+  begin
+    LStored.Source := NativeUInt(Pointer(AValue));
+    RTTI_COPY_FUNCS[RTTI_COPYINTERFACE_FUNC](nil, @Result.FManagedData, @LStored.Source);
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TClass): TValue;
+var
+  LManagedData: Pointer;
+begin
+  Result.FBuffer.VClass := AValue;
+  Result.FExType.Options := Ord(rtClassRef);
+  Result.FExType.CustomData := nil;
+
+  LManagedData := Pointer(Result.FManagedData);
+  if (LManagedData <> @RTTI_DUMMY_INTERFACE_DATA) then
+  begin
+    Pointer(Result.FManagedData) := @RTTI_DUMMY_INTERFACE_DATA;
+    if (Assigned(LManagedData)) then
+    begin
+      Result.InternalReleaseInterface(LManagedData);
+    end;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TBytes): TValue;
+var
+  LManagedData: Pointer;
+  LTarget: Pointer;
+  LStored: record
+    Source: NativeUInt;
+  end;
+begin
+  LStored.Source := NativeUInt(Pointer(AValue));
+
+  if (Result.FExType.Options = Ord(rtBytes)) then
+  begin
+    LManagedData := Pointer(Result.FManagedData);
+    if (Assigned(LManagedData)) then
+    begin
+      LTarget := @PRttiContainerInterface(LManagedData).Value;
+      if (PPointer(LTarget)^ <> Pointer(AValue)) then
+      begin
+        RTTI_COPY_FUNCS[RTTI_COPYDYNARRAYSIMPLE_FUNC](nil, LTarget, @LStored.Source);
+      end;
+      Exit;
+    end;
+  end else
+  begin
+    Result.FExType.Options := Ord(rtBytes);
+  end;
+
+  Result.FExType.CustomData := nil;
+  Result.InternalInitData(RTTI_TYPE_RULES[rtBytes], @LStored.Source);
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Pointer;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtPointer) then
+  begin
+    Result := AValue.FBuffer.VPointer;
+  end else
+  begin
+    Result := AValue.InternalGetPointer;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Boolean;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtBoolean8) then
+  begin
+    Result := AValue.FBuffer.VBoolean;
+  end else
+  begin
+    Result := AValue.InternalGetBoolean;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Integer;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtInt32) then
+  begin
+    Result := AValue.FBuffer.VInt32;
+  end else
+  begin
+    Result := AValue.InternalGetInteger;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Cardinal;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtUInt32) then
+  begin
+    Result := AValue.FBuffer.VUInt32;
+  end else
+  begin
+    Result := AValue.InternalGetCardinal;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Int64;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtInt64) then
+  begin
+    Result := AValue.FBuffer.VInt64;
+  end else
+  begin
+    Result := AValue.InternalGetInt64;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): UInt64;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtUInt64) then
+  begin
+    Result := AValue.FBuffer.VUInt64;
+  end else
+  begin
+    Result := AValue.InternalGetUInt64;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Currency;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtCurrency) then
+  begin
+    Result := AValue.FBuffer.VCurrency;
+  end else
+  begin
+    Result := AValue.InternalGetCurrency;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Single;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtFloat) then
+  begin
+    Result := AValue.FBuffer.VSingle;
+  end else
+  begin
+    Result := AValue.InternalGetSingle;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): Double;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtDouble) then
+  begin
+    Result := AValue.FBuffer.VDouble;
+  end else
+  begin
+    Result := AValue.InternalGetDouble;
+  end;
+end;
+
+{$ifdef EXTENDEDSUPPORT}
+class operator TValue.Implicit(const AValue: TValue): Extended;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType in [rtLongDouble80, rtLongDouble96, rtLongDouble128]) then
+  begin
+    Result := AValue.FBuffer.VLongDouble;
+  end else
+  begin
+    Result := AValue.InternalGetExtended;
+  end;
+end;
+{$endif}
+
+class operator TValue.Implicit(const AValue: TValue): TDate;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtDate) then
+  begin
+    Result := AValue.FBuffer.VDouble;
+  end else
+  begin
+    Result := AValue.InternalGetDate;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): TTime;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtTime) then
+  begin
+    Result := AValue.FBuffer.VDouble;
+  end else
+  begin
+    Result := AValue.InternalGetTime;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): TDateTime;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtDateTime) then
+  begin
+    Result := AValue.FBuffer.VDouble;
+  end else
+  begin
+    Result := AValue.InternalGetDateTime;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): TimeStamp;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtTimeStamp) then
+  begin
+    Result := AValue.FBuffer.VInt64;
+  end else
+  begin
+    Result := AValue.InternalGetTimeStamp;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): AnsiString;
+var
+  LManagedData: Pointer;
+  LSource: Pointer;
+begin
+  LManagedData := Pointer(AValue.FManagedData);
+  if (Assigned(LManagedData)) and (AValue.FExType.BaseType = rtSBCSString) then
+  begin
+    LSource := @PRttiContainerInterface(LManagedData).Value;
+    if (PPointer(LSource)^ <> Pointer(Result)) then
+    begin
+      RTTI_COPY_FUNCS[RTTI_COPYSTRING_FUNC](nil, @Result, LSource);
+    end;
+  end else
+  begin
+    AValue.InternalGetAnsiString(Result);
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): UnicodeString;
+var
+  LManagedData: Pointer;
+  LSource: Pointer;
+begin
+  LManagedData := Pointer(AValue.FManagedData);
+  if (Assigned(LManagedData)) and (AValue.FExType.BaseType = rtUnicodeString) then
+  begin
+    LSource := @PRttiContainerInterface(LManagedData).Value;
+    if (PPointer(LSource)^ <> Pointer(Result)) then
+    begin
+      RTTI_COPY_FUNCS[{$ifdef UNICODE}RTTI_COPYSTRING_FUNC{$else}RTTI_COPYWIDESTRING_FUNC{$endif}](nil, @Result, LSource);
+    end;
+  end else
+  begin
+    AValue.InternalGetUnicodeString(Result);
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): TObject;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtObject) then
+  begin
+    Result := AValue.FBuffer.VPointer;
+  end else
+  begin
+    Result := AValue.InternalGetObject;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): IInterface;
+var
+  LManagedData: Pointer;
+begin
+  LManagedData := Pointer(AValue.FManagedData);
+  if (not Assigned(LManagedData)) or (AValue.FExType.BaseType in [rtInterface, rtClosure]) then
+  begin
+    {$ifdef WEAKINTFREF}
+      Pointer(Result) := LManagedData;
+    {$else}
+      if (LManagedData <> Pointer(Result)) then
+      begin
+        RTTI_COPY_FUNCS[RTTI_COPYINTERFACE_FUNC](nil, @Result, @AValue.FManagedData);
+      end;
+    {$endif}
+  end else
+  begin
+    AValue.InternalGetInterface(Result);
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): TClass;
+begin
+  if (Assigned(AValue.FManagedData)) and (AValue.FExType.BaseType = rtClassRef) then
+  begin
+    Result := AValue.FBuffer.VClass;
+  end else
+  begin
+    Result := AValue.InternalGetClass;
+  end;
+end;
+
+class operator TValue.Implicit(const AValue: TValue): TBytes;
+var
+  LManagedData: Pointer;
+  LSource: Pointer;
+begin
+  LManagedData := Pointer(AValue.FManagedData);
+  if (Assigned(LManagedData)) and (AValue.FExType.BaseType = rtBytes) then
+  begin
+    LSource := @PRttiContainerInterface(LManagedData).Value;
+    if (PPointer(LSource)^ <> Pointer(Result)) then
+    begin
+      RTTI_COPY_FUNCS[RTTI_COPYDYNARRAYSIMPLE_FUNC](nil, @Result, LSource);
+    end;
+  end else
+  begin
+    AValue.InternalGetBytes(Result);
+  end;
+end;
+{$endif}
+
 initialization
-  InitDefaultCP;
-  DefaultContext.Init;
+  if (NativeInt(@InternalRttiTypeCurrentGroup) and 3 <> 0) or (NativeInt(@InternalRttiTypeCurrent) and 3 <> 0) then
+  begin
+    System.Error(reInvalidPtr);
+  end;
+
+  if (not Assigned(DefaultContext.Vmt)) then
+  begin
+    DefaultContext.Init; // + InitLibray
+  end;
 
 finalization
   DefaultContext.Finalize;
-  MemoryBuffers := nil;
+  AllocatorBuffers := nil;
 
 end.

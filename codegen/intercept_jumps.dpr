@@ -46,7 +46,7 @@ begin
         end;
         Add('    };');
       end;
-      List.SaveToFile('..\tiny.invoke.intr.jumps.inc');
+      List.SaveToFile('..\c\tiny.invoke.intr.jumps.inc');
 
       // OldDelphi-jumps
       List.Clear;
@@ -99,7 +99,7 @@ begin
         Add('  Result := LPtr;');
         Add('end;');
       end;
-      List.SaveToFile('..\tiny.invoke.intr.jumps.olddelphi.inc');
+      List.SaveToFile('..\c\tiny.invoke.intr.jumps.olddelphi.inc');
     finally
       List.Free;
     end;

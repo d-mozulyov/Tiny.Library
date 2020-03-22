@@ -7,15 +7,25 @@ uses
   Windows,
   SysUtils;
 
-function MyGetTempFile(const APrefix: string): string;
+function GetTempFolder(const APrefix: string): string;
 var
-  LTempPath, LResult: array[0..MAX_PATH] of Char;
+  LBuffer: array[0..MAX_PATH] of Char;
+  LTempFolder: string;
+  LRandSeed: Integer;
 begin
-  FillChar(LTempPath, MAX_PATH, 0);
-  FillChar(LResult, MAX_PATH, 0);
-  GetTempPath(SizeOf(LTempPath), LTempPath);
-  GetTempFileName(@LTempPath[0], PChar(APrefix), 0, LResult);
-  Result := LResult;
+  FillChar(LBuffer, MAX_PATH, 0);
+  GetTempPath(High(LBuffer), LBuffer);
+  LTempFolder := IncludeTrailingPathDelimiter(LBuffer) + APrefix + '_';
+  LRandSeed := System.RandSeed;
+  try
+    Randomize;
+
+    repeat
+      Result := LTempFolder + IntToHex(Random(100000000), 8);
+    until (CreateDir(Result));
+  finally
+    System.RandSeed := LRandSeed;
+  end;
 end;
 
 procedure ExecuteAndWait(const ACmdLine: string);
@@ -43,8 +53,11 @@ begin
 end;
 
 var
+  i: Integer;
   FileName: string;
+  TempFolder: string;
   TempFileName: string;
+  Done: Boolean;
 begin
   FileName := ParamStr(1);
   if (not FileExists(FileName)) then
@@ -53,15 +66,40 @@ begin
     Halt(1);
   end;
 
-  TempFileName := MyGetTempFile('fixwin32');
-  if (not DeleteFile(TempFileName)) or (not RenameFile(FileName, TempFileName)) then
+  TempFolder := GetTempFolder('fixwin32');
+  TempFileName := IncludeTrailingPathDelimiter(TempFolder) + 'temp.o';
+  if (not RenameFile(FileName, TempFileName)) then
   begin
+    RemoveDir(TempFolder);
     Writeln('Object file "', FileName, '" temporary copying failure');
     Halt(1);
   end;
 
   ExecuteAndWait('coff2omf.exe "' + TempFileName + '"');
-  if (not RenameFile(TempFileName, FileName)) then
+  Done := RenameFile(TempFileName, FileName);
+  begin
+    i := 0;
+    repeat
+      DeleteFile(TempFileName);
+      if (not FileExists(TempFileName)) or (i >= 50) then
+        Break;
+
+      Inc(i);
+      Sleep(100);
+    until (False);
+
+    i := 0;
+    repeat
+      RemoveDir(TempFolder);
+      if (not DirectoryExists(TempFolder)) or (i >= 50) then
+        Break;
+
+      Inc(i);
+      Sleep(100);
+    until (False);
+  end;
+
+  if (not Done) then
   begin
     Writeln('Object file "', FileName, '" temporary restore failure');
     Halt(1);

@@ -7,6 +7,7 @@ uses
   SysUtils;
 
 var
+  N: Integer;
   FileName: string;
   Handle: THandle;
   Buffer: AnsiString;
@@ -23,12 +24,22 @@ begin
     Halt(1);
   end;
 
-  Handle := FileOpen(FileName, fmOpenReadWrite);
-  if (Handle = THandle(-1)) then
-  begin
-    Writeln('Object file "', FileName, '" not opened');
-    Halt(1);
-  end;
+  N := 0;
+  repeat
+    Handle := FileOpen(FileName, fmOpenReadWrite);
+    if (Handle <> THandle(-1)) then
+    begin
+      Break;
+    end;  
+
+    Inc(N);
+    if (N = 10) or (not FileExists(FileName)) then
+    begin
+      Writeln('Object file "', FileName, '" not opened');
+      Halt(1);
+    end;
+    Sleep(100);
+  until (False);
 
   try
     BufferSize := FileSeek(Handle, -60, 2);

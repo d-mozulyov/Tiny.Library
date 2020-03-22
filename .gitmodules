@@ -1,0 +1,9 @@
+[submodule "thirdparty/CachedBuffers"]
+	path = thirdparty/CachedBuffers
+	url = https://github.com/d-mozulyov/CachedBuffers.git
+[submodule "thirdparty/UniConv"]
+	path = thirdparty/UniConv
+	url = https://github.com/d-mozulyov/UniConv.git
+[submodule "thirdparty/CachedTexts"]
+	path = thirdparty/CachedTexts
+	url = https://github.com/d-mozulyov/CachedTexts.git

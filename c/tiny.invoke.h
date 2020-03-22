@@ -7,34 +7,6 @@
 
 
 /*
-    Internal (register) types
-*/
-
-#if defined (CPUX86) || defined (CPUARM32) || defined (WIN64)
-  typedef int64_t out_general;
-#else
-  #pragma pack(push, 1)
-  typedef struct {size_t low; size_t high;} out_general;
-  #pragma pack(pop)
-#endif
-
-#pragma pack(push, 1)
-typedef struct
-{
-  #if defined (CPUARM) || defined (POSIX64)
-    double d0;
-    double d1;
-    #if defined (CPUARM)
-    double d2;
-    double d3;
-    #endif
-  #endif
-}
-hfa_struct;
-#pragma pack(pop)
-
-
-/*
     RttiRegisters struct
     Contains a set of registers needed to execute a function and retrieve a result
 */
@@ -368,8 +340,8 @@ typedef struct
 {
     char* name;
     size_t index;
-    void* context;
     RttiSignature* signature;
+    void* context;
 }
 RttiVirtualMethod;
 typedef REGISTER_DECL void (*RttiVirtualMethodCallback)(void* this, RttiVirtualMethod* method, RttiInvokeDump* dump);
@@ -389,7 +361,7 @@ RttiVirtualMethodData;
     This functionality allows you to execute a native function, having its address, signature and memory dump (for arguments)
     To get the optimal invoke function, use get_invoke_func ()
 */
-typedef REGISTER_DECL void (*InvokeFunc)(RttiSignature* signature, void* address, RttiInvokeDump* dump);
+typedef REGISTER_DECL void (*InvokeFunc)(RttiSignature* signature, void* code_address, RttiInvokeDump* dump);
 
 
 /*

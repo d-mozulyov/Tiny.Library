@@ -49,24 +49,25 @@ uses
   13. (h)       ggg [X64, ARM]
   14. (p)       ggg [ARM64]
   15. (all-h/p) ggg+ [x86]
-  16. (f)       gggg [X64]
-  17. (h)       gggg [X64/ARM]
-  18. (p)       gggg [ARM64]
+  16. (n/g/d)   gggg [all - x86]
+  17. (f)       gggg [X64]
+  18. (h)       gggg [X64/ARM]
+  19. (p)       gggg [ARM64]
 
   // eeee (e1..4)
-  19. (n/g/d)   eeee [all - x86]
-  20. (f)       eeee [X64]
-  21. (h)       eeee [X64/ARM]
-  22. (p)       eeee [ARM64]
+  20. (n/g/d)   eeee [all - x86]
+  21. (f)       eeee [X64]
+  22. (h)       eeee [X64/ARM]
+  23. (p)       eeee [ARM64]
 
   // gege MSABI
-  23. (n/g/d)   gege [Win64, X64]
-  24. (f)!h     gege [X64]
+  24. (n/g/d)   gege [Win64, X64]
+  25. (f)!h     gege [X64]
 
   // ggee (g1..4, e1..4)
-  25. (n/g/d/h) ggee [X64/ARM]
-  26. (f)       ggee [X64]
-  27. (p)       ggee [ARM64]
+  26. (n/g/d/h) ggee [X64/ARM]
+  27. (f)       ggee [X64]
+  28. (p)       ggee [ARM64]
 *)
 
 var
@@ -355,6 +356,9 @@ begin
         WriteEach('(all-h/p) ggg+ [x86]',
           [ipX86], [itNone, itOutputGeneral, itSingle, itDouble, itFPU, itFPUInt64],
           3, 3, 0, 0, nil, 1, 8);
+        WriteEach('(n/g/d)   gggg [all - x86]',
+          ALL_INVOKE_PLATFORMS - [ipX86], [itNone, itOutputGeneral, itDouble],
+          4, 4, 0, 0);
         WriteEach('(f)       gggg [X64]',
           [ipX64], [itFPU],
           4, 4, 0, 0);
@@ -393,7 +397,7 @@ begin
           [ipARM64], [itReturnPtr],
           1, 4, 1, 4);
       end;
-      List.SaveToFile('..\tiny.invoke.intr.funcswitch.inc');
+      List.SaveToFile('..\c\tiny.invoke.intr.funcswitch.inc');
 
       // function implementation
       List.Clear;
@@ -441,7 +445,7 @@ begin
 
         AddEndifPlatforms(Params.Platforms, 0);
       end;
-      List.SaveToFile('..\tiny.invoke.intr.funcimpl.inc');
+      List.SaveToFile('..\c\tiny.invoke.intr.funcimpl.inc');
     finally
       List.Free;
     end;
