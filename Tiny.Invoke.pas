@@ -661,7 +661,7 @@ implementation
 { Link object files }
 
 (* ToDo *)
-procedure TinyThrowSafeCall(const ACode: Integer; const AReturnAddress: Pointer);
+procedure TinyThrowSafeCall(const ACode: Integer; const AReturnAddress: Pointer); {$ifdef FPC}public name 'TinyThrowSafeCall';{$endif}
 begin
   if Assigned(SafeCallErrorProc) then
     SafeCallErrorProc(ACode, AReturnAddress);
@@ -673,7 +673,7 @@ begin
   System.ExitCode := 229{reSafeCallError};
   System.Halt;
 end;
-{$if not Defined(OBJLINKSUPPORT)}
+{$if Defined(EXTERNALLINKER)}
 exports TinyThrowSafeCall;
 {$ifend}
 
@@ -681,7 +681,27 @@ exports TinyThrowSafeCall;
   {$define OLDDELPHILINKER}
 {$ifend}
 
-{$if Defined(OBJLINKSUPPORT)}
+{$if Defined(EXTERNALLINKER)}
+const
+  PLATFORM_NAME =
+    {$if Defined(ANDROID)}
+      'android'
+    {$elseif Defined(IOS)}
+      'ios'
+    {$elseif Defined(MACOS)}
+      'macos'
+    {$elseif Defined(LINUX)}
+      'linux'
+    {$else}
+      {$MESSAGE ERROR 'Unknown platform'}
+    {$ifend}
+     + {$ifdef SMALLINT}'32'{$else .LARGEINT}'64'{$endif};
+
+  OBJ_PATH = 'objs\' + PLATFORM_NAME + '\';
+
+  LIB_TINYINVOKE_PATH = OBJ_PATH + 'tiny.invoke.o';
+  LIB_TINYINVOKEINTRJUMPS_PATH = OBJ_PATH + 'tiny.invoke.intrjumps.o';
+{$else}
   {$if Defined(MSWINDOWS)}
     {$ifdef SMALLINT}
       {$L objs\win32\tiny.invoke.o}
@@ -725,38 +745,22 @@ exports TinyThrowSafeCall;
       {$L objs\linux64\tiny.invoke.intrjumps.o}
     {$endif}
   {$ifend}
-{$else}
-const
-  PLATFORM_NAME =
-    {$if Defined(ANDROID)}
-      'android'
-    {$elseif Defined(IOS)}
-      'ios'
-    {$elseif Defined(MACOS)}
-      'macos'
-    {$elseif Defined(LINUX)}
-      'linux'
-    {$else}
-      {$MESSAGE ERROR 'Unknown platform'}
-    {$ifend}
-     + {$ifdef SMALLINT}'32'{$else .LARGEINT}'64'{$endif};
-
-  OBJ_PATH = 'objs\' + PLATFORM_NAME + '\';
-
-  LIB_TINYINVOKE_PATH = OBJ_PATH + 'tiny.invoke.o';
-  LIB_TINYINVOKEINTRJUMPS_PATH = OBJ_PATH + 'tiny.invoke.intrjumps.o';
 {$ifend}
 
-function get_invoke_func(const ACode: Integer{const ASignature: PRttiSignature}): TRttiInvokeFunc;
-  external {$if not Defined(OBJLINKSUPPORT)}LIB_TINYINVOKE_PATH name 'get_invoke_func'{$ifend};
-function get_intercept_func(const ACode: Integer{const ASignature: PRttiSignature}): TRttiInterceptFunc;
-  external {$if not Defined(OBJLINKSUPPORT)}LIB_TINYINVOKE_PATH name 'get_intercept_func'{$ifend};
+function get_invoke_func(const ACode: Integer{const ASignature: PRttiSignature}): TRttiInvokeFunc; external
+  {$ifdef EXTERNALLINKER}LIB_TINYINVOKE_PATH{$endif}
+  {$ifdef OBJLINKNAME}name 'get_invoke_func'{$endif};
+function get_intercept_func(const ACode: Integer{const ASignature: PRttiSignature}): TRttiInterceptFunc; external
+  {$ifdef EXTERNALLINKER}LIB_TINYINVOKE_PATH{$endif}
+  {$ifdef OBJLINKNAME}name 'get_intercept_func'{$endif};
 function get_intercept_jump(const AIndex, AMode: Integer): Pointer;
   {$ifdef OLDDELPHILINKER}
     forward;
     {$I c\tiny.invoke.intr.jumps.olddelphi.inc}
   {$else}
-    external {$if not Defined(OBJLINKSUPPORT)}LIB_TINYINVOKEINTRJUMPS_PATH name 'get_intercept_jump'{$ifend};
+  external
+    {$ifdef EXTERNALLINKER}LIB_TINYINVOKEINTRJUMPS_PATH{$endif}
+    {$ifdef OBJLINKNAME}name 'get_intercept_jump'{$endif};
   {$endif}
 
 

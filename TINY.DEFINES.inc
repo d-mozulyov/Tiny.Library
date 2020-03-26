@@ -124,8 +124,8 @@
 {$if (not Defined(FPC)) and Defined(POSIX64)}
   {$define HFASUPPORT}
 {$ifend}
-{$if Defined(FPC) or Defined(MSWINDOWS)}
-  {$define OBJLINKSUPPORT}
+{$if Defined(FPC) or Defined(EXTERNALLINKER)}
+  {$define OBJLINKNAME}
 {$ifend}
 {$U-}{$V+}{$B-}{$X+}{$T+}{$P+}{$H+}{$J-}{$Z1}{$A4}
 {$O+}{$R-}{$I-}{$Q-}{$W-}

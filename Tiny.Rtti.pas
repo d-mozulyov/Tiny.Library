@@ -3836,7 +3836,24 @@ type
 var
   rtti_options: TRttiOptions;
 
-{$if Defined(OBJLINKSUPPORT)}
+{$if Defined(EXTERNALLINKER)}
+const
+  PLATFORM_NAME =
+    {$if Defined(ANDROID)}
+      'android'
+    {$elseif Defined(IOS)}
+      'ios'
+    {$elseif Defined(MACOS)}
+      'macos'
+    {$elseif Defined(LINUX)}
+      'linux'
+    {$else}
+      {$MESSAGE ERROR 'Unknown platform'}
+    {$ifend}
+     + {$ifdef SMALLINT}'32'{$else .LARGEINT}'64'{$endif};
+
+  LIB_TINYRTTI_PATH = 'objs\' + PLATFORM_NAME + '\' + 'tiny.rtti.o';
+{$else}
   {$if Defined(MSWINDOWS)}
     {$ifdef SMALLINT}
       {$L objs\win32\tiny.rtti.o}
@@ -3868,27 +3885,11 @@ var
       {$L objs\linux64\tiny.rtti.o}
     {$endif}
   {$ifend}
-{$else}
-const
-  PLATFORM_NAME =
-    {$if Defined(ANDROID)}
-      'android'
-    {$elseif Defined(IOS)}
-      'ios'
-    {$elseif Defined(MACOS)}
-      'macos'
-    {$elseif Defined(LINUX)}
-      'linux'
-    {$else}
-      {$MESSAGE ERROR 'Unknown platform'}
-    {$ifend}
-     + {$ifdef SMALLINT}'32'{$else .LARGEINT}'64'{$endif};
-
-  LIB_TINYRTTI_PATH = 'objs\' + PLATFORM_NAME + '\' + 'tiny.rtti.o';
 {$ifend}
 
-procedure init_library(const AOptions: PRttiOptions);
-  external {$if not Defined(OBJLINKSUPPORT)}LIB_TINYRTTI_PATH name 'init_library'{$ifend};
+procedure init_library(const AOptions: PRttiOptions); external
+  {$ifdef EXTERNALLINKER}LIB_TINYRTTI_PATH{$endif}
+  {$ifdef OBJLINKNAME}name 'init_library'{$endif};
 
 
 procedure InternalErrorHandler(const ATinyErrorCode, AExtendedCode: Cardinal; const AReturnAddress: Pointer);
