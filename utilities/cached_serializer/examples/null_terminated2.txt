@@ -1,0 +1,7 @@
+-utf8 -i -f"ValueToEnum-PUTF8Char:tk:TTagKind" -p"S:4"
+sheet
+row
+cell
+data
+value
+style

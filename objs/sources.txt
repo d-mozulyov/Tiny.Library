@@ -1,3 +1,6 @@
-tiny.rtti.c
-tiny.invoke.c
-tiny.invoke.intrjumps.c
+tiny.types.c
+tiny.types.old86.c
+tiny.types.new86.c
+rtti/tiny.rtti.c
+rtti/tiny.invoke.c
+rtti/tiny.invoke.intrjumps.c

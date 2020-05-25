@@ -3,18 +3,19 @@ setlocal enabledelayedexpansion
 
 set platform=%~1
 set file=%~2
-set folder=%~3
+set sourcefolder=%~3
+set targetfolder=%~4
 set target=unknown
-set flags=-c -O3 -mllvm -align-all-functions=2 -DDELPHI
+set flags=-c -O3 -mllvm -align-all-functions=4 -DDELPHI
 
 if "%platform%"=="win32" (
   set target=i386-windows-gnu -mno-sse
 ) else if "%platform%"=="win64" (
-  set target=x86_64-windows-gnu
+  set target=x86_64-windows-gnu -mcx16
 ) else if "%platform%"=="linux32" (
   set target=i386-linux-gnu -mno-sse
 ) else if "%platform%"=="linux64" (
-  set target=x86_64-linux-gnu
+  set target=x86_64-linux-gnu -mcx16
 ) else if "%platform%"=="mac32" (
   set target=i386-darwin-gnu -mno-sse -fomit-frame-pointer
 ) else if "%platform%"=="mac64" (
@@ -26,7 +27,7 @@ if "%platform%"=="win32" (
 ) else if "%platform%"=="ios32" (
   set target=armv7m-none-ios-gnueabi -mfpu=neon -mfloat-abi=hard -mthumb
 ) else if "%platform%"=="ios64" (
-  set target=arm64-darwin-gnu
+  set target=arm64-darwin-gnu -fno-stack-protector
 ) else (
   echo error: unknown platform "%platform%"
   goto :done
@@ -38,7 +39,7 @@ if not exist "%file%" (
 )
 
 echo platform "%platform%":
-if not exist "%platform%\" mkdir %platform%
+if not exist "%targetfolder%%platform%\" mkdir %targetfolder%%platform%
 
 set fileext=
 for %%f in ("%file%") do set fileext=%%~xf
@@ -50,8 +51,9 @@ if "%fileext%"==".txt" (
 goto :done
 
 :compile
-set sourcefile=%folder%%1
-set targetfile=%platform%\%~n1.o
+set filename=%1
+set sourcefile=%sourcefolder%%filename:/=\%
+set targetfile=%targetfolder%%platform%\%~n1.o
 echo %sourcefile%
 if not exist "%sourcefile%" (
   echo error: file not found!

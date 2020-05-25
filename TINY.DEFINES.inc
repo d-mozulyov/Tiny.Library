@@ -28,6 +28,7 @@
 
 {$ifdef FPC}
   {$MODE DELPHIUNICODE}
+  {$MODESWITCH CVAR}
   {$ASMMODE INTEL}
   {$define INLINESUPPORT}
   {$define INLINESUPPORTSIMPLE}
@@ -36,12 +37,10 @@
   {$define SMALLOBJECTSUPPORT}
   {$define CLASSCONSTRUCTORSUPPORT}
   {$define GENERICSUPPORT}
+  {$define GENERICSUPPORTSIMPLE}
   {$define ANSISTRSUPPORT}
   {$define SHORTSTRSUPPORT}
   {$define WIDESTRSUPPORT}
-  {$ifdef MSWINDOWS}
-    {$define WIDESTRLENSHIFT}
-  {$endif}
   {$define INTERNALCODEPAGE}
   {$ifdef CPU386}
     {$define CPUX86}
@@ -56,16 +55,14 @@
   {$if CompilerVersion >= 24}
     {$LEGACYIFEND ON}
   {$ifend}
+  {$if CompilerVersion <= 22}
+    {$define CPUX86}
+  {$ifend}
   {$if CompilerVersion >= 15}
     {$WARN UNSAFE_CODE OFF}
     {$WARN UNSAFE_TYPE OFF}
     {$WARN UNSAFE_CAST OFF}
     {$WARN SYMBOL_DEPRECATED OFF}
-  {$ifend}
-  {$if CompilerVersion >= 20}
-    {$define INLINESUPPORT}
-    {$define SMALLOBJECTSUPPORT}
-    {$define CLASSCONSTRUCTORSUPPORT}
   {$ifend}
   {$if CompilerVersion >= 17}
     {$define INLINESUPPORTSIMPLE}
@@ -77,23 +74,31 @@
     {$define STATICSUPPORT}
   {$ifend}
   {$if CompilerVersion >= 20}
-    {$define GENERICSUPPORT}
-    {$define GENERICMETHODSUPPORT}
+    {$define INLINESUPPORT}
+    {$define SMALLOBJECTSUPPORT}
+    {$define CLASSCONSTRUCTORSUPPORT}
+    {$define GENERICSUPPORTSIMPLE}
+    {$define GENERICMETHODSUPPORTSIMPLE}
     {$define SYSARRAYSUPPORT}
-  {$ifend}
-  {$if CompilerVersion < 23}
-    {$define CPUX86}
-  {$ifend}
-  {$if CompilerVersion >= 23}
-    {$define UNITSCOPENAMES}
-    {$define RETURNADDRESS}
   {$ifend}
   {$if CompilerVersion >= 21}
     {$WEAKLINKRTTI ON}
     {$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])}
     {$define EXTENDEDRTTI}
   {$ifend}
-  {$if CompilerVersion >= 33}
+  {$if CompilerVersion >= 22}
+    {$define GENERICSUPPORT}
+    {$define GENERICMETHODSUPPORT}
+  {$ifend}
+  {$if CompilerVersion >= 23}
+    {$define UNITSCOPENAMES}
+    {$define RETURNADDRESSSUPPORT}
+    {$define MONITORSUPPORT}
+  {$ifend}
+  {$if CompilerVersion >= 31}
+    {$define VOLATILESUPPORT}
+  {$ifend}
+  {$if CompilerVersion >= 34}
     {$define MANAGEDRECORDS}
   {$ifend}
   {$if (not Defined(NEXTGEN)) or (CompilerVersion >= 31)}
@@ -102,11 +107,8 @@
   {$ifNdef NEXTGEN}
     {$define SHORTSTRSUPPORT}
   {$endif}
-  {$if Defined(MSWINDOWS) or (Defined(MACOS) and not Defined(IOS))}
+  {$if Defined(MSWINDOWS)}
     {$define WIDESTRSUPPORT}
-  {$ifend}
-  {$if Defined(MSWINDOWS) or (Defined(WIDESTRSUPPORT) and (CompilerVersion <= 21))}
-    {$define WIDESTRLENSHIFT}
   {$ifend}
   {$if Defined(ANSISTRSUPPORT) and (CompilerVersion >= 20)}
     {$define INTERNALCODEPAGE}
@@ -118,13 +120,19 @@
 {$if (not Defined(FPC)) and Defined(IOS) and Defined(CPUARM32) and (CompilerVersion < 28)}
   {$define ARM_NO_VFP_USE}
 {$ifend}
+{$if Defined(MSWINDOWS)}
+  {$define WIDESTRLENSHIFT}
+{$ifend}
+{$if Defined(INTERNALCODEPAGE) or not Defined(ANSISTRSUPPORT)}
+  {$define CODEPAGESUPPORT}
+{$ifend}
 {$if Defined(CPUX86) or (Defined(CPUX64) and not Defined(MSWINDOWS))}
   {$define EXTENDEDSUPPORT}
 {$ifend}
 {$if (not Defined(FPC)) and Defined(POSIX64)}
   {$define HFASUPPORT}
 {$ifend}
-{$if Defined(FPC) or Defined(EXTERNALLINKER)}
+{$if Defined(FPC) or (CompilerVersion >= 23)}
   {$define OBJLINKNAME}
 {$ifend}
 {$U-}{$V+}{$B-}{$X+}{$T+}{$P+}{$H+}{$J-}{$Z1}{$A4}

@@ -1,196 +1,56 @@
 ### Concept
 
-The project has the following conceptual features:
-* Standard types, including FreePascal, old and new versions of Delphi, convenient functions for managing them.
-* Universal data representation, regardless of programming language and compiler version.
-* Convert standard RTTI to universal data representation.
-* Minimizing dependencies on heavy units like Classes, Variants, Generics, etc.
-* Cross-platform functions invoke, including FreePascal and old versions of Delphi, creation of function and interface interpreters.
-* Marshalling (serialization and deserialization of data) through different formatters: JSON, XML, [FlexBin](FlexBin.RUS.md) and others.
-* Easy to use unit testing library that does not access the memory manager.
+The library is developed by [Zephyr Software](https://www.zephyr-soft.net) company. We specialize in the most complex, ambitious and high-performance projects written in Delphi 7-XE10, FreePascal and C++Builder. [Fill out an application](https://www.zephyr-soft.net/eng) for a **free** 30-minute consultation if you need to support a project or develop a new one!
 
-The following sections deserve special attention:
-* [Compatibility](#compatibility)
-* [Universal data representation](#universal-data-representation)
-* [Context](#context)
-* [TValue benchmark](#tvalue-benchmark)
-* [Invoke benchmark](#invoke-benchmark)
-* [Virtual interface benchmark](#virtual-interface-benchmark)
+The need for a library appeared because we are increasingly working with low-level code, and we need to support different versions of the compiler. We transfer some units from other open repositories, we take some code in closed repositories, we adapt and develop some units. Part of the code is written in C and assembler. Firstly, we want to maintain compatibility with C/C ++ projects. Secondly, these languages allow us to write low-level fast code. The name of the library contains _"Tiny"_ because the principle of low-level programming minimizes the dependencies of standard units, which in turn leads to a small size of the output binary files.
 
-### Compatibility
+You may read a more detailed description of the functionality in the sections below:
+* [General](#general)
+* [Text](#text)
+* [Generics](#generics)
+* [Rtti](#rtti)
+* [Tests](#tests)
+* [Services](#services)
+* [Delphi](#delphi)
 
-The library is created with the prospect of using in different programming languages, but primarily for Delphi and FreePascal. The main unit is _Tiny.Rtti.pas_, it contains the main types and functions of the library. One of the key ideas of the unit is to ensure code compatibility on different versions of Delphi or FreePascal. For example, on older versions of Delphi there are no `NativeInt` or `UnicodeString` types, and on NEXTGEN compilers there are no `WideString` or `ShortString` types - in this case they are emulated. On older versions of Delphi and FreePascal, there are no familiar `Atomic-`functions or TypeInfo initialization/copy/finalization functions (`InitializeArray`, `CopyRecord`, etc.) - all of them are also emulated.
+### General
 
-Another feature of the library is that the internal types and functions match the units of _System.TypInfo.pas_ and _System.Rtti.pas_ as closely as possible. For example, there are the usual types `TTypeKind`, `TTypeInfo`, `TTypeData`, the `GetEnumName` and `HasWeakRef` functions, there is a [TValue](#tvalue-benchmark) type, including for old Delphi and FreePascal. There are structures that describe arrays, classes, interfaces and other RTTI.
+The library has a lot of general purpose code. One of the main units is _Tiny.Types.pas_ - it stores the basic types, synchronization primitives and constants. One of the key features of the unit is to ensure code compatibility for different versions of Delphi and FreePascal. For example, on older versions of Delphi there are no `NativeInt` or `UnicodeString` types, and on NEXTGEN compilers there are no `WideString` or `ShortString` types - in this case they are emulated. On older versions of Delphi and FreePascal, there are no familiar `Atomic-`functions or TypeInfo initialization/copy/finalization functions (`InitializeArray`, `CopyRecord`, etc.) - all of them are also emulated. The `TinyMove` function deserves special attention - its purpose is the same as `System.Move`, but it works faster.
 
-### Universal data representation
+![](data/general/Move.png)
 
-Despite the fact that a significant part of the library works with RTTI, its essence boils down to the universal representation of data: types and information about them. To store the base type, the `TRttiType` enumeration is used. To classify the types, the `TRttiTypeGroup` enumeration is used. There is a standard set of types and groups, but you can always extend this set with the `RttiTypeIncrease` and `RttiTypeIncreaseGroup` functions. For a detailed description of the type, the `TRttiExType` structure is used - it stores the base type, pointer depth, options and additional meta information.
+The _Tiny.Cache.Buffers.pas_ unit contains several classes that allow you to process data streams at a high speed due to preliminary buffering of data, read more in the section [CachedBuffers.md](doc/CachedBuffers.md).
 
-### Context
+![](data/general/cache/Total.png)
 
-Typically, context is used to convert TypeInfo into the [universal data representation](#universal-data-representation). You can use the `DefaultContext` variable for these purposes. The context functionality can be expanded, for example, to store information about classes, interfaces, properties and methods. For storing and caching a namespace, there is a type `TRttiNamespace` (_Tiny.Namespaces.pas_).
+### Text
 
-On older versions of Delphi, RTTI is not generated for some types, for example, `PAnsiChar`. Therefore, the library supports the concept of PTypeInfo equivalents that will be correctly converted by the context. Use dummy constants (`TYPEINFO_PANSICHAR`, `TYPEINFO_UINT64`, etc.) or the `DummyTypeInfo` function for such cases.
+Text processing usually is a resource-intensive task. In addition, a text is a simple, flexible and readable data exchange format, therefore it is often used, for example, in network data exchange protocols. The `Tiny.Library` library contains a lot of code that allows you to quickly convert, compare, cache, read or write text data. The main units are _Tiny.Text.pas_ and _Tiny.Cache.Text.pas_. For a more detailed description, see the section [Text.md](doc/Text.md).
 
-### TValue benchmark
+![](data/text/Total.png)
 
-`TValue` is a lightweight analogue of the Variant type. This type supports almost all types available in Tiny.Rtti, an exception is made only by all pointer types, they are all cast to `Pointer`. The functional largely repeats the System.Rtti implementation, the difference is only in increasing the number of `As`-properties and reducing the functions of the casts. In addition, much attention was paid to optimizations, you can see this on the benchmark below. Type `TValue` and the benchmark were created with the participation of [Alexander Zhirov](mailto:suprito2012@gmail.com).
+### Generics
 
-![](data/ValueBenchmark.png)
+The _Tiny.Generics.pas_ unit was created in almost full compliance with the standard Delphi generics. The advantageous differences of the unit are performance, compactness and additional features. Read more in the section [Generics.md](doc/Generics.md).
 
-### Invoke benchmark
+![](data/generics/Total.png)
 
-In some cases, for example, when binding code with scripts, or when performing automatic tests, there is a need to invoke your native functions. In older versions of Delphi, this functionality was not available, but in newer versions, the call occurs with low performance. The _Tiny.Invoke.pas_ unit allows you to invoke functions at 3 levels of abstraction ([values](#tvalue-benchmark), arguments, direct), the benchmark below shows how to do this and measures performance.
+### Rtti
 
-`TRttiSignature` structure stores service information about the function signature: calling convention, argument description, register and stack information. The `TRttiInvokeDump` structure is used to store arguments in memory.
+One of the most difficult low-level programming tasks that we have encountered is the task of marshalling and executing functions based on _Run Time Type Information_ (RTTI). First, RTTI is very different between the Delphi and FreePascal versions. Secondly, RTTI is not generated in all cases, for example, `Pointer` will not be generated in `{$M+}` interfaces or older versions of Delphi. Thirdly, in FreePascal or older versions of Delphi there is no invocation routine, which is sometimes very necessary. Therefore, the concept of a universal data representation was developed and implemented in units _Tiny.Rtti.pas_, _Tiny.Invoke.pas_, _Tiny.Namespace.pas_, _Tiny.Marshalling.pas_, etc. Read a more detailed description in the section [Rtti.md](doc/Rtti.md).
 
-![](data/InvokeBenchmark.png)
-```pascal
-procedure TForm1.SomeMethod(const X, Y, Z: Integer);
-begin
-  Tag := X + Y + Z;
-end;
+![](data/rtti/Total.png)
 
-procedure TForm1.Button1Click(Sender: TObject);
-const
-  COUNT = 1000000;
-var
-  i: Integer;
-  LStopwatch: TStopwatch;
-  LContext: System.Rtti.TRttiContext;
-  LMethod: System.Rtti.TRttiMethod;
-  LMethodEntry: Tiny.Rtti.PVmtMethodExEntry;
-  LSignature: Tiny.Invoke.TRttiSignature;
-  LInvokeFunc: Tiny.Invoke.TRttiInvokeFunc;
-  LDump: Tiny.Invoke.TRttiInvokeDump;
-  T1, T2, T3, T4: Int64;
-begin
-  // initialization
-  LContext := System.Rtti.TRttiContext.Create;
-  LMethod := LContext.GetType(TForm1).GetMethod('SomeMethod');
-  LMethodEntry := Tiny.Rtti.PTypeInfo(TypeInfo(TForm1)).TypeData.ClassData.MethodTableEx.Find('SomeMethod');
-  LSignature.Init(LMethodEntry^);
-  LInvokeFunc := LSignature.OptimalInvokeFunc;
+### Tests
 
-  // System.Rtti
-  LStopwatch := TStopwatch.StartNew;
-  for i := 1 to COUNT do
-  begin
-    LMethod.Invoke(Form1, [1, 2, 3]);
-  end;
-  T1 := LStopwatch.ElapsedMilliseconds;
+_ToDo_
 
-  // Tiny.Rtti(Invoke) values
-  LStopwatch := TStopwatch.StartNew;
-  for i := 1 to COUNT do
-  begin
-    LSignature.Invoke(LDump, LMethodEntry.CodeAddress, Form1, {TValue}[1, 2, 3], LInvokeFunc);
-  end;
-  T2 := LStopwatch.ElapsedMilliseconds;
+### Services
 
-  // Tiny.Rtti(Invoke) arguments
-  LStopwatch := TStopwatch.StartNew;
-  for i := 1 to COUNT do
-  begin
-    LSignature.Invoke(LDump, LMethodEntry.CodeAddress, Form1, {array of}[1, 2, 3], nil, LInvokeFunc);
-  end;
-  T3 := LStopwatch.ElapsedMilliseconds;
+_ToDo_
 
-  // Tiny.Rtti(Invoke) direct
-  LStopwatch := TStopwatch.StartNew;
-  for i := 1 to COUNT do
-  begin
-    PPointer(@LDump.Bytes[LSignature.DumpOptions.ThisOffset])^ := Form1;
-    PInteger(@LDump.Bytes[LSignature.Arguments[0].Offset])^ := 1;
-    PInteger(@LDump.Bytes[LSignature.Arguments[1].Offset])^ := 2;
-    PInteger(@LDump.Bytes[LSignature.Arguments[2].Offset])^ := 3;
-    LInvokeFunc(@LSignature, LMethodEntry.CodeAddress, @LDump);
-  end;
-  T4 := LStopwatch.ElapsedMilliseconds;
+### Delphi
 
-  // result
-  Caption := Format('System.Rtti: %dms, Tiny.Rtti (values): %dms, ' +
-    'Tiny.Rtti (args): %dms, Tiny.Rtti (direct): %dms', [T1, T2, T3, T4]);
-end;
-```
-### Virtual interface benchmark
+We choose Delphi because in our opinion it is a simple, powerful and high-performance programming language. It allows you to cover almost all programming needs: PC, server, web, mobile, 3D, IoT. We are proud to have known Delphi for over 20 years. Few people know that the language was named after the ancient Greek town. Below are our personal photos from it :blush:
 
-Virtual interfaces can be used, for example, for high-level marshalling, when a native function call leads to the conversion of the arguments into binary form and sending them to server. The idea of a virtual interface is that you intercept the methods you call and process the arguments as you like. The _Tiny.Invoke.pas_ unit allows you to intercept interface methods at 2 levels of abstraction: [values](#tvalue-benchmark) and direct. At the direct level, the structures `TRttiSignature` and `TRttiInvokeDump`, which are described [above](#invoke-benchmark), are important.
-
-Unlike the implementation of _System.Rtti.pas_, the library allows you to redefine the method context (**not** [TRttiContext](#context)) and the callback for each method. The benchmark below demonstrates the functionality of a virtual interface and compares performance.
-
-![](data/VirtualInterfaceBenchmark.png)
-```pascal
-type
-  IMyInterface = interface(IInvokable)
-    ['{89EDBA5C-DFBA-48FA-889C-FC857B0ED609}']
-    function Func(const X, Y, Z: Integer): Integer;
-  end;
-
-procedure TForm1.Button1Click(Sender: TObject);
-const
-  COUNT = 1000000;
-var
-  i: Integer;
-  LStopwatch: TStopwatch;
-  LInterface: IMyInterface;
-  LValue: Integer;
-  T1, T2, T3: Int64;
-begin
-  // System.Rtti virtual interface
-  LInterface := System.Rtti.TVirtualInterface.Create(TypeInfo(IMyInterface),
-    procedure(Method: System.Rtti.TRttiMethod;
-      const Args: TArray<System.Rtti.TValue>; out Result: System.Rtti.TValue)
-    begin
-      Result := Args[1].AsInteger + Args[2].AsInteger + Args[3].AsInteger;
-    end) as IMyInterface;
-  LValue := LInterface.Func(1, 2, 3);
-  Assert(LValue = (1 + 2 + 3), 'System.Rtti virtual interface');
-  LStopwatch := TStopwatch.StartNew;
-  for i := 1 to COUNT do
-  begin
-    LInterface.Func(1, 2, 3);
-  end;
-  T1 := LStopwatch.ElapsedMilliseconds;
-
-  // Tiny.Rtti(Invoke) virtual interface
-  LInterface := Tiny.Invoke.TRttiVirtualInterface.Create(TypeInfo(IMyInterface),
-    function(const AMethod: Tiny.Invoke.TRttiVirtualMethod;
-      const AArgs: TArray<Tiny.Rtti.TValue>; const AReturnAddress: Pointer): TValue
-    begin
-      Result := AArgs[1].AsInteger + AArgs[2].AsInteger + AArgs[3].AsInteger;
-    end) as IMyInterface;
-  LValue := LInterface.Func(1, 2, 3);
-  Assert(LValue = (1 + 2 + 3), 'Tiny.Rtti(Invoke) virtual interface');
-  LStopwatch := TStopwatch.StartNew;
-  for i := 1 to COUNT do
-  begin
-    LInterface.Func(1, 2, 3);
-  end;
-  T2 := LStopwatch.ElapsedMilliseconds;
-
-  // Tiny.Rtti(Invoke) direct virtual interface
-  LInterface := Tiny.Invoke.TRttiVirtualInterface.CreateDirect(TypeInfo(IMyInterface),
-     procedure(const AMethod: Tiny.Invoke.TRttiVirtualMethod; var ADump: Tiny.Invoke.TRttiInvokeDump)
-     var
-       LSignature: Tiny.Invoke.PRttiSignature;
-     begin
-       LSignature := AMethod.Signature;
-       ADump.OutInt32 := PInteger(@ADump.Bytes[LSignature.Arguments[0].Offset])^ +
-         PInteger(@ADump.Bytes[LSignature.Arguments[1].Offset])^ +
-         PInteger(@ADump.Bytes[LSignature.Arguments[2].Offset])^;
-     end) as IMyInterface;
-  LValue := LInterface.Func(1, 2, 3);
-  Assert(LValue = (1 + 2 + 3), 'Tiny.Rtti(Invoke) direct virtual interface');
-  LStopwatch := TStopwatch.StartNew;
-  for i := 1 to COUNT do
-  begin
-    LInterface.Func(1, 2, 3);
-  end;
-  T3 := LStopwatch.ElapsedMilliseconds;
-
-  // result
-  Caption := Format('System.Rtti: %dms, Tiny.Rtti: %dms, Tiny.Rtti (direct): %dms', [T1, T2, T3]);
-end;
-```
+![](data/Delphi.jpg)

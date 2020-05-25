@@ -1,0 +1,7 @@
+-utf16 -i -p"Params.Name:Length(Params.Name)"
+
+-p::case Params.Count of\n  1\: FillSerializeParams(Params.O1 + '.Chars', Params.O1 + '.Length', 0);\n  2\: FillSerializeParams(Params.O1, Params.O2, 0);\n  3\: if (StrToIntDef(Params.O3, -1) >= 0) then\n     FillSerializeParams(Params.O1, Params.O2, StrToInt(Params.O3));\nelse\n  Exit;\nend;
+-i::IgnoreCase \:= True;
+-f::UseFuncHeaders \:= True;\ngoto func_params;
+-fn::UseFuncHeaders \:= False;\nfunc_params\:\ncase Params.Count of\n  2\: FillFuncParams(Params.O1, Params.O2, '');\n  3\: FillFuncParams(Params.O1, Params.O2, Params.O3);\nelse\n  Exit;\nend;
+-s::case Params.Count of\n  1\: FileName \:= Params.O1;\n  2\: FileName \:= Params.O1 + Params.O2;\nelse\n  Exit;\nend;

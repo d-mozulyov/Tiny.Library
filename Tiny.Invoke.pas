@@ -23,7 +23,7 @@ unit Tiny.Invoke;
 {                                                                              }
 { email: softforyou@inbox.ru                                                   }
 { skype: dimandevil                                                            }
-{ repository: https://github.com/d-mozulyov/Tiny.Rtti                          }
+{ repository: https://github.com/d-mozulyov/Tiny.Library                       }
 {******************************************************************************}
 
 {$I TINY.DEFINES.inc}
@@ -33,7 +33,7 @@ uses
   {$ifdef MSWINDOWS}
     {$ifdef UNITSCOPENAMES}Winapi.Windows{$else}Windows{$endif},
   {$endif}
-  Tiny.Rtti;
+  Tiny.Types, Tiny.Rtti;
 
 
 type
@@ -406,8 +406,24 @@ type
 
   PRttiArgument = ^TRttiArgument;
   {$A1}
-  TRttiArgument = object(TRttiExType)
-  protected
+  {$ifdef BCB}
+  TRttiArgument__ = record [HPPGEN(HPP_INHERIT + '(TRttiArgument, TRttiExType)'#13#10)] _: Byte; end;
+  TRttiArgument = record public
+    [HPPGEN(HPP_RETRIEVE + '(TRttiExType)'#13#10)] This: TRttiExType;
+    [HPPGEN(HPP_PROTECTED)]__protected__: TNothing;
+    [HPPGEN('')]
+    property BaseType: TRttiType read This.F.BaseType write This.F.BaseType;
+    [HPPGEN('')]
+    property PointerDepth: Byte read This.F.PointerDepth write This.F.PointerDepth;
+    [HPPGEN('')]
+    property BaseOptions: Word read This.F.BaseOptions write This.F.BaseOptions;
+    [HPPGEN('')]
+    property Options: Cardinal read This.F.Options write This.F.Options;
+    [HPPGEN('')]
+    property CustomData: Pointer read This.F.CustomData write This.F.CustomData;
+  {$else .DELPHI.FPC}
+  TRttiArgument = object(TRttiExType) protected
+  {$endif}
     function GetIsArray: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetIsValue: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetIsConst: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
@@ -418,6 +434,7 @@ type
     function GetIsReference: Boolean; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetTotalPointerDepth: Byte; {$ifdef INLINESUPPORT}inline;{$endif}
   public
+    {$ifdef BCB}[HPPGEN(HPP_PUBLIC)]__public__: TNothing;{$endif}
     Name: PShortStringHelper;
     Offset: Integer;
     Qualifier: TRttiArgumentQualifier;
@@ -457,8 +474,24 @@ type
   PRttiInterceptFunc = ^TRttiInterceptFunc;
   TRttiInterceptFunc = type Pointer;
   {$A1}
-  TRttiSignature = object(TRttiCustomTypeData)
-  protected
+  {$ifdef BCB}
+  TRttiSignature___ = packed record
+    ReturnStrategy: TRttiReturnStrategy;
+    Reserved: Word;
+    StackSize: Integer;
+    {$ifdef CPUX86}
+    StackPopSize: Integer;
+    {$endif}
+    ThisOffset: Integer;
+    OuterMostFlagOffset: Integer;
+  end;
+  TRttiSignature__ = record [HPPGEN(HPP_INHERIT + '(TRttiSignature, TRttiCustomTypeData)'#13#10)] _: Byte; end;
+  TRttiSignature = record public
+    [HPPGEN(HPP_RETRIEVE + '(TRttiCustomTypeData)'#13#10)] This: TRttiCustomTypeData;
+    [HPPGEN(HPP_PROTECTED)]__protected__: TNothing;
+  {$else .DELPHI.FPC}
+  TRttiSignature = object(TRttiCustomTypeData) protected
+  {$endif}
     function GetSize: Integer; {$ifdef INLINESUPPORT}inline;{$endif}
     function GetDumpSize: Integer; {$ifdef INLINESUPPORT}inline;{$endif}
     {$ifdef STATICSUPPORT}class{$endif}function GetUniversalInvokeFunc: TRttiInvokeFunc; {$ifdef STATICSUPPORT}static;{$endif}
@@ -469,7 +502,11 @@ type
     {$ifdef STATICSUPPORT}class{$endif} function InitArgument(var ATarget: TRttiArgument;
       const ASource: TParamData; const AFlags: TParamFlags; const AContext: PRttiContext): Boolean; {$ifdef STATICSUPPORT}static;{$endif}
   public
+    {$ifdef BCB}[HPPGEN(HPP_PUBLIC)]__public__: TNothing;{$endif}
     CallConv: TRttiCallConv;
+    {$ifdef BCB}
+    DumpOptions: TRttiSignature___;
+    {$else .DELPHI.FPC}
     DumpOptions: packed record
       ReturnStrategy: TRttiReturnStrategy;
       Reserved: Word;
@@ -478,13 +515,14 @@ type
       StackPopSize: Integer;
       {$endif}
       ThisOffset: Integer;
-      ConstructorFlagOffset: Integer;
+      OuterMostFlagOffset: Integer;
     end;
+    {$endif}
     Return: TRttiArgument;
     ArgumentCount: Integer;
     Arguments: array[Byte] of TRttiArgument;
 
-    procedure InitDump(const AHasSelf, AConstructor: Boolean);
+    procedure InitDump(const AHasSelf: Boolean; const AMethodKind: TMethodKind);
     function Init(const ASignatureData: TSignatureData; const AContext: PRttiContext = nil): Boolean; overload;
     function Init(const AMethodSignature: TMethodSignature; const AContext: PRttiContext = nil): Boolean; overload;
     function Init(const AIntfMethodSignature: TIntfMethodSignature; const AContext: PRttiContext = nil): Boolean; overload;
@@ -534,9 +572,16 @@ type
 
   PRttiMethod = ^TRttiMethod;
   {$A1}
-  TRttiMethod = object(TRttiCustomTypeData)
-  protected
+  {$ifdef BCB}
+  TRttiMethod__ = record [HPPGEN(HPP_INHERIT + '(TRttiMethod, TRttiCustomTypeData)'#13#10)] _: Byte; end;
+  TRttiMethod = record public
+    [HPPGEN(HPP_RETRIEVE + '(TRttiCustomTypeData)'#13#10)] This: TRttiCustomTypeData;
+    [HPPGEN(HPP_PROTECTED)]__protected__: TNothing;
+  {$else .DELPHI.FPC}
+  TRttiMethod = object(TRttiCustomTypeData) protected
+  {$endif}
   public
+    {$ifdef BCB}[HPPGEN(HPP_PUBLIC)]__public__: TNothing;{$endif}
     Name: PShortStringHelper;
     Kind: TRttiMethodKind;
     Address: Pointer;
@@ -552,12 +597,17 @@ type
 
   PRttiVirtualMethod = ^TRttiVirtualMethod;
   {$A1}
-  TRttiVirtualMethod = object
+  {$ifdef BCB}
+  TRttiVirtualMethod = record public [HPPGEN(HPP_PROTECTED)]__protected__: TNothing;
+  {$else .DELPHI.FPC}
+  TRttiVirtualMethod = object protected
+  {$endif}
   public
+    {$ifdef BCB}[HPPGEN(HPP_PUBLIC)]__public__: TNothing;{$endif}
     Name: PShortStringHelper;
     Index: NativeInt;
     Signature: PRttiSignature;
-  protected
+  {$ifdef BCB}private{$else}protected{$endif}
     FContext: Pointer;
   public
     property Context: Pointer read FContext write FContext;
@@ -569,7 +619,13 @@ type
 
   PRttiVirtualMethodData = ^TRttiVirtualMethodData;
   {$A1}
-  TRttiVirtualMethodData = object
+  {$ifdef BCB}
+  TRttiVirtualMethodData = record public [HPPGEN(HPP_PROTECTED)]__protected__: TNothing;
+  {$else .DELPHI.FPC}
+  TRttiVirtualMethodData = object protected
+  {$endif}
+  public
+    {$ifdef BCB}[HPPGEN(HPP_PUBLIC)]__public__: TNothing;{$endif}
     InterceptFunc: TRttiInterceptFunc;
     Method: TRttiVirtualMethod;
     {$ifdef WEAKINSTREF}[Unsafe]{$endif}
@@ -660,47 +716,14 @@ implementation
 
 { Link object files }
 
-(* ToDo *)
-procedure TinyThrowSafeCall(const ACode: Integer; const AReturnAddress: Pointer); {$ifdef FPC}public name 'TinyThrowSafeCall';{$endif}
-begin
-  if Assigned(SafeCallErrorProc) then
-    SafeCallErrorProc(ACode, AReturnAddress);
-
-  if Assigned(ErrorProc) then
-    ErrorProc(Ord(reSafeCallError), AReturnAddress {$ifdef FPC}, nil{$endif});
-
-  System.ErrorAddr := AReturnAddress;
-  System.ExitCode := 229{reSafeCallError};
-  System.Halt;
-end;
-{$if Defined(EXTERNALLINKER)}
-exports TinyThrowSafeCall;
-{$ifend}
-
 {$if not Defined(FPC) and Defined(CPUX86) and (CompilerVersion <= 25)}
   {$define OLDDELPHILINKER}
 {$ifend}
 
 {$if Defined(EXTERNALLINKER)}
 const
-  PLATFORM_NAME =
-    {$if Defined(ANDROID)}
-      'android'
-    {$elseif Defined(IOS)}
-      'ios'
-    {$elseif Defined(MACOS)}
-      'macos'
-    {$elseif Defined(LINUX)}
-      'linux'
-    {$else}
-      {$MESSAGE ERROR 'Unknown platform'}
-    {$ifend}
-     + {$ifdef SMALLINT}'32'{$else .LARGEINT}'64'{$endif};
-
-  OBJ_PATH = 'objs\' + PLATFORM_NAME + '\';
-
-  LIB_TINYINVOKE_PATH = OBJ_PATH + 'tiny.invoke.o';
-  LIB_TINYINVOKEINTRJUMPS_PATH = OBJ_PATH + 'tiny.invoke.intrjumps.o';
+  LIB_TINY_INVOKE = PLATFORM_OBJ_PATH + 'tiny.invoke.o';
+  LIB_TINY_INVOKEINTRJUMPS = PLATFORM_OBJ_PATH + 'tiny.invoke.intrjumps.o';
 {$else}
   {$if Defined(MSWINDOWS)}
     {$ifdef SMALLINT}
@@ -748,18 +771,18 @@ const
 {$ifend}
 
 function get_invoke_func(const ACode: Integer{const ASignature: PRttiSignature}): TRttiInvokeFunc; external
-  {$ifdef EXTERNALLINKER}LIB_TINYINVOKE_PATH{$endif}
+  {$ifdef EXTERNALLINKER}LIB_TINY_INVOKE{$endif}
   {$ifdef OBJLINKNAME}name 'get_invoke_func'{$endif};
 function get_intercept_func(const ACode: Integer{const ASignature: PRttiSignature}): TRttiInterceptFunc; external
-  {$ifdef EXTERNALLINKER}LIB_TINYINVOKE_PATH{$endif}
+  {$ifdef EXTERNALLINKER}LIB_TINY_INVOKE{$endif}
   {$ifdef OBJLINKNAME}name 'get_intercept_func'{$endif};
 function get_intercept_jump(const AIndex, AMode: Integer): Pointer;
   {$ifdef OLDDELPHILINKER}
     forward;
-    {$I c\tiny.invoke.intr.jumps.olddelphi.inc}
+    {$I c\rtti\tiny.invoke.intr.jumps.olddelphi.inc}
   {$else}
   external
-    {$ifdef EXTERNALLINKER}LIB_TINYINVOKEINTRJUMPS_PATH{$endif}
+    {$ifdef EXTERNALLINKER}LIB_TINY_INVOKEINTRJUMPS{$endif}
     {$ifdef OBJLINKNAME}name 'get_intercept_jump'{$endif};
   {$endif}
 
@@ -854,7 +877,7 @@ begin
     1: PPointer(LTarget)^ := PPointer(ASource)^;
     2: PAlterNativeInt(LTarget)^ := PAlterNativeInt(ASource)^;
   else
-    RTTI_COPY_FUNCS[LSetter](@Self, LTarget, ASource);
+    RTTI_COPY_FUNCS[LSetter](Pointer(@Self), LTarget, ASource);
   end;
 end;
 
@@ -871,7 +894,7 @@ begin
     1: PPointer(ATarget)^ := PPointer(LSource)^;
     2: PAlterNativeInt(ATarget)^ := PAlterNativeInt(LSource)^;
   else
-    RTTI_COPY_FUNCS[LGetter](@Self, ATarget, LSource);
+    RTTI_COPY_FUNCS[LGetter](Pointer(@Self), ATarget, LSource);
   end;
 end;
 
@@ -888,7 +911,7 @@ end;
 { TRttiSignatureUsage }
 
 type
-  TRttiSignatureUsage = object
+  TRttiSignatureUsage = {$ifdef BCB}record{$else}object{$endif}
     GeneralCount: Cardinal;
     Generals: array[0..High(TRttiGeneralRegisters)] of Boolean;
     ExtendedCount: Cardinal;
@@ -940,7 +963,7 @@ begin
   FillChar(Self, SizeOf(Self), #0);
 
   InspectArgument(ASignature.DumpOptions.ThisOffset, rtPointer, 0);
-  InspectArgument(ASignature.DumpOptions.ConstructorFlagOffset, rtBoolean8, 0);
+  InspectArgument(ASignature.DumpOptions.OuterMostFlagOffset, rtBoolean8, 0);
   InspectArgument(@ASignature.Return);
   for i := 0 to ASignature.ArgumentCount - 1 do
   begin
@@ -1021,11 +1044,11 @@ begin
     begin
       LResult := irNone;
       {$ifdef CPUARM64}
-      if (LGenerals[High(LGenerals)]) then
+      if (LUsage.Generals[High(LUsage.Generals)]) then
       begin
         LResult := irRetPtr;
-        LGenerals[High(LGenerals)] := False;
-        Dec(LGeneralCount);
+        LUsage.Generals[High(LUsage.Generals)] := False;
+        Dec(LUsage.GeneralCount);
       end;
       {$endif}
     end;
@@ -1141,7 +1164,7 @@ begin
     Note:
     The interception jump index must be in the range 0..1023
   }
-  System.Error(reRangeError);
+  TinyError(teRangeError);
 end;
 
 function TRttiSignature.GetInterceptJump(const AIndex: Integer): Pointer;
@@ -1229,11 +1252,11 @@ begin
     begin
       LResult := irNone;
       {$ifdef CPUARM64}
-      if (LGenerals[High(LGenerals)]) then
+      if (LUsage.Generals[High(LUsage.Generals)]) then
       begin
         LResult := irRetPtr;
-        LGenerals[High(LGenerals)] := False;
-        Dec(LGeneralCount);
+        LUsage.Generals[High(LUsage.Generals)] := False;
+        Dec(LUsage.GeneralCount);
       end;
       {$endif}
     end;
@@ -1373,14 +1396,14 @@ begin
   case ASource.Reference of
     rfUnsafe:
     begin
-      if (tfUnsafable in ATarget.GetRules(LRulesBuffer).Flags) then
+      if (tfUnsafable in ATarget.{$ifdef BCB}This.{$endif}GetRules(LRulesBuffer).Flags) then
       begin
         Inc(Byte(ATarget.Qualifier), Byte(rqUnsafeValue) - Byte(rqValue));
       end;
     end;
     rfWeak:
     begin
-      if (tfWeakable in ATarget.GetRules(LRulesBuffer).Flags) then
+      if (tfWeakable in ATarget.{$ifdef BCB}This.{$endif}GetRules(LRulesBuffer).Flags) then
       begin
         Inc(Byte(ATarget.Qualifier), Byte(rqWeakValue) - Byte(rqValue));
       end;
@@ -1388,7 +1411,7 @@ begin
   end;
 end;
 
-procedure TRttiSignature.InitDump(const AHasSelf, AConstructor: Boolean);
+procedure TRttiSignature.InitDump(const AHasSelf: Boolean; const AMethodKind: TMethodKind);
 label
   reference_qualifier, invalid_qualifier, put_arg_stack;
 type
@@ -1595,7 +1618,7 @@ begin
   // initialization
   PCardinal(@DumpOptions.ReturnStrategy)^ := 0;
   DumpOptions.ThisOffset := INVALID_INDEX;
-  DumpOptions.ConstructorFlagOffset := INVALID_INDEX;
+  DumpOptions.OuterMostFlagOffset := INVALID_INDEX;
   DumpOptions.StackSize := 0;
 
   // options
@@ -1627,11 +1650,11 @@ begin
   begin
     LReturnArgMode := ramRegister;
     DumpOptions.ReturnStrategy := rsGeneral;
-    LRules := Return.GetRules(LRulesBuffer);
+    LRules := Return.{$ifdef BCB}This.{$endif}GetRules(LRulesBuffer);
 
     if (Return.IsArray) or (Byte(Return.Qualifier) > Byte(High(TRttiArgumentQualifier))) then
     begin
-      System.Error(reInvalidCast);
+      TinyError(teInvalidCast);
       Exit;
     end;
 
@@ -1743,10 +1766,11 @@ begin
   if (LReturnArgMode = ramRefFirst) then FillReturn;
   if (LThisArgMode = tamSecond) then FillThis;
 
-  // constructor flag
-  if (AConstructor) and (Return.BaseType = rtObject) and (Return.PointerDepth = 0) then
+  // outermost flag
+  if ((AMethodKind = mkConstructor) and (Return.BaseType = rtObject) and (Return.PointerDepth = 0)) or
+    ((AMethodKind = mkDestructor) and (Return.BaseType = rtUnknown)) then
   begin
-    DumpOptions.ConstructorFlagOffset := PutGen;
+    DumpOptions.OuterMostFlagOffset := PutGen;
   end;
 
   // arguments
@@ -1754,7 +1778,7 @@ begin
   begin
     // rules
     LArgument := @Arguments[i];
-    LRules := LArgument.GetRules(LRulesBuffer);
+    LRules := LArgument.{$ifdef BCB}This.{$endif}GetRules(LRulesBuffer);
     LArgument.GetterFunc := LRules.CopyFunc;
     LArgument.SetterFunc := LArgument.GetterFunc;
     LArgument.HighOffset := 0;
@@ -1859,7 +1883,7 @@ begin
       end;
     else
     invalid_qualifier:
-      System.Error(reInvalidCast);
+      TinyError(teInvalidCast);
       Exit;
     end;
 
@@ -1963,7 +1987,7 @@ begin
   if (not LIsBackwardArg) and (DumpOptions.StackSize <> 0) then
   begin
     ApplyOffset(DumpOptions.ThisOffset);
-    ApplyOffset(DumpOptions.ConstructorFlagOffset);
+    ApplyOffset(DumpOptions.OuterMostFlagOffset);
 
     if (LReturnArgMode <> ramNone) then
     begin
@@ -2021,7 +2045,7 @@ begin
     ccSysCall: ;
     {$endif}
   else
-    System.Error(reInvalidCast);
+    TinyError(teInvalidCast);
   end;
 
   // arguments
@@ -2030,12 +2054,12 @@ begin
     ArgumentCount := ASignatureData.ArgumentCount;
     if (ArgumentCount < Low(Byte)) or (ArgumentCount > High(Byte)) then
     begin
-      System.Error(reRangeError);
+      TinyError(teRangeError);
     end;
 
     if (ASignatureData.Result.Assigned) then
     begin
-      if (not InitArgument(Return, ASignatureData.Result, [pfResult], LContext)) then
+      if (not InitArgument(Return, ASignatureData.Result{$ifdef BCB}.This{$endif}, [pfResult], LContext)) then
         Exit;
     end else
     begin
@@ -2046,7 +2070,7 @@ begin
     LSource := @ASignatureData.Arguments[0];
     for i := 0 to ArgumentCount - 1 do
     begin
-      if (not InitArgument(LTarget^, LSource^, LSource.Flags, LContext)) then
+      if (not InitArgument(LTarget^, LSource^{$ifdef BCB}.This.This{$endif}, LSource.Flags, LContext)) then
         Exit;
 
       Inc(LTarget);
@@ -2055,7 +2079,7 @@ begin
   end;
 
   // dump
-  InitDump(ASignatureData.HasSelf, ASignatureData.MethodKind = mkConstructor);
+  InitDump(ASignatureData.HasSelf, ASignatureData.MethodKind);
 
   // done
   Result := True;
@@ -2142,778 +2166,19 @@ begin
   end;
 end;
 
-type
-  PRttiSignatureBufferItem = ^TRttiSignatureBufferItem;
-  TRttiSignatureBufferItem = packed record
-    Next: PRttiSignatureBufferItem;
-    { managed value }
-    FinalFunc: TRttiTypeFunc;
-    {$ifdef LARGEINT}
-    _Padding: Integer;
-    {$endif}
-    ExType: TRttiExType;
-    Value: packed record end;
-  end;
-
-  TRttiSignatureBuffer = object
-    Vmt: Pointer;
-    HeapItems: PRttiSignatureBufferItem;
-    ManagedItems: PRttiSignatureBufferItem;
-    Current: PByte;
-    Overflow: PByte;
-    Bytes: array[0..31] of Byte;
-    ExType: TRttiExType;
-
-    procedure Init(var AEmptyInterface: IInterface); {$ifdef INLINESUPPORT}inline;{$endif}
-    function Release: {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer; stdcall{$else}Longint; cdecl{$ifend};
-    function AllocHeapItem(const ASize: NativeUInt): Pointer;
-    function GrowAlloc(const ASize: NativeUInt): Pointer;
-    function Alloc(const ASize: NativeUInt): Pointer; overload;
-    function Alloc(const AExType: TRttiExType): Pointer; overload;
-    function Convert(const ATargetExType: TRttiExType; const ASource: Pointer): Pointer;
-  end;
-
-const
-  TRttiSignatureBufferVmt: array[0..2] of Pointer =
-  (
-    nil{QueryInterface},
-    nil{AddRef},
-    @TRttiSignatureBuffer.Release
-  );
-
-procedure TRttiSignatureBuffer.Init(var AEmptyInterface: IInterface);
-begin
-  Vmt := @TRttiSignatureBufferVmt;
-  HeapItems := nil;
-  ManagedItems := nil;
-  Current := Pointer(NativeInt(@Bytes[Low(Bytes) + 7]) and -8);
-  Overflow := Pointer(PAnsiChar(@Bytes[High(Bytes)]) + 1);
-  Pointer(AEmptyInterface) := @Self;
-end;
-
-function TRttiSignatureBuffer.Release: {$if (not Defined(FPC)) or Defined(MSWINDOWS)}Integer{$else}Longint{$ifend};
-var
-  LItem, LNext: PRttiSignatureBufferItem;
-begin
-  // managed values
-  LItem := ManagedItems;
-  ManagedItems := nil;
-  while (Assigned(LItem)) do
-  begin
-    LItem.FinalFunc(@LItem.ExType, @LItem.Value);
-    LItem := LItem.Next;
-  end;
-
-  // heap items
-  LItem := HeapItems;
-  HeapItems := nil;
-  while (Assigned(LItem)) do
-  begin
-    LNext := LItem.Next;
-    FreeMem(LItem);
-
-    LItem := LNext;
-  end;
-
-  // result
-  Result := -1;
-end;
-
-function TRttiSignatureBuffer.AllocHeapItem(const ASize: NativeUInt): Pointer;
-var
-  LItem: PRttiSignatureBufferItem;
-begin
-  GetMem(LItem, ASize + 8);
-
-  LItem.Next := HeapItems;
-  HeapItems := LItem;
-
-  Result := Pointer(NativeUInt(LItem) + 8);
-end;
-
-function TRttiSignatureBuffer.GrowAlloc(const ASize: NativeUInt): Pointer;
-const
-  BLOCK_SIZE = 256;
-var
-  LPtr: PByte;
-begin
-  if (ASize >= BLOCK_SIZE) then
-  begin
-    Result := AllocHeapItem(ASize);
-    Exit;
-  end;
-
-  LPtr := AllocHeapItem(BLOCK_SIZE);
-  Overflow := Pointer(NativeUInt(LPtr) + BLOCK_SIZE);
-  Inc(LPtr, ASize);
-  Current := LPtr;
-  Dec(LPtr, ASize);
-  Result := LPtr;
-end;
-
-function TRttiSignatureBuffer.Alloc(const ASize: NativeUInt): Pointer;
-var
-  LSize: NativeUInt;
-  LPtr: NativeUInt{PByte};
-begin
-  LSize := NativeUInt(NativeInt(ASize + 7) and -8);
-
-  LPtr := NativeUInt(Current);
-  Inc(LPtr, LSize);
-  if (NativeUInt(LPtr) > NativeUInt(Overflow)) then
-  begin
-    Result := GrowAlloc(LSize);
-  end else
-  begin
-    NativeUInt(Current) := LPtr;
-    Dec(LPtr, LSize);
-    Result := Pointer(LPtr);
-  end;
-end;
-
-function TRttiSignatureBuffer.Alloc(const AExType: TRttiExType): Pointer;
-var
-  LRulesBuffer: TRttiTypeRules;
-  LRules: PRttiTypeRules;
-  LSize: NativeUInt;
-  LPtr: NativeUInt{PByte};
-  LItem: PRttiSignatureBufferItem;
-  LFuncIndex: NativeUInt;
-begin
-  // rules
-  LRules := AExType.GetRules(LRulesBuffer);
-  LSize := LRules.Size;
-  if (tfManaged in LRules.Flags) then
-  begin
-    Inc(LSize, SizeOf(TRttiSignatureBufferItem) + 7);
-  end else
-  begin
-    Inc(LSize, 7);
-  end;
-  LSize := NativeUInt(NativeInt(LSize) and -8);
-
-  // allocation
-  LPtr := NativeUInt(Current);
-  Inc(LPtr, LSize);
-  if (NativeUInt(LPtr) > NativeUInt(Overflow)) then
-  begin
-    LItem := GrowAlloc(LSize);
-  end else
-  begin
-    NativeUInt(Current) := LPtr;
-    Dec(LPtr, LSize);
-    LItem := Pointer(LPtr);
-  end;
-
-  // initialization
-  if (tfManaged in LRules.Flags) then
-  begin
-    LItem.Next := ManagedItems;
-    ManagedItems := LItem;
-
-    LItem.FinalFunc := RTTI_FINAL_FUNCS[LRules.FinalFunc];
-    LItem.ExType := AExType;
-    Result := @LItem.Value;
-
-    LFuncIndex := LRules.InitFunc;
-    case LFuncIndex of
-      RTTI_INITNONE_FUNC: ;
-      RTTI_INITPOINTER_FUNC: PPointer(Result)^ := nil;
-      RTTI_INITPOINTERPAIR_FUNC:
-      begin
-        PMethod(Result).Code := nil;
-        PMethod(Result).Data := nil;
-      end;
-    else
-      RTTI_INIT_FUNCS[LFuncIndex](@AExType, Result);
-    end;
-  end else
-  begin
-    Result := LItem;
-  end;
-end;
-
-function TRttiSignatureBuffer.Convert(const ATargetExType: TRttiExType;
-  const ASource: Pointer): Pointer;
-label
-  true_value, pchars_value, failure;
-const
-  CP_UTF8 = 65001;
-  CP_UTF16 = 1200;
-  CP_UTF32 = 12000;
-var
-  LValue: Pointer;
-  LCodePage: Word;
-  LCount: Integer;
-  LTargetCodePage: Word;
-begin
-  case ATargetExType.BaseType of
-    rtPointer:
-    begin
-      case (ExType.BaseType) of
-        rtPointer,
-        rtPSBCSChars,
-        rtPUTF8Chars,
-        rtPWideChars,
-        rtPUCS4Chars,
-        rtClassRef,
-        rtObject,
-        rtFunction,
-        rtClosure,
-        rtInterface: Result := ASource;
-        rtMethod: Result := @PMethod(ASource).Code;
-      else
-        goto failure;
-      end;
-    end;
-    rtBoolean8,
-    rtBoolean16,
-    rtBoolean32,
-    rtBoolean64,
-    rtBool8,
-    rtBool16,
-    rtBool32,
-    rtBool64:
-    begin
-      Result := Alloc(SizeOf(Int64));
-      PInt64(Result)^ := 0;
-
-      case (ExType.BaseType) of
-        rtBoolean8,
-        rtBool8: if (PByte(ASource)^ <> 0) then goto true_value;
-        rtBoolean16,
-        rtBool16: if (PWord(ASource)^ <> 0) then goto true_value;
-        rtBoolean32,
-        rtBool32: if (PCardinal(ASource)^ <> 0) then goto true_value;
-        rtBoolean64,
-        rtBool64: if (PInt64(ASource)^ <> 0) then goto true_value;
-      else
-        goto failure;
-      true_value:
-        if (ATargetExType.BaseType in [rtBoolean8..rtBoolean64]) then
-        begin
-          PInt64(Result)^ := 1;
-        end else
-        begin
-          PInt64(Result)^ := -1;
-        end;
-      end;
-    end;
-    rtInt8,
-    rtUInt8,
-    rtInt16,
-    rtUInt16,
-    rtInt32,
-    rtUInt32,
-    rtInt64,
-    rtUInt64,
-    rtComp,
-    rtEnumeration8,
-    rtEnumeration16,
-    rtEnumeration32,
-    rtEnumeration64:
-    begin
-      Result := Alloc(SizeOf(Int64));
-
-      case (ExType.BaseType) of
-        rtBoolean8,
-        rtBool8,
-        rtUInt8: PInt64(Result)^ := PByte(ASource)^;
-        rtBoolean16,
-        rtBool16,
-        rtUInt16: PInt64(Result)^ := PWord(ASource)^;
-        rtInt8,
-        rtEnumeration8: PInt64(Result)^ := PShortInt(ASource)^;
-        rtInt16,
-        rtEnumeration16: PInt64(Result)^ := PSmallInt(ASource)^;
-        rtBoolean32,
-        rtBool32,
-        rtUInt32: PInt64(Result)^ := PCardinal(ASource)^;
-        rtInt32,
-        rtEnumeration32: PInt64(Result)^ := PInteger(ASource)^;
-        rtBoolean64,
-        rtBool64,
-        rtInt64,
-        rtUInt64,
-        rtEnumeration64,
-        rtComp,
-        rtTimeStamp: PInt64(Result)^ := PInt64(ASource)^;
-        rtCurrency: PInt64(Result)^ := Round(PInt64(ASource)^ * (1 / 10000));
-        rtFloat: PInt64(Result)^ := Round(PSingle(ASource)^);
-        rtDouble: PInt64(Result)^ := Round(PDouble(ASource)^);
-        {$ifdef EXTENDEDSUPPORT}
-        rtLongDouble80,
-        rtLongDouble96,
-        rtLongDouble128: PInt64(Result)^ := Round(PExtended(ASource)^);
-        {$endif}
-      else
-        goto failure;
-      end;
-    end;
-    {$ifdef EXTENDEDSUPPORT}
-    rtLongDouble80,
-    rtLongDouble96,
-    rtLongDouble128,
-    {$endif}
-    rtCurrency,
-    rtFloat,
-    rtDouble:
-    begin
-      Result := Alloc(SizeOf(Extended));
-
-      case (ExType.BaseType) of
-        rtUInt8:
-        begin
-          PExtended(Result)^ := PByte(ASource)^;
-        end;
-        rtInt8,
-        rtEnumeration8:
-        begin
-          PExtended(Result)^ := PShortInt(ASource)^;
-        end;
-        rtUInt16:
-        begin
-          PExtended(Result)^ := PWord(ASource)^;
-        end;
-        rtInt16,
-        rtEnumeration16:
-        begin
-          PExtended(Result)^ := PSmallInt(ASource)^;
-        end;
-        rtUInt32: PExtended(Result)^ := Int64(PCardinal(ASource)^);
-        rtInt32,
-        rtEnumeration32: PExtended(Result)^ := PInteger(ASource)^;
-        rtInt64,
-        rtUInt64,
-        rtEnumeration64,
-        rtComp,
-        rtTimeStamp: PExtended(Result)^ := PInt64(ASource)^;
-        rtCurrency: PExtended(Result)^ := PInt64(ASource)^ * (1 / 10000);
-        rtFloat: PExtended(Result)^ := PSingle(ASource)^;
-        rtDouble,
-        rtDate,
-        rtTime,
-        rtDateTime: PExtended(Result)^ := PDouble(ASource)^;
-        {$ifdef EXTENDEDSUPPORT}
-        rtLongDouble80,
-        rtLongDouble96,
-        rtLongDouble128: PExtended(Result)^ := PExtended(ASource)^;
-        {$endif}
-      else
-        goto failure;
-      end;
-
-      case ATargetExType.BaseType of
-        rtCurrency: PCurrency(Result)^ := PExtended(Result)^;
-        rtFloat: PSingle(Result)^ := PExtended(Result)^;
-        {$ifdef EXTENDEDSUPPORT}
-        rtDouble: PDouble(Result)^ := PExtended(Result)^;
-        {$endif}
-      end;
-    end;
-    rtDate:
-    begin
-      Result := Alloc(SizeOf(TDate));
-
-      case (ExType.BaseType) of
-        rtDate: PDouble(Result)^ := PDouble(ASource)^;
-        rtDateTime: PDouble(Result)^ := Trunc(PDouble(ASource)^);
-        rtTimeStamp: PDouble(Result)^ := Trunc((PInt64(ASource)^ - TIMESTAMP_DELTA) * TIMESTAMP_UNDAY);
-      else
-        goto failure;
-      end;
-    end;
-    rtTime:
-    begin
-      Result := Alloc(SizeOf(TTime));
-
-      case (ExType.BaseType) of
-        rtTime: PDouble(Result)^ := PDouble(ASource)^;
-        rtDateTime: PDouble(Result)^ := Frac(PDouble(ASource)^);
-        rtTimeStamp: PDouble(Result)^ := Frac((PInt64(ASource)^ - TIMESTAMP_DELTA) * TIMESTAMP_UNDAY);
-      else
-        goto failure;
-      end;
-    end;
-    rtDateTime:
-    begin
-      Result := Alloc(SizeOf(TDateTime));
-
-      case (ExType.BaseType) of
-        rtDate,
-        rtTime,
-        rtDateTime: PDouble(Result)^ := PDouble(ASource)^;
-        rtTimeStamp: PDouble(Result)^ := (PInt64(ASource)^ - TIMESTAMP_DELTA) * TIMESTAMP_UNDAY;
-      else
-        goto failure;
-      end;
-    end;
-    rtTimeStamp:
-    begin
-      Result := Alloc(SizeOf(TimeStamp));
-
-      case (ExType.BaseType) of
-        rtTimeStamp: PInt64(Result)^ := PInt64(ASource)^;
-        rtDate,
-        rtTime,
-        rtDateTime: PInt64(Result)^ := Round(PDouble(ASource)^ * TIMESTAMP_DAY + TIMESTAMP_DELTA);
-      else
-        goto failure;
-      end;
-    end;
-    rtPSBCSChars,
-    rtPUTF8Chars:
-    begin
-      case ExType.BaseType of
-        rtPointer, rtPSBCSChars, rtPUTF8Chars:
-        begin
-          Result := ASource;
-        end;
-        rtSBCSString, rtUTF8String:
-        begin
-          Result := ASource;
-          goto pchars_value;
-        end;
-      else
-        goto failure;
-      end;
-    end;
-    rtPWideChars:
-    begin
-      case ExType.BaseType of
-        rtPointer, rtPWideChars:
-        begin
-          Result := ASource;
-        end;
-        rtWideString, rtUnicodeString:
-        begin
-          Result := ASource;
-          goto pchars_value;
-        end;
-      else
-        goto failure;
-      end;
-    end;
-    rtPUCS4Chars:
-    begin
-      case ExType.BaseType of
-        rtPointer, rtPUCS4Chars:
-        begin
-          Result := ASource;
-        end;
-        rtUCS4String:
-        begin
-          Result := ASource;
-        pchars_value:
-          if (not Assigned(PPointer(Result)^)) then
-          begin
-            Result := Alloc(SizeOf(Pointer));
-            PPointer(Result)^ := Pointer(@RTTI_RULES_NONE);
-          end;
-        end;
-      else
-        goto failure;
-      end;
-    end;
-    rtSBCSChar,
-    rtUTF8Char,
-    rtWideChar,
-    rtUCS4Char,
-    rtSBCSString,
-    rtUTF8String,
-    rtWideString,
-    rtUnicodeString,
-    rtUCS4String,
-    rtShortString:
-    begin
-      if (ATargetExType.BaseType = ExType.BaseType) then
-      begin
-        Result := ASource;
-        Exit;
-      end;
-
-      // characters, count and code page
-      LValue := ASource;
-      case (ExType.BaseType) of
-        rtSBCSChar:
-        begin
-          LCount := 1;
-          LCodePage := ExType.CodePage;
-        end;
-        rtUTF8Char:
-        begin
-          LCount := 1;
-          LCodePage := CP_UTF8;
-        end;
-        rtWideChar:
-        begin
-          LCount := 1;
-          LCodePage := CP_UTF16;
-        end;
-        rtUCS4Char:
-        begin
-          LCount := 1;
-          LCodePage := CP_UTF32;
-        end;
-        rtPSBCSChars:
-        begin
-          LValue := PPointer(LValue)^;
-          LCount := TCharacters.LStrLen(LValue);
-          LCodePage := ExType.CodePage;
-        end;
-        rtPUTF8Chars:
-        begin
-          LValue := PPointer(LValue)^;
-          LCount := TCharacters.LStrLen(LValue);
-          LCodePage := CP_UTF8;
-        end;
-        rtPWideChars:
-        begin
-          LValue := PPointer(LValue)^;
-          LCount := TCharacters.WStrLen(LValue);
-          LCodePage := CP_UTF16;
-        end;
-        rtPUCS4Chars:
-        begin
-          LValue := PPointer(LValue)^;
-          LCount := TCharacters.UStrLen(LValue);
-          LCodePage := CP_UTF32;
-        end;
-        rtSBCSString, rtUTF8String:
-        begin
-          if (ExType.BaseType = rtUTF8String) then
-          begin
-            LCodePage := CP_UTF8;
-          end else
-          begin
-            LCodePage := ExType.CodePage;
-          end;
-
-          LCount := Length(PAnsiString(LValue)^);
-          LValue := PPointer(LValue)^;
-        end;
-        rtWideString:
-        begin
-          LCount := Length(PWideString(LValue)^);
-          LValue := PPointer(LValue)^;
-          LCodePage := CP_UTF16;
-        end;
-        rtUnicodeString:
-        begin
-          LCount := Length(PUnicodeString(LValue)^);
-          LValue := PPointer(LValue)^;
-          LCodePage := CP_UTF16;
-        end;
-        rtUCS4String:
-        begin
-          LCount := TCharacters.UCS4StringLen(PUCS4String(LValue)^);
-          LValue := PPointer(LValue)^;
-          LCodePage := CP_UTF32;
-        end;
-        rtShortString:
-        begin
-          LCount := PByte(LValue)^;
-          Inc(NativeInt(LValue));
-          LCodePage := CP_UTF8;
-        end;
-      else
-        goto failure;
-      end;
-
-      // target is a character
-      if (ATargetExType.BaseType in [rtSBCSChar..rtUCS4Char]) then
-      begin
-        Result := Alloc(SizeOf(UCS4Char));
-
-        if (LCount = 0) then
-        begin
-          PCardinal(Result)^ := 0;
-        end else
-        case LCodePage of
-          CP_UTF16:
-          begin
-            PUCS4Char(Result)^ := TCharacters.UCS4CharFromUnicode(LValue, LCount);
-          end;
-          CP_UTF32:
-          begin
-           PUCS4Char(Result)^ := PUCS4Char(LValue)^;
-          end;
-        else
-          PUCS4Char(Result)^ := TCharacters.UCS4CharFromAnsi(LCodePage, LValue, LCount);
-        end;
-
-        if (ATargetExType.BaseType <> rtUCS4Char) and (PCardinal(Result)^ > $7f) then
-        begin
-          LCount := TCharacters.UnicodeFromUCS4(Result, Result, 1);
-
-          case ATargetExType.BaseType of
-            rtSBCSChar:
-            begin
-              {$ifNdef MSWINDOWS}TCharacters.{$endif}WideCharToMultiByte(ATargetExType.CodePage,
-                0, Result, LCount, Result, 4, nil, nil);
-            end;
-            rtUTF8Char:
-            begin
-              {$ifNdef MSWINDOWS}TCharacters.{$endif}WideCharToMultiByte(CP_UTF8,
-                0, Result, LCount, Result, 4, nil, nil);
-            end;
-           end;
-        end;
-
-        Exit;
-      end;
-
-      // string targets
-      Result := Alloc(ATargetExType);
-      if (LCount = 0) then
-      begin
-        if (ATargetExType.BaseType = rtShortString) then
-        begin
-          PByte(Result)^ := 0;
-        end;
-      end else
-      case ATargetExType.BaseType of
-        rtSBCSString,
-        rtUTF8String:
-        begin
-          LTargetCodePage := CP_UTF8;
-          if (ATargetExType.BaseType = rtSBCSString) then
-          begin
-            LTargetCodePage := ATargetExType.CodePage;
-          end;
-
-          case LCodePage of
-            CP_UTF16:
-            begin
-              TCharacters.AnsiFromUnicode(LTargetCodePage, PAnsiString(Result)^,
-                LValue, LCount);
-            end;
-            CP_UTF32:
-            begin
-              TCharacters.AnsiFromUCS4(LTargetCodePage, PAnsiString(Result)^,
-                LValue, LCount);
-            end;
-          else
-            TCharacters.AnsiFromAnsi(LTargetCodePage, PAnsiString(Result)^,
-              LCodePage, LValue, LCount);
-          end;
-        end;
-        rtWideString:
-        begin
-          case LCodePage of
-            CP_UTF16:
-            begin
-              SetLength(PWideString(Result)^, LCount);
-              System.Move(LValue^, PPointer(PWideString(Result)^)^, LCount * SizeOf(WideChar));
-            end;
-            CP_UTF32:
-            begin
-              TCharacters.UnicodeFromUCS4(PWideString(Result)^, LValue, LCount);
-            end;
-          else
-            TCharacters.UnicodeFromAnsi(PWideString(Result)^, LCodePage, LValue, LCount);
-          end;
-        end;
-        rtUnicodeString:
-        begin
-          case LCodePage of
-            CP_UTF16:
-            begin
-              SetLength(PUnicodeString(Result)^, LCount);
-              System.Move(LValue^, PPointer(PUnicodeString(Result)^)^, LCount * SizeOf(WideChar));
-            end;
-            CP_UTF32:
-            begin
-              TCharacters.UnicodeFromUCS4(PUnicodeString(Result)^, LValue, LCount);
-            end;
-          else
-            TCharacters.UnicodeFromAnsi(PUnicodeString(Result)^, LCodePage, LValue, LCount);
-          end;
-        end;
-        rtUCS4String:
-        begin
-          case LCodePage of
-            CP_UTF16:
-            begin
-              TCharacters.UCS4FromUnicode(PUCS4String(Result)^, LValue, LCount);
-            end;
-            CP_UTF32:
-            begin
-              SetLength(PUCS4String(Result)^, LCount + 1);
-              PUCS4String(Result)^[LCount] := 0;
-              System.Move(LValue^, PPointer(PUCS4String(Result)^)^, LCount * SizeOf(UCS4Char));
-            end;
-          else
-            TCharacters.UCS4FromAnsi(PUCS4String(Result)^, LCodePage, LValue, LCount);
-          end;
-        end;
-      else
-        // rtShortString:
-        case LCodePage of
-          CP_UTF16:
-          begin
-            TCharacters.ShortStringFromUnicode(PShortString(Result)^,
-              ATargetExType.MaxLength, LValue, LCount);
-          end;
-          CP_UTF32:
-          begin
-            TCharacters.ShortStringFromUCS4(PShortString(Result)^,
-              ATargetExType.MaxLength, LValue, LCount);
-          end;
-        else
-          TCharacters.ShortStringFromAnsi(PShortString(Result)^,
-            ATargetExType.MaxLength, LCodePage, LValue, LCount);
-        end;
-      end;
-    end;
-    rtSet,
-    rtStaticArray,
-    rtDynamicArray,
-    rtStructure:
-    begin
-      Result := ASource;
-      if (ATargetExType.Options <> ExType.Options) or
-        (ATargetExType.CustomData <> ExType.CustomData) then
-      begin
-        goto failure;
-      end;
-    end;
-    rtObject,
-    rtInterface,
-    rtClassRef,
-    rtFunction,
-    rtMethod,
-    rtClosure,
-    rtBytes,
-    rtVarRec,
-    rtValue:
-    begin
-      Result := ASource;
-      if (ATargetExType.BaseType <> ExType.BaseType) then
-      begin
-        goto failure;
-      end;
-    end;
-    rtOleVariant,
-    rtVariant:
-    begin
-      case ExType.BaseType of
-        rtOleVariant,
-        rtVariant: Result := ASource;
-      else
-        goto failure;
-      end;
-    end;
-  else
-  failure:
-    System.Error(reInvalidCast);
-    Result := nil;
-  end;
-end;
 
 type
   PRttiInvokeBuffer = ^TRttiInvokeBuffer;
-  TRttiInvokeBuffer = object(TRttiSignatureBuffer)
+  {$ifdef BCB}
+  TRttiInvokeBuffer__ = record [HPPGEN(HPP_INHERIT + '(TRttiInvokeBuffer, TRttiBuffer)'#13#10)] _: Byte; end;
+  TRttiInvokeBuffer = record public
+    [HPPGEN(HPP_RETRIEVE + '(TRttiBuffer)'#13#10)] This: TRttiBuffer;
+    [HPPGEN(HPP_PROTECTED)]__protected__: TNothing;
+  {$else .DELPHI.FPC}
+  TRttiInvokeBuffer = object(TRttiBuffer) protected
+  {$endif}
+  public
+    {$ifdef BCB}[HPPGEN(HPP_PUBLIC)]__public__: TNothing;{$endif}
     Result: Pointer;
     CodeAddress: Pointer;
     Instance: Pointer;
@@ -2952,7 +2217,7 @@ begin
   begin
     PPointer(@ADump.Bytes[LOffset])^ := Instance;
   end;
-  LOffset := ASignature.DumpOptions.ConstructorFlagOffset;
+  LOffset := ASignature.DumpOptions.OuterMostFlagOffset;
   if (LOffset <> INVALID_INDEX) then
   begin
     PByte(@ADump.Bytes[LOffset])^ := $01;
@@ -2966,7 +2231,7 @@ begin
   LArgumentCount := ArgumentCount;
   if (ASignature.ArgumentCount <> Integer(LArgumentCount)) then
   begin
-    System.Error(reRangeError);
+    TinyError(teRangeError);
     Exit;
   end else
   begin
@@ -2986,20 +2251,20 @@ begin
           vtBoolean:
           begin
             if (LSignatureArgument.BaseType = rtBoolean8) then goto fill_value;
-            ExType.Options := Ord(rtBoolean8);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtBoolean8);
             goto fill_simple_converted_value;
           end;
           vtInteger:
           begin
             if (LSignatureArgument.BaseType in [rtInt8..rtUInt32]) then goto fill_value;
-            ExType.Options := Ord(rtInt32);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtInt32);
             goto fill_simple_converted_value;
           end;
           vtInt64:
           begin
             LSource := PPointer(LSource)^;
             if (LSignatureArgument.BaseType in [rtInt8..rtComp, rtTimeStamp]) then goto fill_value;
-            ExType.Options := Ord(rtInt64);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtInt64);
             goto fill_simple_converted_value;
           end;
           vtExtended:
@@ -3009,11 +2274,11 @@ begin
               [{$ifdef EXTENDEDSUPPORT}rtLongDouble80..rtLongDouble128{$else}rtDouble{$endif}]) then goto fill_value;
 
             case SizeOf(Extended) of
-              10: ExType.Options := Ord(rtLongDouble80);
-              12: ExType.Options := Ord(rtLongDouble96);
-              16: ExType.Options := Ord(rtLongDouble128);
+              10: {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtLongDouble80);
+              12: {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtLongDouble96);
+              16: {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtLongDouble128);
             else
-              ExType.Options := Ord(rtDouble);
+              {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtDouble);
             end;
             goto fill_simple_converted_value;
           end;
@@ -3021,99 +2286,99 @@ begin
           begin
             LSource := PPointer(LSource)^;
             if (LSignatureArgument.BaseType in [rtCurrency]) then goto fill_value;
-            ExType.Options := Ord(rtCurrency);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtCurrency);
             goto fill_simple_converted_value;
           end;
           vtPointer:
           begin
             if (LSignatureArgument.PointerDepth <> 0) or
               (LSignatureArgument.BaseType in [rtPointer, rtObject]) then goto fill_value;
-            ExType.Options := Ord(rtPointer);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtPointer);
             goto fill_simple_converted_value;
           end;
           vtObject:
           begin
             if (LSignatureArgument.BaseType in [rtObject]) then goto fill_value;
-            ExType.Options := Ord(rtObject);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtObject);
             goto fill_simple_converted_value;
           end;
           vtClass:
           begin
             if (LSignatureArgument.BaseType in [rtClassRef]) then goto fill_value;
-            ExType.Options := Ord(rtClassRef);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtClassRef);
             goto fill_simple_converted_value;
           end;
           vtInterface:
           begin
             if (LSignatureArgument.BaseType in [rtInterface, rtClosure]) then goto fill_value;
-            ExType.Options := Ord(rtInterface);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtInterface);
             goto fill_simple_converted_value;
           end;
           vtVariant:
           begin
             if (LSignatureArgument.BaseType in [rtVariant, rtOleVariant]) then goto fill_value;
-            ExType.Options := Ord(rtVariant);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtVariant);
             goto fill_simple_converted_value;
           end;
           vtString:
           begin
             LSource := PPointer(LSource)^;
             if (LSignatureArgument.BaseType in [rtShortString]) then goto fill_value;
-            ExType.Options := Ord(rtShortString) + (255 shl 16) {$ifdef SHORTSTRSUPPORT}+ (Ord(True) shl 24){$endif};
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtShortString) + (255 shl 16) {$ifdef SHORTSTRSUPPORT}+ (Ord(True) shl 24){$endif};
             goto fill_simple_converted_value;
           end;
           vtAnsiString:
           begin
             if (LSignatureArgument.BaseType in [rtSBCSString, rtUTF8String]) then goto fill_value;
-            ExType.Options := DefaultSBCSStringOptions;
+            {$ifdef BCB}This.{$endif}SourceExType.Options := DefaultSBCSStringOptions;
             goto fill_simple_converted_value;
           end;
           {$ifdef UNICODE}
           vtUnicodeString:
           begin
             if (LSignatureArgument.BaseType in [rtUnicodeString]) then goto fill_value;
-            ExType.Options := Ord(rtUnicodeString);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtUnicodeString);
             goto fill_simple_converted_value;
           end;
           {$endif}
           vtWideString:
           begin
             if (LSignatureArgument.BaseType in [rtWideString]) then goto fill_value;
-            ExType.Options := Ord(rtWideString);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtWideString);
             goto fill_simple_converted_value;
           end;
           vtChar:
           begin
             if (LSignatureArgument.BaseType in [rtSBCSChar, rtUTF8Char]) then goto fill_value;
-            ExType.Options := Ord(rtSBCSChar);
-            ExType.CodePage := DefaultCP;
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtSBCSChar);
+            {$ifdef BCB}This.{$endif}SourceExType.CodePage := DefaultCP;
             goto fill_simple_converted_value;
           end;
           vtWideChar:
           begin
             if (LSignatureArgument.BaseType in [rtSBCSChar, rtUTF8Char, rtWideChar]) then goto fill_value;
-            ExType.Options := Ord(rtWideChar);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtWideChar);
             goto fill_simple_converted_value;
           end;
           vtPChar:
           begin
             if (LSignatureArgument.BaseType in [rtPointer, rtPSBCSChars, rtPUTF8Chars]) then goto fill_value;
-            ExType.Options := Ord(rtPSBCSChars);
-            ExType.CodePage := DefaultCP;
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtPSBCSChars);
+            {$ifdef BCB}This.{$endif}SourceExType.CodePage := DefaultCP;
             goto fill_simple_converted_value;
           end;
           vtPWideChar:
           begin
             if (LSignatureArgument.BaseType in [rtPointer, rtPWideChars]) then goto fill_value;
-            ExType.Options := Ord(rtPWideChars);
+            {$ifdef BCB}This.{$endif}SourceExType.Options := Ord(rtPWideChars);
             goto fill_simple_converted_value;
           end;
         else
         invalid_cast:
-          System.Error(reInvalidCast);
+          TinyError(teInvalidCast);
           Exit;
         fill_simple_converted_value:
-          ExType.CustomData := nil;
+          {$ifdef BCB}This.{$endif}SourceExType.CustomData := nil;
           goto fill_converted_value;
         end;
       end;
@@ -3133,9 +2398,9 @@ begin
           goto fill_value;
         end else
         begin
-          Self.ExType := FExType;
+          Self.{$ifdef BCB}This.{$endif}SourceExType := FExType;
         fill_converted_value:
-          LSource := Convert(LSignatureArgument^, LSource);
+          LSource := {$ifdef BCB}This.{$endif}Convert(LSignatureArgument^{$ifdef BCB}.This{$endif}, LSource);
         end;
       end;
     end;
@@ -3145,7 +2410,7 @@ begin
     LCount := LSignatureArgument.PointerDepth;
     if (LCount > 1) then
     repeat
-      LTarget := Alloc(SizeOf(Pointer));
+      LTarget := {$ifdef BCB}This.This.{$endif}Alloc(SizeOf(Pointer));
       PPointer(LTarget)^ := LSource;
       LSource := LTarget;
 
@@ -3159,7 +2424,7 @@ begin
       1: PPointer(LTarget)^ := PPointer(LSource)^;
       2: PAlterNativeInt(LTarget)^ := PAlterNativeInt(LSource)^;
     else
-      RTTI_COPY_FUNCS[PByte(@LSignatureArgument.SetterFunc)^](LSignatureArgument, LTarget, LSource);
+      RTTI_COPY_FUNCS[PByte(@LSignatureArgument.SetterFunc)^](Pointer(LSignatureArgument), LTarget, LSource);
     end;
 
   next_iteration:
@@ -3185,7 +2450,7 @@ begin
       1: PPointer(LTarget)^ := PPointer(LSource)^;
       2: PAlterNativeInt(LTarget)^ := PAlterNativeInt(LSource)^;
     else
-      RTTI_COPY_FUNCS[PByte(@ASignature.Return.SetterFunc)^](@ASignature.Return, LTarget, LSource);
+      RTTI_COPY_FUNCS[PByte(@ASignature.Return.SetterFunc)^](Pointer(@ASignature.Return), LTarget, LSource);
     end;
   end;
 end;
@@ -3194,60 +2459,66 @@ procedure TRttiSignature.Invoke(var ADump: TRttiInvokeDump;
   const ACodeAddress, AInstance: Pointer; const AArgs: array of const;
   const AResult: Pointer; const AInvokeFunc: TRttiInvokeFunc);
 var
+  LBufferBytes: array[0..31] of Byte;
   LBuffer: TRttiInvokeBuffer;
-  LBufferIntf: IInterface;
 begin
-  // interface
-  LBuffer.Init(LBufferIntf);
+  // initialization
+  LBuffer.{$ifdef BCB}This.{$endif}Init(@LBufferBytes, SizeOf(LBufferBytes));
+  try
+    // return value
+    LBuffer.Result := AResult;
+    if (not Assigned(AResult)) and (Return.Qualifier >= rqValueRef{IsReference}) then
+    begin
+      LBuffer.Result := LBuffer.{$ifdef BCB}This.{$endif}Alloc(Return{$ifdef BCB}.This{$endif});
+    end;
 
-  // return value
-  LBuffer.Result := AResult;
-  if (not Assigned(AResult)) and (Return.Qualifier >= rqValueRef{IsReference}) then
-  begin
-    LBuffer.Result := LBuffer.Alloc(Return);
+    // invoke
+    LBuffer.CodeAddress := ACodeAddress;
+    LBuffer.Instance := AInstance;
+    LBuffer.InvokeFunc := AInvokeFunc;
+    LBuffer.Arguments := @AArgs[0];
+    LBuffer.ArgumentCount := Length(AArgs);
+    LBuffer.ArgumentSize := SizeOf(TVarRec);
+    LBuffer.ArgumentMode := amVarRec;
+    LBuffer.Invoke(ADump, Self);
+  finally
+    LBuffer.{$ifdef BCB}This.{$endif}Clear;
   end;
-
-  // invoke
-  LBuffer.CodeAddress := ACodeAddress;
-  LBuffer.Instance := AInstance;
-  LBuffer.InvokeFunc := AInvokeFunc;
-  LBuffer.Arguments := @AArgs[0];
-  LBuffer.ArgumentCount := Length(AArgs);
-  LBuffer.ArgumentSize := SizeOf(TVarRec);
-  LBuffer.ArgumentMode := amVarRec;
-  LBuffer.Invoke(ADump, Self);
 end;
 
 function TRttiSignature.Invoke(var ADump: TRttiInvokeDump;
   const ACodeAddress, AInstance: Pointer; const AArgs: array of TValue;
   const AInvokeFunc: TRttiInvokeFunc): TValue;
 var
+  LBufferBytes: array[0..31] of Byte;
   LBuffer: TRttiInvokeBuffer;
-  LBufferIntf: IInterface;
 begin
-  // interface
-  LBuffer.Init(LBufferIntf);
+  // initialization
+  LBuffer.{$ifdef BCB}This.{$endif}Init(@LBufferBytes, SizeOf(LBufferBytes));
+  try
+    // return value
+    if (Return.Offset <> INVALID_INDEX) then
+    begin
+      Result.Init(Return{$ifdef BCB}.This{$endif}, nil);
+      LBuffer.Result := Result.Data;
+    end else
+    begin
+      Result.Clear;
+      LBuffer.Result := nil;
+    end;
 
-  // return value
-  if (Return.Offset <> INVALID_INDEX) then
-  begin
-    Result.Init(Return, nil);
-    LBuffer.Result := Result.Data;
-  end else
-  begin
-    Result.Clear;
-    LBuffer.Result := nil;
+    // invoke
+    LBuffer.CodeAddress := ACodeAddress;
+    LBuffer.Instance := AInstance;
+    LBuffer.InvokeFunc := AInvokeFunc;
+    LBuffer.Arguments := @AArgs[0];
+    LBuffer.ArgumentCount := Length(AArgs);
+    LBuffer.ArgumentSize := SizeOf(TValue);
+    LBuffer.ArgumentMode := amValue;
+    LBuffer.Invoke(ADump, Self);
+  finally
+    LBuffer.{$ifdef BCB}This.{$endif}Clear;
   end;
-
-  // invoke
-  LBuffer.CodeAddress := ACodeAddress;
-  LBuffer.Instance := AInstance;
-  LBuffer.InvokeFunc := AInvokeFunc;
-  LBuffer.Arguments := @AArgs[0];
-  LBuffer.ArgumentCount := Length(AArgs);
-  LBuffer.ArgumentSize := SizeOf(TValue);
-  LBuffer.ArgumentMode := amValue;
-  LBuffer.Invoke(ADump, Self);
 end;
 
 
@@ -3291,7 +2562,7 @@ begin
     Note:
     The interception jump index must be in the range 0..1023
   }
-  System.Error(reRangeError);
+  TinyError(teRangeError);
 end;
 
 function TRttiVirtualInterface.GetCallback(const AInvokeCallback: TRttiVirtualMethodInvokeCallback): TRttiVirtualMethodCallback;
@@ -3344,7 +2615,7 @@ var
 begin
   LSize := ASignature.Size;
   Result := InternalHeapAlloc(LSize);
-  System.Move(ASignature, Result^, LSize);
+  TinyMove(ASignature, Result^, LSize);
 end;
 
 procedure TRttiVirtualInterface.InternalEventCallback(const AMethod: TRttiVirtualMethod; var ADump: TRttiInvokeDump);
@@ -3365,75 +2636,79 @@ var
   LValue: PValue;
   LValueRec: PValueRec;
   LSource, LTarget: Pointer;
-  LBuffer: TRttiSignatureBuffer;
-  LBufferIntf: IInterface;
+  LBufferBytes: array[0..31] of Byte;
+  LBuffer: TRttiBuffer;
 begin
-  LSignature := AMethod.Signature;
+  LBuffer.Init(@LBufferBytes, SizeOf(LBufferBytes));
+  try
+    LSignature := AMethod.Signature;
 
-  // arguments
-  SetLength(LArgs, LSignature.ArgumentCount + 1);
-  LArgs[0].AsPointer := PPointer(@ADump.Bytes[LSignature.DumpOptions.ThisOffset])^;
-  LArgument := @LSignature.Arguments[0];
-  LTopArgument := @LSignature.Arguments[LSignature.ArgumentCount];
-  LValue := @LArgs[1];
-  if (LArgument <> LTopArgument) then
-  repeat
-    LSource := @ADump.Bytes[LArgument.Offset];
-    if (LArgument.Qualifier >= rqValueRef{IsReference}) then
+    // arguments
+    SetLength(LArgs, LSignature.ArgumentCount + 1);
+    LArgs[0].AsPointer := PPointer(@ADump.Bytes[LSignature.DumpOptions.ThisOffset])^;
+    LArgument := @LSignature.Arguments[0];
+    LTopArgument := @LSignature.Arguments[LSignature.ArgumentCount];
+    LValue := @LArgs[1];
+    if (LArgument <> LTopArgument) then
+    repeat
+      LSource := @ADump.Bytes[LArgument.Offset];
+      if (LArgument.Qualifier >= rqValueRef{IsReference}) then
+      begin
+        LSource := PPointer(LSource)^;
+      end;
+      LValue.Init(LArgument^{$ifdef BCB}.This{$endif}, LSource);
+
+      Inc(LArgument);
+      Inc(LValue);
+    until (LArgument = LTopArgument);
+
+    // event
+    {$ifdef CPUARM64}
+      if (LSignature.Return.Offset = INVALID_INDEX) then
+      begin
+        PEvent(Pointer(Self))^(AMethod, LArgs, ADump.ReturnAddress);
+      end else
+      begin
+        LResult := PEvent(Pointer(Self))^(AMethod, LArgs, ADump.ReturnAddress);
+      end;
+    {$else}
+      PEvent(Pointer(Self))^(AMethod, LArgs, ADump.ReturnAddress, LResult);
+    {$endif}
+
+    // result
+    if (LSignature.Return.Offset <> INVALID_INDEX) then
     begin
-      LSource := PPointer(LSource)^;
+      LSource := LResult.Data;
+      LValueRec := Pointer(@LResult);
+      if (LValueRec.FExType.Options = LSignature.Return.Options) and
+        (
+          Assigned(RTTI_TYPE_RULES[LValueRec.FExType.BaseType]) or
+          (LValueRec.FExType.CustomData = LSignature.Return.CustomData)
+        ) then
+      begin
+        // LSource := LSource;
+      end else
+      begin
+        LBuffer.SourceExType := LValueRec.FExType;
+        LSource := LBuffer.Convert(LSignature.Return{$ifdef BCB}.This{$endif}, LSource)
+      end;
+
+      LTarget := @ADump.Bytes[LSignature.Return.Offset];
+      if (LSignature.Return.Qualifier >= rqValueRef{IsReference}) then
+      begin
+        LTarget := PPointer(LTarget)^;
+      end;
+
+      case Cardinal(LSignature.Return.SetterFunc) of
+        0: PPointer(LTarget)^ := LSource;
+        1: PPointer(LTarget)^ := PPointer(LSource)^;
+        2: PAlterNativeInt(LTarget)^ := PAlterNativeInt(LSource)^;
+      else
+        RTTI_COPY_FUNCS[LSignature.Return.SetterFunc](Pointer(@LSignature.Return), LTarget, LSource);
+      end;
     end;
-    LValue.Init(LArgument^, LSource);
-
-    Inc(LArgument);
-    Inc(LValue);
-  until (LArgument = LTopArgument);
-
-  // event
-  {$ifdef CPUARM64}
-    if (LSignature.Return.Offset = INVALID_INDEX) then
-    begin
-      PEvent(Pointer(Self))^(AMethod, LArgs, ADump.ReturnAddress);
-    end else
-    begin
-      LResult := PEvent(Pointer(Self))^(AMethod, LArgs, ADump.ReturnAddress);
-    end;
-  {$else}
-    PEvent(Pointer(Self))^(AMethod, LArgs, ADump.ReturnAddress, LResult);
-  {$endif}
-
-  // result
-  if (LSignature.Return.Offset <> INVALID_INDEX) then
-  begin
-    LSource := LResult.Data;
-    LValueRec := Pointer(@LResult);
-    if (LValueRec.FExType.Options = LSignature.Return.Options) and
-      (
-        Assigned(RTTI_TYPE_RULES[LValueRec.FExType.BaseType]) or
-        (LValueRec.FExType.CustomData = LSignature.Return.CustomData)
-      ) then
-    begin
-      // LSource := LSource;
-    end else
-    begin
-      LBuffer.Init(LBufferIntf);
-      LBuffer.ExType := LValueRec.FExType;
-      LSource := LBuffer.Convert(LSignature.Return, LSource)
-    end;
-
-    LTarget := @ADump.Bytes[LSignature.Return.Offset];
-    if (LSignature.Return.Qualifier >= rqValueRef{IsReference}) then
-    begin
-      LTarget := PPointer(LTarget)^;
-    end;
-
-    case Cardinal(LSignature.Return.SetterFunc) of
-      0: PPointer(LTarget)^ := LSource;
-      1: PPointer(LTarget)^ := PPointer(LSource)^;
-      2: PAlterNativeInt(LTarget)^ := PAlterNativeInt(LSource)^;
-    else
-      RTTI_COPY_FUNCS[LSignature.Return.SetterFunc](@LSignature.Return, LTarget, LSource);
-    end;
+  finally
+    LBuffer.Clear
   end;
 end;
 
@@ -3490,7 +2765,7 @@ var
 begin
   LSource := Pointer(@IID);
   LTarget := Pointer(FGuids);
-  for i := Low(FGuids) to High(FGuids) do
+  for i := 0 to Length(FGuids) - 1 do
   begin
     if (LSource.Low = LTarget.Low) and (LSource.High = LTarget.High) then
     begin
@@ -3581,12 +2856,12 @@ var
 begin
   if (NativeUInt(AIntfType) <= $ffff) then
   begin
-    System.Error(reAccessViolation);
+    TinyError(teAccessViolation);
   end;
 
   if (AIntfType.Kind <> tkInterface) then
   begin
-    System.Error(reInvalidPtr);
+    TinyError(teInvalidPtr);
   end;
 
   LRttiContext := ARttiContext;

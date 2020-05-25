@@ -1,0 +1,7 @@
+-ansi -f"ValueToID:ID_" -p"S:0"
+sheet
+row
+cell
+data
+value
+style

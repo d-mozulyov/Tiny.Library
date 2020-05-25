@@ -1,0 +1,7 @@
+-ansi -f"ValueToEnum:tk:TTagKind" 
+sheet
+row
+cell
+data
+value
+style

@@ -1,0 +1,7 @@
+-ansi -f"ValueToID-AnsiString:ID_" -p"S:Length(S)"
+sheet
+row
+cell
+data
+value
+style
